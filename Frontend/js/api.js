@@ -1,0 +1,90 @@
+var API = '/api';
+
+function redirectToLogin() {
+  var next = encodeURIComponent(location.pathname + location.search);
+  window.location.href = 'login.html?next=' + next;
+}
+
+function apiGet(url) {
+  return fetch(API + url, { credentials: 'include' }).then(function (res) {
+    if (res.status === 401) {
+      redirectToLogin();
+      return null;
+    }
+    return res.json().then(function (json) {
+      json._status = res.status;
+      return json;
+    });
+  });
+}
+
+function apiGetSilent(url) {
+  return fetch(API + url, { credentials: 'include' }).then(function (res) {
+    return res.json().then(function (json) {
+      json._status = res.status;
+      return json;
+    });
+  });
+}
+
+function apiSend(method, url, data) {
+  return fetch(API + url, {
+    method: method,
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: data !== undefined ? JSON.stringify(data) : undefined,
+  }).then(function (res) {
+    if (res.status === 401) {
+      redirectToLogin();
+      return null;
+    }
+    return res
+      .json()
+      .catch(function () {
+        return {};
+      })
+      .then(function (json) {
+        json._status = res.status;
+        return json;
+      });
+  });
+}
+
+function apiUpload(url, file) {
+  var formData = new FormData();
+  formData.append('file', file);
+  return fetch(API + url, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  }).then(function (res) {
+    if (res.status === 401) {
+      redirectToLogin();
+      return null;
+    }
+    return res.json().then(function (json) {
+      json._status = res.status;
+      return json;
+    });
+  });
+}
+
+function apiPost(url, data) {
+  return apiSend('POST', url, data);
+}
+
+function apiPatch(url, data) {
+  return apiSend('PATCH', url, data);
+}
+
+function apiDelete(url) {
+  return apiSend('DELETE', url);
+}
+
+function fmt(n) {
+  return '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function qs(name) {
+  return new URLSearchParams(window.location.search).get(name);
+}

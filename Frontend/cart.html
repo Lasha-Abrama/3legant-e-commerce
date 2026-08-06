@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cart — Loam &amp; Co.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="site-header" data-active="Cart"></div>
+
+<main>
+  <div class="wrap wrap--narrow">
+    <h1 class="center" style="font-size:34px;font-weight:600;margin:0 0 32px;">Cart</h1>
+
+    <div class="step-indicator">
+      <div class="step"><span class="step__dot step__dot--active">1</span><span class="step__label step__label--active">Shopping cart</span></div>
+      <div class="step__line"></div>
+      <div class="step"><span class="step__dot">2</span><span class="step__label">Checkout details</span></div>
+      <div class="step__line"></div>
+      <div class="step"><span class="step__dot">3</span><span class="step__label">Order complete</span></div>
+    </div>
+
+    <div class="cart-layout">
+      <div>
+        <div class="cart-table-head"><span>Product</span><span>Quantity</span><span>Price</span><span>Subtotal</span></div>
+        <div id="cart-items"></div>
+
+        <div style="margin-top:40px;">
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px;">Have a coupon?</div>
+          <div class="faint" style="font-size:12px;margin-bottom:12px;">Add your code for an instant cart discount</div>
+          <div class="coupon-row">
+            <input class="input" placeholder="Coupon Code">
+            <button class="btn btn--dark">Apply</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="cart-summary">
+        <div class="cart-summary__title">Cart summary</div>
+        <div id="shipping-options"></div>
+        <div class="summary-line" style="padding-top:12px;border-top:1px solid var(--border);"><span>Subtotal</span><span id="subtotal-label"></span></div>
+        <div class="summary-total"><span>Total</span><span id="total-label"></span></div>
+        <a href="checkout.html" class="btn btn--dark btn--block">Checkout</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="site-footer" data-variant="cart"></div>
+
+<script src="js/api.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/header.js"></script>
+<script src="js/cart-page.js"></script>
+</body>
+</html>

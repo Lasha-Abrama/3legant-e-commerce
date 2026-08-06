@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop — Loam &amp; Co.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="site-header" data-active="Shop"></div>
+
+<main>
+  <div class="page-hero">
+    <div class="ph"></div>
+    <div class="page-hero__overlay">
+      <div class="page-hero__crumb">Home / Shop</div>
+      <div class="page-hero__title">Shop Page</div>
+      <div class="page-hero__sub">Let's design the place you always imagined</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="shop-layout">
+      <div class="shop-sidebar" id="shop-sidebar">
+        <div class="filter-heading">☰ Filter</div>
+        <div class="sidebar-label">CATEGORIES</div>
+        <div class="category-list" id="category-list"></div>
+        <div class="sidebar-label">PRICE</div>
+        <div class="price-list" id="price-list"></div>
+      </div>
+
+      <div>
+        <div class="section-head">
+          <div style="font-size:20px;font-weight:600;" id="active-category-label">All Rooms</div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <button class="mobile-filter-toggle" id="mobile-filter-toggle">☰ Filter</button>
+            <select class="sort-select" id="sort-select">
+              <option value="">Sort by ⌄</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="newest">Newest</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-3" id="product-grid"></div>
+        <div class="center" style="margin-top:40px;">
+          <button class="btn btn--outline" id="show-more">Show more</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="newsletter-slot"></div>
+</main>
+
+<div id="site-footer" data-variant="full"></div>
+
+<script src="js/api.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/product-card.js"></script>
+<script src="js/newsletter.js"></script>
+<script src="js/header.js"></script>
+<script src="js/shop.js"></script>
+</body>
+</html>

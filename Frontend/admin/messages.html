@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Messages — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body data-admin-page="messages">
+<div id="admin-shell"></div>
+
+<main class="admin-main">
+  <div class="admin-topbar"><h1>Messages</h1></div>
+
+  <div class="tab-toggle">
+    <button class="is-active" data-tab="contact">Contact messages</button>
+    <button data-tab="newsletter">Newsletter subscribers</button>
+  </div>
+
+  <div class="admin-card" id="contact-panel">
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Message</th><th>Date</th><th></th></tr></thead>
+        <tbody id="contact-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="admin-card" id="newsletter-panel" style="display:none;">
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Email</th><th>Date</th><th></th></tr></thead>
+        <tbody id="newsletter-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script src="../js/api.js"></script>
+<script src="js/admin-guard.js"></script>
+<script src="js/admin-messages.js"></script>
+</body>
+</html>

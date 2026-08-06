@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Login — Loam &amp; Co.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/styles.css">
+<style>input:focus { outline: 1px solid #1c1c1a; } body { background: #faf9f6; }</style>
+</head>
+<body>
+<div class="wrap" style="display:flex;justify-content:center;min-height:100vh;align-items:center;">
+  <div class="auth-card">
+    <div class="auth-head">
+      <div class="auth-head__title">Admin Login</div>
+      <div class="auth-head__sub">Loam &amp; Co. management panel</div>
+    </div>
+
+    <form id="admin-login-form" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="field">
+        <span class="field__label">EMAIL ADDRESS *</span>
+        <input class="input" type="email" name="email" placeholder="admin@loamandco.com" required>
+      </div>
+      <div class="field">
+        <span class="field__label">PASSWORD *</span>
+        <input class="input" type="password" name="password" placeholder="Your password" required>
+      </div>
+      <div class="error-text" id="admin-login-error"></div>
+      <button class="btn btn--dark" type="submit" style="margin-top:6px;">Log In</button>
+    </form>
+
+    <div class="auth-footer"><a href="../index.html">&larr; Back to storefront</a></div>
+  </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="js/admin-login.js"></script>
+</body>
+</html>

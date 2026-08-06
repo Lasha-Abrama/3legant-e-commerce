@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Account — Loam &amp; Co.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="site-header" data-active="Account"></div>
+
+<main>
+  <div class="wrap wrap--narrow">
+    <h1 class="center" style="font-size:32px;font-weight:600;margin:0 0 32px;">My Account</h1>
+
+    <div class="account-layout">
+      <div class="account-sidebar">
+        <div class="ph">Photo</div>
+        <div style="font-size:15px;font-weight:600;" id="account-name">&nbsp;</div>
+        <nav class="account-nav" id="account-nav"></nav>
+        <select class="input account-mobile-select" id="account-mobile-select"></select>
+        <a href="#" id="logout-link" style="text-align:left;padding:10px 8px;font-size:13px;color:var(--faint);text-decoration:none;width:100%;">Log Out</a>
+      </div>
+
+      <div id="account-content"></div>
+    </div>
+  </div>
+</main>
+
+<div id="site-footer" data-variant="minimal"></div>
+
+<script src="js/api.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/product-card.js"></script>
+<script src="js/header.js"></script>
+<script src="js/account.js"></script>
+</body>
+</html>

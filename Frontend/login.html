@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Login — Loam &amp; Co.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<style>input:focus { outline: 1px solid #1c1c1a; }</style>
+</head>
+<body>
+<div id="site-header" data-active="Account"></div>
+
+<main>
+  <div class="wrap" style="display:flex;justify-content:center;">
+    <div class="auth-card">
+      <div class="auth-head">
+        <div class="auth-head__title">Login</div>
+        <div class="auth-head__sub">Welcome back to Loam &amp; Co.</div>
+      </div>
+
+      <form id="login-form" style="display:flex;flex-direction:column;gap:14px;">
+        <div class="field">
+          <span class="field__label">EMAIL ADDRESS *</span>
+          <input class="input" type="email" name="email" placeholder="Your email" required>
+        </div>
+        <div class="field">
+          <span class="field__label">PASSWORD *</span>
+          <input class="input" type="password" name="password" placeholder="Your password" required>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;">
+          <label style="display:flex;align-items:center;gap:8px;color:var(--muted);"><input type="checkbox"> Remember me</label>
+          <a href="#" style="color:var(--ink);text-decoration:underline;">Forgot password?</a>
+        </div>
+        <div class="error-text" id="login-error"></div>
+        <button class="btn btn--dark" type="submit" style="margin-top:6px;">Log In</button>
+      </form>
+
+      <div class="auth-divider"><div class="auth-divider__line"></div><span class="auth-divider__label">or</span><div class="auth-divider__line"></div></div>
+      <button class="btn btn--ghost btn--block" type="button">Continue with Google</button>
+
+      <div class="auth-footer">Don't have an account? <a href="register.html">Sign up</a></div>
+    </div>
+  </div>
+</main>
+
+<div id="site-footer" data-variant="minimal"></div>
+
+<script src="js/api.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/header.js"></script>
+<script src="js/login.js"></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Products — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body data-admin-page="products">
+<div id="admin-shell"></div>
+
+<main class="admin-main">
+  <div class="admin-topbar">
+    <h1>Products</h1>
+    <button class="btn btn--dark btn-sm" id="add-product-btn">+ Add product</button>
+  </div>
+
+  <div class="admin-card admin-form-panel" id="product-form-panel" style="display:none;"></div>
+
+  <div class="admin-card">
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th></th></tr>
+        </thead>
+        <tbody id="products-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script src="../js/api.js"></script>
+<script src="js/admin-guard.js"></script>
+<script src="js/admin-products.js"></script>
+</body>
+</html>

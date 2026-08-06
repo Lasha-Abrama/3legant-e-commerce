@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Our Blog — Loam &amp; Co.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="site-header" data-active="Blog"></div>
+
+<main>
+  <div class="page-hero" style="height:340px;">
+    <div class="ph"></div>
+    <div class="page-hero__overlay">
+      <div class="page-hero__crumb">Home / Blog</div>
+      <div class="page-hero__title" style="font-size:46px;">Our Blog</div>
+      <div class="page-hero__sub">Home ideas and design inspiration</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="section-head" style="margin-bottom:28px;">
+      <div style="display:flex;gap:24px;font-size:14px;">
+        <span style="font-weight:600;border-bottom:2px solid var(--ink);padding-bottom:6px;">All Blog</span>
+        <span class="faint">Featured</span>
+      </div>
+      <div class="muted" style="font-size:13px;">Sort by ⌄</div>
+    </div>
+
+    <div class="grid-3" id="post-grid"></div>
+
+    <div class="center" style="margin-top:40px;">
+      <button class="btn btn--outline">Show more</button>
+    </div>
+  </div>
+
+  <div id="newsletter-slot"></div>
+</main>
+
+<div id="site-footer" data-variant="full"></div>
+
+<script src="js/api.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/newsletter.js"></script>
+<script src="js/blog-data.js"></script>
+<script src="js/header.js"></script>
+<script src="js/blog.js"></script>
+</body>
+</html>

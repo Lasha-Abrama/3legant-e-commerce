@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body data-admin-page="dashboard">
+<div id="admin-shell"></div>
+
+<main class="admin-main">
+  <div class="admin-topbar"><h1>Dashboard</h1></div>
+  <div class="stat-grid" id="stat-grid">
+    <div class="stat-tile"><div class="stat-tile__value">&hellip;</div><div class="stat-tile__label">Products</div></div>
+    <div class="stat-tile"><div class="stat-tile__value">&hellip;</div><div class="stat-tile__label">Orders</div></div>
+    <div class="stat-tile"><div class="stat-tile__value">&hellip;</div><div class="stat-tile__label">Users</div></div>
+    <div class="stat-tile"><div class="stat-tile__value">&hellip;</div><div class="stat-tile__label">Messages</div></div>
+  </div>
+
+  <div class="admin-card">
+    <div style="font-size:15px;font-weight:600;margin-bottom:12px;">Quick links</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <a class="btn btn--dark btn-sm" href="products.html">Add a product</a>
+      <a class="btn btn--outline btn-sm" href="orders.html">Review orders</a>
+      <a class="btn btn--outline btn-sm" href="reviews.html">Moderate reviews</a>
+    </div>
+  </div>
+</main>
+
+<script src="../js/api.js"></script>
+<script src="js/admin-guard.js"></script>
+<script src="js/admin-dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact Us — Loam &amp; Co.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="site-header" data-active="Contact"></div>
+
+<main>
+  <div class="wrap wrap--narrow">
+    <div class="breadcrumb">Home / Contact Us</div>
+    <h1 style="font-size:38px;font-weight:600;max-width:640px;line-height:1.25;margin:0 0 16px;">We believe in sustainable decor. We're passionate about life at home.</h1>
+    <p class="muted" style="font-size:14px;max-width:640px;line-height:1.8;margin-bottom:40px;">Loam &amp; Co. features furniture with natural fabrics, curved lines, plenty of mirrors and classic design, which can be incorporated into any decor project. The pieces enchant for their subtlety, to last for generations, faithful to the shapes of each period, with a touch of the present.</p>
+
+    <div class="about-grid">
+      <div class="ph">Cozy living room photo</div>
+      <div>
+        <div style="font-size:20px;font-weight:600;margin-bottom:10px;">About Us</div>
+        <p class="muted" style="font-size:13px;line-height:1.8;margin-bottom:12px;">Loam &amp; Co. is a gift and decoration store. Our customer service is always prepared to support you 24/7.</p>
+        <a href="shop.html" style="color:var(--ink);font-size:13px;text-decoration:underline;">Shop Now &rarr;</a>
+      </div>
+    </div>
+
+    <h2 class="center" style="font-size:26px;font-weight:600;margin-bottom:32px;">Contact Us</h2>
+    <div class="contact-cards">
+      <div class="contact-card"><div style="font-size:22px;margin-bottom:10px;">📍</div><div class="faint" style="font-size:12px;margin-bottom:6px;">ADDRESS</div><div style="font-size:13px;font-weight:500;">234 Main Street, Your City</div></div>
+      <div class="contact-card"><div style="font-size:22px;margin-bottom:10px;">☎</div><div class="faint" style="font-size:12px;margin-bottom:6px;">CONTACT US</div><div style="font-size:13px;font-weight:500;">+1 234 567 890</div></div>
+      <div class="contact-card"><div style="font-size:22px;margin-bottom:10px;">✉</div><div class="faint" style="font-size:12px;margin-bottom:6px;">EMAIL</div><div style="font-size:13px;font-weight:500;">hello@loamandco.com</div></div>
+    </div>
+
+    <div class="contact-form-grid">
+      <form id="contact-form" style="display:flex;flex-direction:column;gap:12px;">
+        <div class="field"><span class="field__label" style="font-size:12px;">FULL NAME</span><input class="input" id="c-name" placeholder="Your Name" required></div>
+        <div class="field"><span class="field__label" style="font-size:12px;">EMAIL ADDRESS</span><input class="input" type="email" id="c-email" placeholder="Your Email" required></div>
+        <div class="field"><span class="field__label" style="font-size:12px;">MESSAGE</span><textarea class="input" id="c-message" placeholder="Your message" rows="4" required></textarea></div>
+        <div class="error-text" id="contact-msg"></div>
+        <button class="btn btn--dark" type="submit" style="width:fit-content;padding-left:30px;padding-right:30px;">Send Message</button>
+      </form>
+      <div class="ph">Map location</div>
+    </div>
+
+    <div class="contact-feature-grid">
+      <div class="contact-feature"><span>🚚</span><span>Free Shipping<br><span class="faint" style="font-weight:400;">Order above $200</span></span></div>
+      <div class="contact-feature"><span>↩</span><span>Money-back<br><span class="faint" style="font-weight:400;">30 days guarantee</span></span></div>
+      <div class="contact-feature"><span>🔒</span><span>Secure Payments<br><span class="faint" style="font-weight:400;">Secured by Stripe</span></span></div>
+      <div class="contact-feature"><span>☎</span><span>24/7 Support<br><span class="faint" style="font-weight:400;">Phone and email support</span></span></div>
+    </div>
+  </div>
+</main>
+
+<div id="site-footer" data-variant="cart"></div>
+
+<script src="js/api.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/header.js"></script>
+<script src="js/contact.js"></script>
+</body>
+</html>
