@@ -11,6 +11,6 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<string>('PORT', '5000');
   await app.listen(port);
-  console.log(`Loam & Co. სერვერი გაშვებულია: http://localhost:${port}`);
+  console.log(`Gita_3_Team_2. სერვერი გაშვებულია: http://localhost:${port}`);
 }
 bootstrap();

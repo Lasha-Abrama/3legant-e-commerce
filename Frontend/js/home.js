@@ -1,8 +1,8 @@
 (function () {
   var CATEGORIES = [
-    { name: 'Living Room', placeholder: 'Living room photo' },
-    { name: 'Bedroom', placeholder: 'Bedroom photo' },
-    { name: 'Kitchen', placeholder: 'Kitchen photo' },
+    { name: 'Living Room', img: 'images/category-living-room.jpg' },
+    { name: 'Bedroom', img: 'images/category-bedroom.jpg' },
+    { name: 'Kitchen', img: 'images/category-kitchen.jpg' },
   ];
   var FEATURES = [
     { icon: '🚚', title: 'Free Shipping', sub: 'Order above $200' },
@@ -14,7 +14,7 @@
   document.getElementById('category-grid').innerHTML = CATEGORIES.map(function (c) {
     return (
       '<div class="category-tile">' +
-        '<div class="ph" style="width:100%;height:200px;">' + c.placeholder + '</div>' +
+        '<img src="' + c.img + '" alt="' + c.name + '" style="width:100%;height:200px;object-fit:cover;display:block;">' +
         '<div class="category-tile__overlay"></div>' +
         '<div class="category-tile__text">' +
           '<div class="category-tile__name">' + c.name + '</div>' +
@@ -33,15 +33,20 @@
     );
   }).join('');
 
-  document.getElementById('article-grid').innerHTML = window.BLOG_POSTS.slice(0, 3).map(function (a) {
-    return (
-      '<a class="article-card" href="blog.html">' +
-        '<div class="ph" style="width:100%;height:160px;border-radius:10px;">' + a.placeholder + '</div>' +
-        '<div class="article-card__title">' + a.title + '</div>' +
-        '<div class="article-card__date">' + a.date + '</div>' +
-      '</a>'
-    );
-  }).join('');
+  apiGetSilent('/blogs?take=3').then(function (res) {
+    var posts = (res && res.data) || [];
+    document.getElementById('article-grid').innerHTML = posts.map(function (a) {
+      return (
+        '<a class="article-card" href="blog-post.html?id=' + a._id + '">' +
+          '<div class="ph" style="width:100%;height:160px;border-radius:10px;padding:0;">' +
+            '<img src="' + a.image + '" alt="' + a.title + '" style="width:100%;height:100%;object-fit:cover;">' +
+          '</div>' +
+          '<div class="article-card__title">' + a.title + '</div>' +
+          '<div class="article-card__date">' + new Date(a.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + '</div>' +
+        '</a>'
+      );
+    }).join('');
+  });
 
   document.getElementById('newsletter-slot').innerHTML = newsletterHtml();
   wireNewsletterForm();

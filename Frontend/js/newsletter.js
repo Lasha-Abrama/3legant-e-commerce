@@ -1,7 +1,7 @@
 function newsletterHtml() {
   return (
     '<div class="newsletter"><div class="newsletter__inner">' +
-      '<div class="ph" style="width:100%;height:160px;border-radius:12px;">Cozy home corner</div>' +
+      '<img src="images/cozy-home-corner.jpg" alt="Cozy home corner" style="width:100%;height:160px;border-radius:12px;object-fit:cover;display:block;">' +
       '<div>' +
         '<h3 style="font-size:26px;font-weight:500;margin:0 0 8px;">Join Our Newsletter</h3>' +
         '<p class="muted" style="font-size:13px;margin:0 0 16px;">Sign up for deals, new products and promotions.</p>' +

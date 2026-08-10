@@ -2,6 +2,7 @@
   var NAV = [
     { key: 'dashboard', label: 'Dashboard', href: 'index.html' },
     { key: 'products', label: 'Products', href: 'products.html' },
+    { key: 'blogs', label: 'Blog', href: 'blogs.html' },
     { key: 'orders', label: 'Orders', href: 'orders.html' },
     { key: 'users', label: 'Users', href: 'users.html' },
     { key: 'messages', label: 'Messages', href: 'messages.html' },
@@ -13,7 +14,7 @@
     if (!shell) return;
     shell.innerHTML =
       '<div class="admin-sidebar">' +
-        '<div class="admin-sidebar__brand">Loam &amp; Co.<span>Admin panel</span></div>' +
+        '<div class="admin-sidebar__brand">Gita_3_Team_2<span>Admin panel</span></div>' +
         '<nav class="admin-nav">' +
           NAV.map(function (item) {
             return '<a href="' + item.href + '" class="' + (item.key === active ? 'is-active' : '') + '">' + item.label + '</a>';

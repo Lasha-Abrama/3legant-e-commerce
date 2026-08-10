@@ -4,9 +4,7 @@ import express from 'express';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/setup';
 
-// Vercel keeps warm serverless instances alive between requests, so we
-// build the Nest app once per instance and reuse it (and its Mongo
-// connection/session store) instead of re-bootstrapping on every call.
+
 const expressApp = express();
 let bootstrapped: Promise<void> | null = null;
 

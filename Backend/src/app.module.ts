@@ -6,6 +6,7 @@ import { join } from 'path';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProductsModule } from './products/products.module';
+import { BlogsModule } from './blogs/blogs.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { OrdersModule } from './orders/orders.module';
 import { ContactModule } from './contact/contact.module';
@@ -30,6 +31,7 @@ import { UploadsModule } from './uploads/uploads.module';
     AuthModule,
     UsersModule,
     ProductsModule,
+    BlogsModule,
     ReviewsModule,
     OrdersModule,
     ContactModule,

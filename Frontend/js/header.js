@@ -30,7 +30,7 @@
           '<button class="promo-bar__close" id="promo-close" aria-label="Dismiss">&times;</button>' +
         '</div>') +
       '<div class="site-header">' +
-        '<a href="index.html" class="site-header__logo">Loam &amp; Co.</a>' +
+        '<a href="index.html" class="site-header__logo">Gita_3_Team_2</a>' +
         '<nav class="site-nav">' + navHtml(active, '') + '</nav>' +
         '<div class="header-actions">' +
           '<button class="icon-btn search-btn" aria-label="Search">' +
@@ -171,7 +171,7 @@
       : '';
     var topHtml = variant === 'minimal' ? '' :
       '<div class="site-footer__top">' +
-        '<div><div class="site-footer__brand">Loam &amp; Co.</div><div class="site-footer__tag">Gift &amp; Decoration Store</div></div>' +
+        '<div><div class="site-footer__brand">Gita_3_Team_2</div><div class="site-footer__tag">Gift &amp; Decoration Store</div></div>' +
         linksHtml +
       '</div>';
     root.innerHTML =
@@ -179,7 +179,7 @@
         topHtml +
         '<div class="site-footer__bottom' + (variant === 'minimal' ? '' : '') + '"' +
           (variant === 'minimal' ? ' style="text-align:center;padding-top:0;border-top:none;"' : '') + '>' +
-          '&copy; 2026 Loam &amp; Co. All rights reserved.' +
+          '&copy; 2026 Gita_3_Team_2. All rights reserved.' +
         '</div>' +
       '</div>';
   }

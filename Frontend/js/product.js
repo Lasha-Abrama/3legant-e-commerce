@@ -12,7 +12,7 @@
   function renderProduct() {
     var p = state.product;
     document.getElementById('crumb').textContent = 'Home / Shop / ' + p.category + ' / ' + p.name;
-    document.title = p.name + ' — Loam & Co.';
+    document.title = p.name + ' — Gita_3_Team_2';
 
     document.getElementById('product-content').innerHTML =
       '<div class="product-detail-grid">' +

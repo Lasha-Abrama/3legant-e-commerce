@@ -2,6 +2,7 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Product, ProductSchema } from './products/schemas/product.schema';
+import { Blog, BlogSchema } from './blogs/schemas/blog.schema';
 import { User, UserSchema } from './users/schemas/user.schema';
 
 const BLACK = { name: 'Black', hex: '#2a2a28' };
@@ -181,6 +182,57 @@ const products = [
   },
 ];
 
+const blogPosts = [
+  {
+    title: '7 ways to decor your home like a professional',
+    excerpt: 'Small, deliberate changes that make a living room feel designed instead of decorated.',
+    content:
+      'Professional decorators rarely rely on expensive pieces alone — it is the small, deliberate choices that make a room feel finished. Start by editing before you add: clear surfaces of anything that does not serve a purpose or bring you joy. Layer lighting at three heights (floor, table, ceiling) instead of relying on one overhead fixture. Group objects in odd numbers, vary their heights, and let a few larger pieces anchor the room instead of scattering many small ones. Finally, bring in something alive — a plant, fresh flowers, or natural wood grain — to keep the space from feeling staged.',
+    image: '/images/hero-living-room.webp',
+    featured: true,
+  },
+  {
+    title: 'Inside a beautiful kitchen organization',
+    excerpt: 'How to keep an open kitchen looking calm even when it is in daily use.',
+    content:
+      'An open kitchen is judged the moment guests walk in, which makes daily-use clutter the biggest design risk in the house. The fix is not more storage — it is fewer categories on display. Keep countertops to the essentials you use every single day, and give everything else a dedicated home behind a door. Uniform containers for dry goods, a single tray for oils and utensils near the stove, and closed cabinets for small appliances go a long way. If you cook often, build your organization around your actual workflow rather than a Pinterest ideal — the system only works if it is easier than leaving things out.',
+    image: '/images/category-kitchen.jpg',
+    featured: false,
+  },
+  {
+    title: 'Decor your bedroom for your children',
+    excerpt: "Playful, low-maintenance ideas for a kid's room that still feels put together.",
+    content:
+      "A children's room has to survive daily play, which means the decor decisions that matter most are the durable ones: washable paint finishes, rugs that hide stains, and furniture with rounded edges. Beyond that, let personality come through in things that are easy to change later — art on the walls, a gallery of their own drawings, colorful storage bins — rather than in fixed elements like wallpaper or built-ins that are expensive to update as tastes change. A low shelf they can reach themselves does more for a tidy room than any amount of adult-height storage.",
+    image: '/images/category-bedroom.jpg',
+    featured: false,
+  },
+  {
+    title: 'Modern home is beautiful and kid-friendly',
+    excerpt: 'Balancing clean modern lines with furniture that can survive a busy household.',
+    content:
+      'Modern design and family life are not natural enemies — they just require choosing materials for how they age, not just how they look on day one. Performance fabrics that resist stains, engineered wood floors that shrug off scooters, and furniture with no sharp corners all keep clean lines intact without babying every surface. Keep the modern palette (neutral tones, a few bold accents, minimal ornamentation) and let texture — a chunky knit throw, a woven rug — do the work of making the space feel warm instead of clinical.',
+    image: '/images/category-living-room.jpg',
+    featured: true,
+  },
+  {
+    title: 'Warm lighting changes everything',
+    excerpt: 'A short guide to layering lamps and fixtures for a room that feels lived-in.',
+    content:
+      'A single ceiling fixture flattens a room; layered lighting gives it depth at any hour. Aim for at least three light sources at different heights — a floor lamp, a table lamp, and one accent source like a picture light or string lights — each on its own switch or dimmer if possible. Choose warm-white bulbs (around 2700K) over cool daylight tones for living spaces, since warm light is what makes a room read as cozy rather than clinical after sunset. Position lamps to pool light where you actually sit and read, not just where an outlet happens to be.',
+    image: '/images/promo-banner.jpg',
+    featured: false,
+  },
+  {
+    title: 'Styling a cozy home corner',
+    excerpt: 'Turning an unused wall into a corner you actually want to sit in.',
+    content:
+      "Every home has one: the awkward corner that becomes a dumping ground because nothing was ever planned for it. The fix is usually smaller than people expect — a single comfortable chair, a side table within reach, and a lamp are enough to turn dead space into somewhere you actually want to sit. Add a plant or a piece of art at eye level to give the corner a focal point, and resist the urge to fill it with more than one seat; a corner designed for one person to read or drink coffee gets used far more often than one designed to impress.",
+    image: '/images/cozy-home-corner.jpg',
+    featured: false,
+  },
+];
+
 function buildSlug(name: string): string {
   return name
     .toLowerCase()
@@ -199,6 +251,7 @@ async function seed() {
   console.log('დაკავშირებულია MongoDB-სთან');
 
   const ProductModel = mongoose.model(Product.name, ProductSchema);
+  const BlogModel = mongoose.model(Blog.name, BlogSchema);
   const UserModel = mongoose.model(User.name, UserSchema);
 
   await ProductModel.deleteMany({});
@@ -206,6 +259,12 @@ async function seed() {
     products.map((p) => ({ ...p, slug: buildSlug(p.name) })),
   );
   console.log(`${products.length} პროდუქტი დაემატა`);
+
+  await BlogModel.deleteMany({});
+  await BlogModel.insertMany(
+    blogPosts.map((b) => ({ ...b, slug: buildSlug(b.title) })),
+  );
+  console.log(`${blogPosts.length} ბლოგპოსტი დაემატა`);
 
   const adminEmail = 'admin@loamandco.com';
   const existingAdmin = await UserModel.findOne({ email: adminEmail });
