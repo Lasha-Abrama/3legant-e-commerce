@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Order, OrderDocument, OrderStatus } from './schemas/order.schema';
+import { Order, OrderDocument, OrderStatus, PaymentStatus } from './schemas/order.schema';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ProductsService } from '../products/products.service';
 
@@ -19,6 +19,9 @@ export class OrdersService {
   ) {}
 
   async create(userId: string, dto: CreateOrderDto) {
+    if (dto.paymentMethod !== 'card') {
+      throw new BadRequestException('ამ ეტაპზე მხოლოდ ბარათით გადახდაა ხელმისაწვდომი');
+    }
     const products = await Promise.all(
       dto.items.map((item) => this.productsService.findOne(item.productId)),
     );
@@ -64,6 +67,24 @@ export class OrdersService {
 
   findByUser(userId: string) {
     return this.orderModel.find({ user: userId }).sort({ createdAt: -1 }).lean().exec();
+  }
+
+  async findByIdForUser(orderId: string, userId: string) {
+    const order = await this.orderModel.findOne({ _id: orderId, user: userId }).exec();
+    if (!order) {
+      throw new NotFoundException('შეკვეთა ვერ მოიძებნა');
+    }
+    return order;
+  }
+
+  async updatePaymentStatus(orderId: string, paymentStatus: PaymentStatus) {
+    const order = await this.orderModel
+      .findByIdAndUpdate(orderId, { paymentStatus }, { new: true })
+      .exec();
+    if (!order) {
+      throw new NotFoundException('შეკვეთა ვერ მოიძებნა');
+    }
+    return order;
   }
 
   findAll() {

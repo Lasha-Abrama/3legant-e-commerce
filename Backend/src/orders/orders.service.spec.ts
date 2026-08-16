@@ -80,4 +80,15 @@ describe('OrdersService', () => {
       BadRequestException,
     );
   });
+
+  it('rejects payment methods without a configured provider', async () => {
+    await expect(service.create('507f1f77bcf86cd799439012', {
+      items: [],
+      contact: { firstName: 'Sofia', lastName: 'Havertz', phone: '123', email: 'sofia@example.com' },
+      shippingAddress: { street: 'Main', city: 'Tbilisi', state: 'Tbilisi', zip: '0100', country: 'Georgia' },
+      paymentMethod: 'paypal',
+      shippingOption: 'free',
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(productsService.findOne).not.toHaveBeenCalled();
+  });
 });

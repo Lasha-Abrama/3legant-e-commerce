@@ -12,6 +12,7 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(
     AppModule,
     new ExpressAdapter(expressApp),
+    { rawBody: true },
   );
   configureApp(app);
   await app.init();
