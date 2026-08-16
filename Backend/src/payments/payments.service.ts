@@ -21,22 +21,30 @@ export class PaymentsService {
 
     const stripe = this.getStripeClient();
     const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5000');
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: { name: `3legant order ${order._id}` },
-            unit_amount: Math.round(order.total * 100),
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: { name: `3legant order ${order._id}` },
+              unit_amount: Math.round(order.total * 100),
+            },
+            quantity: 1,
           },
-          quantity: 1,
-        },
-      ],
-      metadata: { orderId: String(order._id), userId },
-      success_url: `${frontendUrl}/checkout.html?payment=success&order=${order._id}`,
-      cancel_url: `${frontendUrl}/checkout.html?payment=cancelled&order=${order._id}`,
-    });
+        ],
+        metadata: { orderId: String(order._id), userId },
+        success_url: `${frontendUrl}/checkout.html?payment=success&order=${order._id}`,
+        cancel_url: `${frontendUrl}/checkout.html?payment=cancelled&order=${order._id}`,
+      });
+    } catch (error) {
+      if (error instanceof Stripe.errors.StripeError) {
+        throw new BadRequestException(error.message);
+      }
+      throw error;
+    }
 
     return { checkoutUrl: session.url, sessionId: session.id };
   }

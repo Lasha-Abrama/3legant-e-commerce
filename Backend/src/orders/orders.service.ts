@@ -32,7 +32,7 @@ export class OrdersService {
 
     const orderItems = dto.items.map((item, index) => {
       const product = products[index];
-      const color = product.colors.find((option) => option.name === item.color);
+      const color = (product.colors ?? []).find((option) => option.name === item.color);
       if (!color) {
         throw new BadRequestException(`ფერი მიუწვდომელია: ${item.color}`);
       }
