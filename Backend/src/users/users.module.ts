@@ -4,13 +4,13 @@ import { User, UserSchema } from './schemas/user.schema';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { UsersAdminController } from './users-admin.controller';
-import { SessionAuthGuard } from '../common/guards/session-auth.guard';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../common/guards/admin.guard';
 
 @Module({
   imports: [MongooseModule.forFeature([{ name: User.name, schema: UserSchema }])],
   controllers: [UsersController, UsersAdminController],
-  providers: [UsersService, SessionAuthGuard, AdminGuard],
-  exports: [UsersService, SessionAuthGuard, AdminGuard],
+  providers: [UsersService, JwtAuthGuard, AdminGuard],
+  exports: [UsersService, JwtAuthGuard, AdminGuard],
 })
 export class UsersModule {}

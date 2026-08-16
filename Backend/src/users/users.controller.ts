@@ -3,12 +3,12 @@ import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { SessionAuthGuard } from '../common/guards/session-auth.guard';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { AuthenticatedRequest } from '../common/types/authenticated-request';
 
 @Controller('users/me')
-@UseGuards(SessionAuthGuard)
+@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 

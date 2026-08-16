@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
-import { SessionAuthGuard } from '../common/guards/session-auth.guard';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { AuthenticatedRequest } from '../common/types/authenticated-request';
 
@@ -15,7 +15,7 @@ export class ReviewsController {
   }
 
   @Post()
-  @UseGuards(SessionAuthGuard)
+  @UseGuards(JwtAuthGuard)
   create(
     @Param('productId', ParseObjectIdPipe) productId: string,
     @Req() request: AuthenticatedRequest,

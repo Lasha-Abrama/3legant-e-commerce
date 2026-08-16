@@ -30,6 +30,7 @@
         errorEl.textContent = res.message || 'რეგისტრაცია ვერ მოხერხდა';
         return;
       }
+      setAccessToken(res.accessToken);
       var next = qs('next');
       window.location.href = next || 'account.html';
     });

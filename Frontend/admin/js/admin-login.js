@@ -20,9 +20,10 @@
         errorEl.textContent = res.message || 'ავტორიზაცია ვერ მოხერხდა';
         return;
       }
+      setAccessToken(res.accessToken);
       if (!res.user.isAdmin) {
         errorEl.textContent = 'ამ ანგარიშს არ აქვს ადმინისტრატორის უფლებები';
-        apiPost('/auth/logout', {});
+        apiPost('/auth/logout', {}).then(clearAccessToken);
         return;
       }
       window.location.href = 'index.html';

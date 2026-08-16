@@ -1,4 +1,20 @@
 var API = '/api';
+var ACCESS_TOKEN_KEY = 'threelegant_access_token';
+
+function getAuthHeaders() {
+  var token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  return token ? { Authorization: 'Bearer ' + token } : {};
+}
+
+function setAccessToken(token) {
+  if (token) {
+    localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  }
+}
+
+function clearAccessToken() {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+}
 
 function redirectToLogin() {
   var next = encodeURIComponent(location.pathname + location.search);
@@ -6,8 +22,9 @@ function redirectToLogin() {
 }
 
 function apiGet(url) {
-  return fetch(API + url, { credentials: 'include' }).then(function (res) {
+  return fetch(API + url, { headers: getAuthHeaders() }).then(function (res) {
     if (res.status === 401) {
+      clearAccessToken();
       redirectToLogin();
       return null;
     }
@@ -19,7 +36,10 @@ function apiGet(url) {
 }
 
 function apiGetSilent(url) {
-  return fetch(API + url, { credentials: 'include' }).then(function (res) {
+  return fetch(API + url, { headers: getAuthHeaders() }).then(function (res) {
+    if (res.status === 401) {
+      clearAccessToken();
+    }
     return res.json().then(function (json) {
       json._status = res.status;
       return json;
@@ -30,11 +50,11 @@ function apiGetSilent(url) {
 function apiSend(method, url, data) {
   return fetch(API + url, {
     method: method,
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
+    headers: Object.assign({ 'Content-Type': 'application/json' }, getAuthHeaders()),
     body: data !== undefined ? JSON.stringify(data) : undefined,
   }).then(function (res) {
     if (res.status === 401) {
+      clearAccessToken();
       redirectToLogin();
       return null;
     }
@@ -55,10 +75,11 @@ function apiUpload(url, file) {
   formData.append('file', file);
   return fetch(API + url, {
     method: 'POST',
-    credentials: 'include',
+    headers: getAuthHeaders(),
     body: formData,
   }).then(function (res) {
     if (res.status === 401) {
+      clearAccessToken();
       redirectToLogin();
       return null;
     }

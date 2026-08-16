@@ -14,6 +14,7 @@
         errorEl.textContent = res.message || 'ავტორიზაცია ვერ მოხერხდა';
         return;
       }
+      setAccessToken(res.accessToken);
       var next = qs('next');
       window.location.href = next || 'account.html';
     });

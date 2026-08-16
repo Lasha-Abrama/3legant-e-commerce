@@ -1,10 +1,10 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../../users/users.service';
 import { AuthenticatedRequest } from '../types/authenticated-request';
 
 @Injectable()
-export class AdminGuard implements CanActivate {
+export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -18,17 +18,12 @@ export class AdminGuard implements CanActivate {
       throw new UnauthorizedException('გაიარეთ ავტორიზაცია');
     }
 
-    let user;
     try {
       const payload = await this.jwtService.verifyAsync<{ sub: string }>(token);
-      user = await this.usersService.findById(payload.sub);
+      request.user = await this.usersService.findById(payload.sub);
+      return true;
     } catch {
       throw new UnauthorizedException('გაიარეთ ავტორიზაცია');
     }
-    if (!user.isAdmin) {
-      throw new ForbiddenException('წვდომა აკრძალულია');
-    }
-    request.user = user;
-    return true;
   }
 }

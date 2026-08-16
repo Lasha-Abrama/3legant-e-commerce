@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
@@ -8,7 +9,10 @@ const SALT_ROUNDS = 10;
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   async register(dto: RegisterDto) {
     const existing = await this.usersService.findByEmail(dto.email);
@@ -34,5 +38,26 @@ export class AuthService {
       throw new BadRequestException('არასწორი ელფოსტა ან პაროლი');
     }
     return user;
+  }
+
+  async createAuthResponse(userId: string) {
+    const user = await this.usersService.findById(userId);
+    const accessToken = await this.jwtService.signAsync({ sub: String(user._id) });
+    return { accessToken, user: this.usersService.toSafeUser(user) };
+  }
+
+  async getUserFromAuthorization(authorization?: string) {
+    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
+    if (!token) {
+      return null;
+    }
+
+    try {
+      const payload = await this.jwtService.verifyAsync<{ sub: string }>(token);
+      const user = await this.usersService.findById(payload.sub);
+      return this.usersService.toSafeUser(user);
+    } catch {
+      return null;
+    }
   }
 }

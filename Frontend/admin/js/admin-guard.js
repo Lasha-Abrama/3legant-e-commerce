@@ -29,6 +29,7 @@
     document.getElementById('admin-logout').addEventListener('click', function (e) {
       e.preventDefault();
       apiPost('/auth/logout', {}).then(function () {
+        clearAccessToken();
         window.location.href = 'login.html';
       });
     });

@@ -9,7 +9,10 @@
 
   document.getElementById('logout-link').addEventListener('click', function (e) {
     e.preventDefault();
-    apiPost('/auth/logout', {}).then(function () { window.location.href = 'index.html'; });
+    apiPost('/auth/logout', {}).then(function () {
+      clearAccessToken();
+      window.location.href = 'index.html';
+    });
   });
 
   function renderNav() {
