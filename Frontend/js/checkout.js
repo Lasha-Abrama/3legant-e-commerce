@@ -63,8 +63,7 @@
             '<div class="form-section-title">Payment method</div>' +
             '<label class="pay-option' + (form.paymentMethod === 'card' ? ' is-active' : '') + '"><input type="radio" name="pay" data-pay="card" ' + (form.paymentMethod === 'card' ? 'checked' : '') + '> Pay by Card Credit</label>' +
             '<label class="pay-option' + (form.paymentMethod === 'paypal' ? ' is-active' : '') + '"><input type="radio" name="pay" data-pay="paypal" ' + (form.paymentMethod === 'paypal' ? 'checked' : '') + '> PayPal</label>' +
-            '<input class="input" placeholder="Card Number" style="margin:12px 0;" ' + (form.paymentMethod !== 'card' ? 'disabled' : '') + '>' +
-            '<div class="row-2"><input class="input" placeholder="MM/YY" ' + (form.paymentMethod !== 'card' ? 'disabled' : '') + '><input class="input" placeholder="CVC code" ' + (form.paymentMethod !== 'card' ? 'disabled' : '') + '></div>' +
+          '<p class="faint" style="margin:16px 0 0;">Card details are entered securely on Stripe Checkout.</p>' +
           '</div>' +
           '<div id="checkout-error" class="error-text"></div>' +
         '</div>' +
@@ -143,8 +142,22 @@
         btn.textContent = 'Place Order';
         return;
       }
-      window.CartStore.clear();
-      renderComplete(res);
+      if (form.paymentMethod !== 'card') {
+        errorEl.textContent = 'Card payments are currently available only.';
+        btn.disabled = false;
+        btn.textContent = 'Place Order';
+        return;
+      }
+
+      apiPost('/payments/checkout-session', { orderId: res._id }).then(function (payment) {
+        if (!payment || payment._status >= 400 || !payment.checkoutUrl) {
+          errorEl.textContent = (payment && payment.message) || 'Payment could not be started.';
+          btn.disabled = false;
+          btn.textContent = 'Place Order';
+          return;
+        }
+        window.location.href = payment.checkoutUrl;
+      });
     });
   }
 

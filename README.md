@@ -40,9 +40,18 @@ npm test
 
 ## Environment variables
 
-The API requires `MONGO_URL`, `JWT_SECRET`, `CLOUDINARY_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Do not commit `.env` files or credentials. Authentication uses bearer access tokens stored by the browser client.
+The API requires `MONGO_URL`, `JWT_SECRET`, `CLOUDINARY_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Stripe checkout additionally requires `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `FRONTEND_URL`. Do not commit `.env` files or credentials. Authentication uses bearer access tokens stored by the browser client.
 
 Checkout sends only the selected payment method; card details must never be stored or sent to this API. New orders remain `pending` until a payment provider is integrated.
+
+For local Stripe webhooks:
+
+```bash
+stripe login
+stripe listen --forward-to localhost:5000/api/payments/webhook
+```
+
+Copy the `whsec_...` value printed by `stripe listen` into `Backend/.env` as `STRIPE_WEBHOOK_SECRET`. This local secret is temporary and changes when a new listener is started.
 
 ## Delivery roadmap
 
