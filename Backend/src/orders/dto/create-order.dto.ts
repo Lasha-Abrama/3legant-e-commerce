@@ -4,8 +4,10 @@ import {
   IsArray,
   IsEmail,
   IsIn,
+  IsInt,
   IsMongoId,
   IsNumber,
+  IsOptional,
   IsString,
   Min,
   MinLength,
@@ -17,6 +19,7 @@ export class OrderItemDto {
   productId: string;
 
   @IsString()
+  @IsOptional()
   @MinLength(1)
   name: string;
 
@@ -24,9 +27,11 @@ export class OrderItemDto {
   color: string;
 
   @IsNumber()
+  @IsOptional()
   @Min(0)
   price: number;
 
+  @IsInt()
   @IsNumber()
   @Min(1)
   qty: number;
