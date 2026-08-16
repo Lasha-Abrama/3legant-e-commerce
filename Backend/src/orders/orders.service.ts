@@ -55,6 +55,7 @@ export class OrdersService {
       shippingAddress: dto.shippingAddress,
       paymentMethod: dto.paymentMethod,
       shippingOption: dto.shippingOption,
+      paymentStatus: 'pending',
       subtotal: Math.round(subtotal * 100) / 100,
       total,
     });

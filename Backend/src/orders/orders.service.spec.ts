@@ -48,6 +48,8 @@ describe('OrdersService', () => {
     }]);
     expect(order.subtotal).toBe(38);
     expect(order.total).toBe(53);
+    expect(order.paymentStatus).toBe('pending');
+    expect(order).not.toHaveProperty('cardNumber');
   });
 
   it('rejects unavailable colors and insufficient stock', async () => {

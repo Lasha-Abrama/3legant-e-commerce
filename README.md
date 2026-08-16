@@ -42,6 +42,8 @@ npm test
 
 The API requires `MONGO_URL`, `JWT_SECRET`, `CLOUDINARY_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Do not commit `.env` files or credentials. Authentication uses bearer access tokens stored by the browser client.
 
+Checkout sends only the selected payment method; card details must never be stored or sent to this API. New orders remain `pending` until a payment provider is integrated.
+
 ## Delivery roadmap
 
 1. Establish repository documentation, secret handling, and a repeatable local setup.

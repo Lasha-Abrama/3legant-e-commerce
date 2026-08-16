@@ -13,6 +13,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
+import { PAYMENT_METHODS, SHIPPING_OPTIONS } from '../schemas/order.schema';
 
 export class OrderItemDto {
   @IsMongoId()
@@ -91,9 +92,9 @@ export class CreateOrderDto {
   @Type(() => OrderShippingAddressDto)
   shippingAddress: OrderShippingAddressDto;
 
-  @IsIn(['card', 'paypal'])
-  paymentMethod: 'card' | 'paypal';
+  @IsIn(PAYMENT_METHODS)
+  paymentMethod: (typeof PAYMENT_METHODS)[number];
 
-  @IsIn(['free', 'express', 'pickup'])
-  shippingOption: 'free' | 'express' | 'pickup';
+  @IsIn(SHIPPING_OPTIONS)
+  shippingOption: (typeof SHIPPING_OPTIONS)[number];
 }

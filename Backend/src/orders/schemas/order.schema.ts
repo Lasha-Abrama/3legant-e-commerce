@@ -4,8 +4,14 @@ import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 export type OrderDocument = HydratedDocument<Order>;
 
 export const ORDER_STATUSES = ['Processing', 'Shipped', 'Delivered', 'Cancelled'] as const;
+export const PAYMENT_METHODS = ['card', 'paypal'] as const;
+export const SHIPPING_OPTIONS = ['free', 'express', 'pickup'] as const;
+export const PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'refunded'] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+export type ShippingOption = (typeof SHIPPING_OPTIONS)[number];
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 @Schema({ _id: false })
 export class OrderItem {
@@ -78,11 +84,14 @@ export class Order {
   @Prop({ type: OrderShippingAddressSchema, required: true })
   shippingAddress: OrderShippingAddress;
 
-  @Prop({ required: true, trim: true })
-  paymentMethod: string;
+  @Prop({ required: true, enum: PAYMENT_METHODS, trim: true })
+  paymentMethod: PaymentMethod;
 
-  @Prop({ required: true, trim: true })
-  shippingOption: string;
+  @Prop({ required: true, enum: SHIPPING_OPTIONS, trim: true })
+  shippingOption: ShippingOption;
+
+  @Prop({ required: true, enum: PAYMENT_STATUSES, default: 'pending' })
+  paymentStatus: PaymentStatus;
 
   @Prop({ required: true, min: 0 })
   subtotal: number;
