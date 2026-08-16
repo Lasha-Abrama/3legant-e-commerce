@@ -1,0 +1,49 @@
+# 3legant E-Commerce
+
+Full-stack e-commerce application based on the 3legant Figma design. The current implementation uses a static vanilla JavaScript storefront and a NestJS API backed by MongoDB.
+
+## Current architecture
+
+- `Frontend/` — static HTML, CSS, and vanilla JavaScript storefront plus admin pages.
+- `Backend/` — NestJS API for authentication, users, products, blogs, reviews, orders, contact messages, newsletter subscriptions, and Cloudinary uploads.
+- `vercel.json` — deploys the static storefront and routes `/api/*` to the NestJS Vercel handler.
+
+## Local development
+
+1. Copy `Backend/.env.example` to `Backend/.env` and set each value locally.
+2. Install API dependencies:
+   ```bash
+   cd Backend
+   npm install
+   ```
+3. Run the API and storefront:
+   ```bash
+   npm run start:dev
+   ```
+4. Open `http://localhost:5000`.
+
+## Environment variables
+
+The API requires `MONGO_URL`, `SESSION_SECRET`, `CLOUDINARY_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Do not commit `.env` files or credentials.
+
+## Delivery roadmap
+
+1. Establish repository documentation, secret handling, and a repeatable local setup.
+2. Add backend quality checks and baseline tests.
+3. Replace session authentication with JWT access tokens and protected API guards.
+4. Harden core domains: products, cart/checkout, orders, reviews, and admin authorization.
+5. Document and test public/admin API flows.
+6. Rebuild the storefront in Next.js only after the API contract is stable.
+
+## Commit convention
+
+Use focused Conventional Commit-style messages:
+
+- `chore:` tooling, configuration, repository hygiene
+- `docs:` documentation
+- `feat:` user-facing capability
+- `fix:` bug correction
+- `test:` tests only
+- `refactor:` behavior-preserving code changes
+
+Each commit should build successfully and explain one meaningful change.
