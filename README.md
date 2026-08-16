@@ -31,6 +31,13 @@ cd Backend
 npm run check
 ```
 
+Run isolated backend tests:
+
+```bash
+cd Backend
+npm test
+```
+
 ## Environment variables
 
 The API requires `MONGO_URL`, `JWT_SECRET`, `CLOUDINARY_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Do not commit `.env` files or credentials. Authentication uses bearer access tokens stored by the browser client.
