@@ -5,6 +5,8 @@
   "private": true,
   "scripts": {
     "build": "nest build",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run build",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "seed": "ts-node -r tsconfig-paths/register src/seed.ts"

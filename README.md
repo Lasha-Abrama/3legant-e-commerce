@@ -11,16 +11,25 @@ Full-stack e-commerce application based on the 3legant Figma design. The current
 ## Local development
 
 1. Copy `Backend/.env.example` to `Backend/.env` and set each value locally.
-2. Install API dependencies:
+2. Install API dependencies from the lockfile:
    ```bash
    cd Backend
-   npm install
+   npm ci
    ```
 3. Run the API and storefront:
    ```bash
    npm run start:dev
    ```
 4. Open `http://localhost:5000`.
+
+## Verification
+
+Run the backend type-check and production build together:
+
+```bash
+cd Backend
+npm run check
+```
 
 ## Environment variables
 
