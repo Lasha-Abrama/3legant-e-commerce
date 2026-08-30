@@ -1,5 +1,6 @@
 (function () {
   var SHIPPING_KEY = 'lc_shipping';
+  var PENDING_ORDER_KEY = 'lc_pending_checkout_order';
   var SHIPPING_OPTIONS = {
     free: { label: 'Free shipping', cost: function () { return 0; } },
     express: { label: 'Express shipping', cost: function () { return 15; } },
@@ -119,6 +120,10 @@
       errorEl.textContent = 'გთხოვთ შეავსოთ ყველა სავალდებულო ველი';
       return;
     }
+    if (form.paymentMethod !== 'card') {
+      errorEl.textContent = 'Card payments are currently available only.';
+      return;
+    }
 
     var payload = {
       items: cart.map(function (item) {
@@ -134,31 +139,93 @@
     btn.disabled = true;
     btn.textContent = 'Placing order...';
 
+    var payloadFingerprint = JSON.stringify(payload);
+    var pendingOrder = getPendingOrder();
+    if (pendingOrder && pendingOrder.payloadFingerprint === payloadFingerprint) {
+      startStripeCheckout(pendingOrder.orderId, btn, errorEl);
+      return;
+    }
+
     apiPost('/orders', payload).then(function (res) {
-      if (!res) return;
+      if (!res) {
+        restorePlaceOrderButton(btn);
+        return;
+      }
       if (res._status >= 400) {
         errorEl.textContent = res.message || 'შეკვეთის გაფორმება ვერ მოხერხდა';
-        btn.disabled = false;
-        btn.textContent = 'Place Order';
+        restorePlaceOrderButton(btn);
         return;
       }
-      if (form.paymentMethod !== 'card') {
-        errorEl.textContent = 'Card payments are currently available only.';
-        btn.disabled = false;
-        btn.textContent = 'Place Order';
-        return;
-      }
-
-      apiPost('/payments/checkout-session', { orderId: res._id }).then(function (payment) {
-        if (!payment || payment._status >= 400 || !payment.checkoutUrl) {
-          errorEl.textContent = (payment && payment.message) || 'Payment could not be started.';
-          btn.disabled = false;
-          btn.textContent = 'Place Order';
-          return;
-        }
-        window.location.href = payment.checkoutUrl;
-      });
+      savePendingOrder(res._id, payload, payloadFingerprint);
+      startStripeCheckout(res._id, btn, errorEl);
+    }).catch(function () {
+      errorEl.textContent = 'The order service is currently unavailable. Please try again.';
+      restorePlaceOrderButton(btn);
     });
+  }
+
+  function startStripeCheckout(orderId, btn, errorEl) {
+    apiPost('/payments/checkout-session', { orderId: orderId }).then(function (payment) {
+      if (!payment || payment._status >= 400 || !payment.checkoutUrl) {
+        errorEl.textContent = (payment && payment.message) || 'Payment could not be started.';
+        if (payment && /ვადაგასულია|შეუძლებელია/.test(payment.message || '')) {
+          clearPendingOrder();
+        }
+        restorePlaceOrderButton(btn);
+        return;
+      }
+      window.location.href = payment.checkoutUrl;
+    }).catch(function () {
+      errorEl.textContent = 'Payment could not be started. Please try again.';
+      restorePlaceOrderButton(btn);
+    });
+  }
+
+  function restorePlaceOrderButton(btn) {
+    if (!btn) return;
+    btn.disabled = false;
+    btn.textContent = 'Place Order';
+  }
+
+  function getPendingOrder() {
+    try {
+      return JSON.parse(sessionStorage.getItem(PENDING_ORDER_KEY));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function savePendingOrder(orderId, payload, payloadFingerprint) {
+    sessionStorage.setItem(PENDING_ORDER_KEY, JSON.stringify({
+      orderId: orderId,
+      payload: payload,
+      payloadFingerprint: payloadFingerprint,
+    }));
+  }
+
+  function clearPendingOrder() {
+    sessionStorage.removeItem(PENDING_ORDER_KEY);
+  }
+
+  function restorePendingCheckout() {
+    var pendingOrder = getPendingOrder();
+    if (!pendingOrder || !pendingOrder.payload) return;
+    var savedItems = pendingOrder.payload.items || [];
+    var currentItems = window.CartStore.getCart();
+    var savedCartKey = JSON.stringify(savedItems.map(function (item) {
+      return [item.productId, item.color, item.qty];
+    }));
+    var currentCartKey = JSON.stringify(currentItems.map(function (item) {
+      return [item.id, item.color, item.qty];
+    }));
+    if (savedCartKey !== currentCartKey) return;
+
+    Object.assign(form, pendingOrder.payload.contact || {});
+    Object.assign(form, pendingOrder.payload.shippingAddress || {});
+    form.paymentMethod = pendingOrder.payload.paymentMethod || 'card';
+    if (pendingOrder.payload.shippingOption) {
+      localStorage.setItem(SHIPPING_KEY, pendingOrder.payload.shippingOption);
+    }
   }
 
   function renderComplete(order) {
@@ -167,12 +234,65 @@
       '<div class="order-complete">' +
         '<div class="order-complete__icon">&#10003;</div>' +
         '<h2 style="font-size:26px;font-weight:600;margin-bottom:12px;">Thank you, your order is placed!</h2>' +
-        '<p class="muted" style="font-size:14px;margin-bottom:24px;">Order total <strong>' + fmt(order.total) + '</strong> &middot; status: ' + order.status + '</p>' +
+        '<p class="muted" style="font-size:14px;margin-bottom:24px;">Order total <strong>' + fmt(order.total) + '</strong> &middot; payment confirmed</p>' +
         '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
           '<a class="btn btn--dark" href="account.html?tab=orders">View my orders</a>' +
           '<a class="btn btn--outline" href="index.html">Continue shopping</a>' +
         '</div>' +
       '</div>';
+  }
+
+  function renderPaymentVerification() {
+    renderSteps(3);
+    document.getElementById('checkout-body').innerHTML =
+      '<div class="order-complete">' +
+        '<h2 style="font-size:26px;font-weight:600;margin-bottom:12px;">Confirming your payment...</h2>' +
+        '<p class="muted" style="font-size:14px;">Please keep this page open while Stripe confirms your order.</p>' +
+      '</div>';
+  }
+
+  function renderPaymentPending() {
+    renderSteps(3);
+    document.getElementById('checkout-body').innerHTML =
+      '<div class="order-complete">' +
+        '<h2 style="font-size:26px;font-weight:600;margin-bottom:12px;">Payment confirmation is taking longer than expected</h2>' +
+        '<p class="muted" style="font-size:14px;margin-bottom:24px;">Your cart is still saved. Check your orders in a moment before trying again.</p>' +
+        '<a class="btn btn--dark" href="account.html?tab=orders">View my orders</a>' +
+      '</div>';
+  }
+
+  function verifyReturnedOrder(orderId, attemptsRemaining) {
+    apiGet('/orders/' + encodeURIComponent(orderId)).then(function (order) {
+      if (!order || order._status >= 400) {
+        renderPaymentPending();
+        return;
+      }
+      if (order.paymentStatus === 'paid') {
+        window.CartStore.clear();
+        clearPendingOrder();
+        window.history.replaceState({}, '', 'checkout.html');
+        renderComplete(order);
+        return;
+      }
+      if (order.paymentStatus === 'failed' || order.status === 'Cancelled') {
+        clearPendingOrder();
+        window.history.replaceState({}, '', 'checkout.html');
+        renderSteps(2);
+        renderForm();
+        document.getElementById('checkout-error').textContent =
+          'Payment was not completed. Your cart is still available.';
+        return;
+      }
+      if (attemptsRemaining > 0) {
+        window.setTimeout(function () {
+          verifyReturnedOrder(orderId, attemptsRemaining - 1);
+        }, 1200);
+        return;
+      }
+      renderPaymentPending();
+    }).catch(function () {
+      renderPaymentPending();
+    });
   }
 
   apiGetSilent('/auth/me').then(function (res) {
@@ -192,6 +312,22 @@
       form.zip = addr.zip || '';
       form.country = addr.country || '';
     }
+    restorePendingCheckout();
+
+    var paymentResult = qs('payment');
+    var returnedOrderId = qs('order');
+    if (paymentResult === 'success' && returnedOrderId) {
+      renderPaymentVerification();
+      verifyReturnedOrder(returnedOrderId, 10);
+      return;
+    }
+    if (paymentResult === 'success') {
+      renderPaymentPending();
+      return;
+    }
+    if (paymentResult === 'cancelled') {
+      window.history.replaceState({}, '', 'checkout.html');
+    }
 
     if (window.CartStore.getCart().length === 0) {
       renderSteps(2);
@@ -201,5 +337,9 @@
 
     renderSteps(2);
     renderForm();
+    if (paymentResult === 'cancelled') {
+      document.getElementById('checkout-error').textContent =
+        'Payment was cancelled. Your cart and checkout details are still available.';
+    }
   });
 })();

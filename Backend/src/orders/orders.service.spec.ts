@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { ProductsService } from '../products/products.service';
 
@@ -23,6 +23,29 @@ describe('OrdersService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('returns an order only when it belongs to the requesting user', async () => {
+    const ownedOrder = { _id: 'order-id', user: 'user-id' };
+    (orderModel as any).findOne = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(ownedOrder),
+    });
+
+    await expect(service.findByIdForUser('order-id', 'user-id')).resolves.toBe(ownedOrder);
+    expect((orderModel as any).findOne).toHaveBeenCalledWith({
+      _id: 'order-id',
+      user: 'user-id',
+    });
+  });
+
+  it('does not expose an order owned by another user', async () => {
+    (orderModel as any).findOne = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    await expect(service.findByIdForUser('order-id', 'other-user-id')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 
   it('uses canonical product data when creating an order', async () => {
