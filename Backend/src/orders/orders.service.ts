@@ -1,7 +1,13 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
-import { Order, OrderDocument, OrderStatus, PaymentStatus } from './schemas/order.schema';
+import {
+  CheckoutSessionStatus,
+  Order,
+  OrderDocument,
+  OrderStatus,
+  PaymentStatus,
+} from './schemas/order.schema';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ProductsService } from '../products/products.service';
 
@@ -67,6 +73,7 @@ export class OrdersService {
       paymentMethod: dto.paymentMethod,
       shippingOption: dto.shippingOption,
       paymentStatus: 'pending',
+      checkoutSessionStatus: 'none',
       inventoryStatus: 'pending',
       subtotal: Math.round(subtotal * 100) / 100,
       total,
@@ -94,17 +101,83 @@ export class OrdersService {
     return order;
   }
 
+  async attachStripeCheckoutSession(
+    orderId: string,
+    userId: string,
+    stripeCheckoutSessionId: string,
+    stripeCheckoutExpiresAt: Date,
+  ) {
+    const order = await this.orderModel
+      .findOneAndUpdate(
+        {
+          _id: orderId,
+          user: userId,
+          paymentStatus: 'pending',
+          status: 'Processing',
+          $or: [
+            { stripeCheckoutSessionId: { $exists: false } },
+            { stripeCheckoutSessionId },
+          ],
+        },
+        {
+          $set: {
+            stripeCheckoutSessionId,
+            stripeCheckoutExpiresAt,
+            checkoutSessionStatus: 'open',
+          },
+        },
+        { new: true },
+      )
+      .exec();
+    if (order) {
+      return order;
+    }
+
+    const existingOrder = await this.findByIdForUser(orderId, userId);
+    if (existingOrder.stripeCheckoutSessionId === stripeCheckoutSessionId) {
+      return existingOrder;
+    }
+    throw new ConflictException('A different checkout session is already attached to this order');
+  }
+
+  async updateCheckoutSessionStatus(
+    orderId: string,
+    stripeCheckoutSessionId: string,
+    checkoutSessionStatus: CheckoutSessionStatus,
+  ) {
+    const order = await this.orderModel
+      .findOneAndUpdate(
+        { _id: orderId, paymentStatus: 'pending' },
+        {
+          $set: {
+            stripeCheckoutSessionId,
+            checkoutSessionStatus,
+          },
+        },
+        { new: true },
+      )
+      .exec();
+    if (order) {
+      return order;
+    }
+
+    return this.findById(orderId);
+  }
+
   async updateStripePayment(
     orderId: string,
     paymentStatus: Extract<PaymentStatus, 'paid' | 'failed'>,
     stripeCheckoutSessionId: string,
     stripePaymentIntentId?: string,
+    checkoutSessionStatus: Extract<CheckoutSessionStatus, 'completed' | 'expired' | 'failed'> =
+      paymentStatus === 'paid' ? 'completed' : 'failed',
   ) {
     if (paymentStatus === 'paid') {
       return this.markStripePaymentPaid(
         orderId,
         stripeCheckoutSessionId,
         stripePaymentIntentId,
+        'completed',
       );
     }
 
@@ -113,6 +186,7 @@ export class OrdersService {
     const paymentUpdate: Record<string, unknown> = {
       paymentStatus,
       stripeCheckoutSessionId,
+      checkoutSessionStatus,
     };
     if (stripePaymentIntentId) {
       paymentUpdate.stripePaymentIntentId = stripePaymentIntentId;
@@ -139,6 +213,7 @@ export class OrdersService {
     orderId: string,
     stripeCheckoutSessionId: string,
     stripePaymentIntentId?: string,
+    checkoutSessionStatus: Extract<CheckoutSessionStatus, 'completed'> = 'completed',
   ) {
     const session = await this.connection.startSession();
     let paidOrder: OrderDocument | null = null;
@@ -147,6 +222,7 @@ export class OrdersService {
         const paymentUpdate: Record<string, unknown> = {
           paymentStatus: 'paid',
           stripeCheckoutSessionId,
+          checkoutSessionStatus,
           paidAt: new Date(),
           inventoryStatus: 'adjusted',
           inventoryAdjustedAt: new Date(),
@@ -178,6 +254,7 @@ export class OrdersService {
           orderId,
           stripeCheckoutSessionId,
           stripePaymentIntentId,
+          checkoutSessionStatus,
         );
       } else {
         throw error;
@@ -192,10 +269,12 @@ export class OrdersService {
     orderId: string,
     stripeCheckoutSessionId: string,
     stripePaymentIntentId?: string,
+    checkoutSessionStatus: Extract<CheckoutSessionStatus, 'completed'> = 'completed',
   ) {
     const paymentUpdate: Record<string, unknown> = {
       paymentStatus: 'paid',
       stripeCheckoutSessionId,
+      checkoutSessionStatus,
       paidAt: new Date(),
       inventoryStatus: 'insufficient',
     };
@@ -346,8 +425,13 @@ export class OrdersService {
       if (order.paymentStatus === 'paid') {
         throw new BadRequestException('Refund the paid order before cancelling it');
       }
-      if (order.paymentStatus === 'pending') {
-        throw new BadRequestException('Wait for payment to fail or expire before cancelling');
+      const checkoutExpiresAt = order.stripeCheckoutExpiresAt?.getTime();
+      const hasActiveCheckoutSession =
+        order.checkoutSessionStatus === 'completed' ||
+        (order.checkoutSessionStatus === 'open' &&
+          (!checkoutExpiresAt || checkoutExpiresAt > Date.now()));
+      if (order.paymentStatus === 'pending' && hasActiveCheckoutSession) {
+        throw new BadRequestException('Wait for the active payment session to finish or expire');
       }
     }
 
@@ -357,7 +441,18 @@ export class OrdersService {
       transitionFilter.inventoryStatus = 'adjusted';
     }
     if (status === 'Cancelled') {
-      transitionFilter.paymentStatus = { $in: ['failed', 'refunded'] };
+      transitionFilter.$or = [
+        { paymentStatus: { $in: ['failed', 'refunded'] } },
+        {
+          paymentStatus: 'pending',
+          checkoutSessionStatus: { $in: ['none', 'expired', 'failed'] },
+        },
+        {
+          paymentStatus: 'pending',
+          checkoutSessionStatus: 'open',
+          stripeCheckoutExpiresAt: { $lte: new Date() },
+        },
+      ];
     }
 
     const updatedOrder = await this.orderModel

@@ -7,6 +7,13 @@ export const ORDER_STATUSES = ['Processing', 'Shipped', 'Delivered', 'Cancelled'
 export const PAYMENT_METHODS = ['card', 'paypal'] as const;
 export const SHIPPING_OPTIONS = ['free', 'express', 'pickup'] as const;
 export const PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'refunded'] as const;
+export const CHECKOUT_SESSION_STATUSES = [
+  'none',
+  'open',
+  'completed',
+  'expired',
+  'failed',
+] as const;
 export const INVENTORY_STATUSES = [
   'pending',
   'adjusted',
@@ -20,6 +27,7 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export type ShippingOption = (typeof SHIPPING_OPTIONS)[number];
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+export type CheckoutSessionStatus = (typeof CHECKOUT_SESSION_STATUSES)[number];
 export type InventoryStatus = (typeof INVENTORY_STATUSES)[number];
 
 @Schema({ _id: false })
@@ -104,6 +112,12 @@ export class Order {
 
   @Prop({ trim: true })
   stripeCheckoutSessionId?: string;
+
+  @Prop({ required: true, enum: CHECKOUT_SESSION_STATUSES, default: 'none' })
+  checkoutSessionStatus: CheckoutSessionStatus;
+
+  @Prop()
+  stripeCheckoutExpiresAt?: Date;
 
   @Prop({ trim: true })
   stripePaymentIntentId?: string;

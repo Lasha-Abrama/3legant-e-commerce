@@ -171,6 +171,7 @@ describe('OrdersService', () => {
         $set: {
           paymentStatus: 'failed',
           stripeCheckoutSessionId: 'checkout-session-id',
+          checkoutSessionStatus: 'failed',
         },
       },
       { new: true },

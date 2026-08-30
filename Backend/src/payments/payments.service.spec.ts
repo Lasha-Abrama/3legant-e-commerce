@@ -12,11 +12,13 @@ describe('PaymentsService', () => {
   const ordersService = {
     findById: jest.fn(),
     findByIdForUser: jest.fn(),
+    attachStripeCheckoutSession: jest.fn(),
+    updateCheckoutSessionStatus: jest.fn(),
     refundStripePayment: jest.fn(),
     updateStripePayment: jest.fn(),
   } as unknown as OrdersService;
   const stripeClient = {
-    checkout: { sessions: { create: jest.fn() } },
+    checkout: { sessions: { create: jest.fn(), retrieve: jest.fn() } },
     refunds: { create: jest.fn() },
     webhooks: { constructEvent: jest.fn() },
   } as unknown as Stripe;
@@ -38,18 +40,53 @@ describe('PaymentsService', () => {
     stripeClient.checkout.sessions.create = jest.fn().mockResolvedValue({
       id: 'session-id',
       url: 'https://checkout.stripe.com/session-id',
+      expires_at: 1700000000,
     });
+    ordersService.attachStripeCheckoutSession = jest.fn().mockResolvedValue({});
 
     await expect(service.createCheckoutSession('user-id', 'order-id')).resolves.toEqual({
       checkoutUrl: 'https://checkout.stripe.com/session-id',
       sessionId: 'session-id',
+      expiresAt: new Date(1700000000 * 1000),
     });
     expect(stripeClient.checkout.sessions.create).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: 'payment',
         metadata: { orderId: 'order-id', userId: 'user-id' },
       }),
+      { idempotencyKey: 'order-order-id-checkout' },
     );
+    expect(ordersService.attachStripeCheckoutSession).toHaveBeenCalledWith(
+      'order-id',
+      'user-id',
+      'session-id',
+      new Date(1700000000 * 1000),
+    );
+  });
+
+  it('reuses an open Stripe Checkout Session for the same order', async () => {
+    ordersService.findByIdForUser = jest.fn().mockResolvedValue({
+      _id: 'order-id',
+      paymentMethod: 'card',
+      paymentStatus: 'pending',
+      status: 'Processing',
+      checkoutSessionStatus: 'open',
+      stripeCheckoutSessionId: 'existing-session-id',
+      total: 38,
+    });
+    stripeClient.checkout.sessions.retrieve = jest.fn().mockResolvedValue({
+      id: 'existing-session-id',
+      status: 'open',
+      url: 'https://checkout.stripe.com/existing-session-id',
+      expires_at: 1700000000,
+    });
+
+    await expect(service.createCheckoutSession('user-id', 'order-id')).resolves.toEqual({
+      checkoutUrl: 'https://checkout.stripe.com/existing-session-id',
+      sessionId: 'existing-session-id',
+      expiresAt: new Date(1700000000 * 1000),
+    });
+    expect(stripeClient.checkout.sessions.create).not.toHaveBeenCalled();
   });
 
   it('rejects unsupported payment methods', async () => {
@@ -137,6 +174,7 @@ describe('PaymentsService', () => {
       'paid',
       'checkout-session-id',
       'payment-intent-id',
+      'completed',
     );
   });
 
@@ -161,6 +199,7 @@ describe('PaymentsService', () => {
       'failed',
       'checkout-session-id',
       undefined,
+      'expired',
     );
   });
 

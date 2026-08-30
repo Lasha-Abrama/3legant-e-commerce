@@ -20,25 +20,61 @@ export class PaymentsService {
     }
 
     const stripe = this.getStripeClient();
+    if (order.stripeCheckoutSessionId && order.checkoutSessionStatus === 'open') {
+      try {
+        const existingSession = await stripe.checkout.sessions.retrieve(
+          order.stripeCheckoutSessionId,
+        );
+        if (existingSession.status === 'open' && existingSession.url) {
+          return {
+            checkoutUrl: existingSession.url,
+            sessionId: existingSession.id,
+            expiresAt: existingSession.expires_at
+              ? new Date(existingSession.expires_at * 1000)
+              : undefined,
+          };
+        }
+        if (existingSession.status === 'complete') {
+          throw new BadRequestException('ამ შეკვეთის გადახდა უკვე დასრულებულია');
+        }
+        await this.ordersService.updateCheckoutSessionStatus(
+          String(order._id),
+          existingSession.id,
+          'expired',
+        );
+        throw new BadRequestException('გადახდის სესია ვადაგასულია; შექმენით ახალი შეკვეთა');
+      } catch (error) {
+        if (error instanceof BadRequestException) {
+          throw error;
+        }
+        if (error instanceof Stripe.errors.StripeError && error.code !== 'resource_missing') {
+          throw new BadRequestException(error.message);
+        }
+      }
+    }
+
     const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5000');
     let session: Stripe.Checkout.Session;
     try {
-      session = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        line_items: [
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: { name: `3legant order ${order._id}` },
-              unit_amount: Math.round(order.total * 100),
+      session = await stripe.checkout.sessions.create(
+        {
+          mode: 'payment',
+          line_items: [
+            {
+              price_data: {
+                currency: 'usd',
+                product_data: { name: `3legant order ${order._id}` },
+                unit_amount: Math.round(order.total * 100),
+              },
+              quantity: 1,
             },
-            quantity: 1,
-          },
-        ],
-        metadata: { orderId: String(order._id), userId },
-        success_url: `${frontendUrl}/checkout.html?payment=success&order=${order._id}`,
-        cancel_url: `${frontendUrl}/checkout.html?payment=cancelled&order=${order._id}`,
-      });
+          ],
+          metadata: { orderId: String(order._id), userId },
+          success_url: `${frontendUrl}/checkout.html?payment=success&order=${order._id}`,
+          cancel_url: `${frontendUrl}/checkout.html?payment=cancelled&order=${order._id}`,
+        },
+        { idempotencyKey: `order-${order._id}-checkout` },
+      );
     } catch (error) {
       if (error instanceof Stripe.errors.StripeError) {
         throw new BadRequestException(error.message);
@@ -46,7 +82,20 @@ export class PaymentsService {
       throw error;
     }
 
-    return { checkoutUrl: session.url, sessionId: session.id };
+    if (!session.url) {
+      throw new BadRequestException('Stripe did not return a checkout URL');
+    }
+    await this.ordersService.attachStripeCheckoutSession(
+      String(order._id),
+      userId,
+      session.id,
+      new Date(session.expires_at * 1000),
+    );
+    return {
+      checkoutUrl: session.url,
+      sessionId: session.id,
+      expiresAt: new Date(session.expires_at * 1000),
+    };
   }
 
   async createRefund(orderId: string) {
@@ -105,7 +154,10 @@ export class PaymentsService {
           'paid',
           session.id,
           this.getPaymentIntentId(session),
+          'completed',
         );
+      } else if (orderId) {
+        await this.ordersService.updateCheckoutSessionStatus(orderId, session.id, 'completed');
       }
     }
 
@@ -121,6 +173,7 @@ export class PaymentsService {
           'failed',
           session.id,
           this.getPaymentIntentId(session),
+          event.type === 'checkout.session.expired' ? 'expired' : 'failed',
         );
       }
     }
