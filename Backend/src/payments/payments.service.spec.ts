@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Stripe from 'stripe';
+import Stripe = require('stripe');
 import { OrdersService } from '../orders/orders.service';
 import { PaymentsService } from './payments.service';
 
