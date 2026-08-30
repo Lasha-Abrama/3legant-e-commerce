@@ -11,6 +11,13 @@ const SHIPPING_COST: Record<string, (subtotal: number) => number> = {
   pickup: (subtotal) => -Math.round(subtotal * 0.05 * 100) / 100,
 };
 
+const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
+  Processing: ['Shipped', 'Cancelled'],
+  Shipped: ['Delivered'],
+  Delivered: [],
+  Cancelled: [],
+};
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -240,7 +247,10 @@ export class OrdersService {
           return;
         }
 
-        if (refundedOrder.inventoryStatus === 'adjusted') {
+        if (
+          refundedOrder.inventoryStatus === 'adjusted' &&
+          refundedOrder.status === 'Processing'
+        ) {
           await this.productsService.incrementStock(refundedOrder.items, session);
           const inventoryRestoredAt = new Date();
           await this.orderModel
@@ -252,6 +262,15 @@ export class OrdersService {
             .exec();
           refundedOrder.inventoryStatus = 'restored';
           refundedOrder.inventoryRestoredAt = inventoryRestoredAt;
+        } else if (refundedOrder.inventoryStatus === 'adjusted') {
+          await this.orderModel
+            .updateOne(
+              { _id: refundedOrder._id },
+              { $set: { inventoryStatus: 'return_required' } },
+              { session },
+            )
+            .exec();
+          refundedOrder.inventoryStatus = 'return_required';
         }
       });
     } catch (error) {
@@ -305,10 +324,57 @@ export class OrdersService {
   }
 
   async updateStatus(id: string, status: OrderStatus) {
-    const order = await this.orderModel.findByIdAndUpdate(id, { status }, { new: true }).exec();
-    if (!order) {
-      throw new NotFoundException('შეკვეთა ვერ მოიძებნა');
+    const order = await this.findById(id);
+    if (order.status === status) {
+      return order;
     }
-    return order;
+
+    if (!ORDER_STATUS_TRANSITIONS[order.status].includes(status)) {
+      throw new BadRequestException(
+        `Order status cannot change from ${order.status} to ${status}`,
+      );
+    }
+    if (status === 'Shipped') {
+      if (order.paymentStatus !== 'paid') {
+        throw new BadRequestException('Only paid orders can be shipped');
+      }
+      if (order.inventoryStatus !== 'adjusted') {
+        throw new BadRequestException('Order inventory must be ready before shipping');
+      }
+    }
+    if (status === 'Cancelled') {
+      if (order.paymentStatus === 'paid') {
+        throw new BadRequestException('Refund the paid order before cancelling it');
+      }
+      if (order.paymentStatus === 'pending') {
+        throw new BadRequestException('Wait for payment to fail or expire before cancelling');
+      }
+    }
+
+    const transitionFilter: Record<string, unknown> = { _id: id, status: order.status };
+    if (status === 'Shipped') {
+      transitionFilter.paymentStatus = 'paid';
+      transitionFilter.inventoryStatus = 'adjusted';
+    }
+    if (status === 'Cancelled') {
+      transitionFilter.paymentStatus = { $in: ['failed', 'refunded'] };
+    }
+
+    const updatedOrder = await this.orderModel
+      .findOneAndUpdate(
+        transitionFilter,
+        { $set: { status } },
+        { new: true },
+      )
+      .exec();
+    if (updatedOrder) {
+      return updatedOrder;
+    }
+
+    const latestOrder = await this.findById(id);
+    if (latestOrder.status === status) {
+      return latestOrder;
+    }
+    throw new ConflictException('Order status changed while this update was processing');
   }
 }

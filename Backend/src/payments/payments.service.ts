@@ -51,8 +51,12 @@ export class PaymentsService {
 
   async createRefund(orderId: string) {
     const order = await this.ordersService.findById(orderId);
-    if (order.paymentStatus !== 'paid' || !order.stripePaymentIntentId) {
-      throw new BadRequestException('Only paid Stripe orders can be refunded');
+    if (
+      order.paymentStatus !== 'paid' ||
+      !order.stripePaymentIntentId ||
+      order.status !== 'Processing'
+    ) {
+      throw new BadRequestException('Only unshipped paid Stripe orders can be refunded');
     }
 
     const stripe = this.getStripeClient();

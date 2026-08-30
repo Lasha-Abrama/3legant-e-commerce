@@ -72,6 +72,7 @@ describe('PaymentsService', () => {
       _id: 'order-id',
       paymentStatus: 'paid',
       stripePaymentIntentId: 'payment-intent-id',
+      status: 'Processing',
     });
     stripeClient.refunds.create = jest.fn().mockResolvedValue({
       id: 'refund-id',
@@ -96,6 +97,18 @@ describe('PaymentsService', () => {
     ordersService.findById = jest.fn().mockResolvedValue({
       _id: 'order-id',
       paymentStatus: 'pending',
+    });
+
+    await expect(service.createRefund('order-id')).rejects.toBeInstanceOf(BadRequestException);
+    expect(stripeClient.refunds.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects automatic refunds after an order has shipped', async () => {
+    ordersService.findById = jest.fn().mockResolvedValue({
+      _id: 'order-id',
+      paymentStatus: 'paid',
+      stripePaymentIntentId: 'payment-intent-id',
+      status: 'Shipped',
     });
 
     await expect(service.createRefund('order-id')).rejects.toBeInstanceOf(BadRequestException);

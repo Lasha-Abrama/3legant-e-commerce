@@ -44,7 +44,9 @@ The API requires `MONGO_URL`, `JWT_SECRET`, `CLOUDINARY_NAME`, `CLOUDINARY_API_K
 
 Checkout sends only the selected payment method; card details are collected by Stripe Checkout and must never be stored or sent to this API. Orders remain `pending` until a signed Stripe webhook confirms payment. A successful payment updates the order and decrements product stock in one MongoDB transaction, so duplicate webhook deliveries cannot reduce stock twice. If stock changed before payment completed, the paid order is retained with `inventoryStatus: insufficient` for manual fulfillment review.
 
-Admins can request a full refund with `POST /api/admin/payments/orders/:orderId/refund`. The order is marked `refunded` only after Stripe sends a signed full-refund webhook. Inventory restoration runs in the same MongoDB transaction and is idempotent; `inventoryStatus: restore_failed` identifies refunds that require manual stock reconciliation.
+Admins can request a full refund for an unshipped paid order with `POST /api/admin/payments/orders/:orderId/refund`. The order is marked `refunded` only after Stripe sends a signed full-refund webhook. Inventory restoration runs in the same MongoDB transaction and is idempotent; `inventoryStatus: restore_failed` identifies refunds that require manual stock reconciliation. Refunds made externally after shipping are marked `inventoryStatus: return_required` instead of immediately returning items to stock.
+
+Fulfillment status changes are forward-only: `Processing → Shipped → Delivered`. A processing order can become `Cancelled` only after payment has failed or a completed payment has been refunded. Shipping requires both `paymentStatus: paid` and `inventoryStatus: adjusted`; terminal and backward transitions are rejected.
 
 For local Stripe webhooks:
 

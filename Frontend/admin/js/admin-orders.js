@@ -25,7 +25,7 @@
             '<td style="max-width:260px;">' + itemsSummary + '</td>' +
             '<td>' + fmt(o.total) + '</td>' +
             '<td>' +
-              '<select class="status-select" data-order-id="' + o._id + '">' +
+              '<select class="status-select" data-order-id="' + o._id + '" data-current-status="' + o.status + '">' +
                 STATUSES.map(function (s) { return '<option ' + (o.status === s ? 'selected' : '') + '>' + s + '</option>'; }).join('') +
               '</select>' +
             '</td>' +
@@ -35,7 +35,19 @@
 
       document.querySelectorAll('[data-order-id]').forEach(function (select) {
         select.addEventListener('change', function () {
-          apiPatch('/admin/orders/' + select.getAttribute('data-order-id') + '/status', { status: select.value });
+          var previousStatus = select.getAttribute('data-current-status');
+          select.disabled = true;
+          apiPatch('/admin/orders/' + select.getAttribute('data-order-id') + '/status', { status: select.value }).then(function (res) {
+            select.disabled = false;
+            if (!res || res._status >= 400) {
+              select.value = previousStatus;
+              var message = res && res.message ? res.message : 'Order status could not be updated.';
+              window.alert(Array.isArray(message) ? message.join('\n') : message);
+              return;
+            }
+            select.value = res.status;
+            select.setAttribute('data-current-status', res.status);
+          });
         });
       });
     });

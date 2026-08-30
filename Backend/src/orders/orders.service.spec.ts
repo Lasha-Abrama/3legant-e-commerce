@@ -225,6 +225,7 @@ describe('OrdersService', () => {
       _id: 'order-id',
       paymentStatus: 'refunded',
       inventoryStatus: 'adjusted',
+      status: 'Processing',
       items: [{ productId: 'product-id', qty: 2 }],
     };
     (orderModel as any).findOneAndUpdate = jest.fn().mockReturnValue({
@@ -296,6 +297,7 @@ describe('OrdersService', () => {
       _id: 'order-id',
       paymentStatus: 'refunded',
       inventoryStatus: 'adjusted',
+      status: 'Processing',
       items: [{ productId: 'missing-product', qty: 1 }],
     };
     const restoreFailedOrder = {
@@ -324,5 +326,118 @@ describe('OrdersService', () => {
       },
       { new: true },
     );
+  });
+
+  it('does not restock an externally refunded order that already shipped', async () => {
+    const shippedOrder = {
+      _id: 'order-id',
+      paymentStatus: 'refunded',
+      inventoryStatus: 'adjusted',
+      status: 'Shipped',
+      items: [{ productId: 'product-id', qty: 1 }],
+    };
+    (orderModel as any).findOneAndUpdate = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(shippedOrder),
+    });
+    (orderModel as any).updateOne = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
+    });
+
+    await expect(
+      service.refundStripePayment('payment-intent-id', 'charge-id'),
+    ).resolves.toEqual(expect.objectContaining({ inventoryStatus: 'return_required' }));
+    expect(productsService.incrementStock).not.toHaveBeenCalled();
+    expect((orderModel as any).updateOne).toHaveBeenCalledWith(
+      { _id: 'order-id' },
+      { $set: { inventoryStatus: 'return_required' } },
+      { session },
+    );
+  });
+
+  it('ships only paid orders with adjusted inventory', async () => {
+    const processingOrder = {
+      _id: 'order-id',
+      status: 'Processing',
+      paymentStatus: 'paid',
+      inventoryStatus: 'adjusted',
+    };
+    const shippedOrder = { ...processingOrder, status: 'Shipped' };
+    (orderModel as any).findById = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(processingOrder),
+    });
+    (orderModel as any).findOneAndUpdate = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(shippedOrder),
+    });
+
+    await expect(service.updateStatus('order-id', 'Shipped')).resolves.toBe(shippedOrder);
+    expect((orderModel as any).findOneAndUpdate).toHaveBeenCalledWith(
+      {
+        _id: 'order-id',
+        status: 'Processing',
+        paymentStatus: 'paid',
+        inventoryStatus: 'adjusted',
+      },
+      { $set: { status: 'Shipped' } },
+      { new: true },
+    );
+  });
+
+  it('rejects shipping unpaid orders and invalid backward transitions', async () => {
+    (orderModel as any).findById = jest.fn().mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({
+        _id: 'order-id',
+        status: 'Processing',
+        paymentStatus: 'pending',
+        inventoryStatus: 'pending',
+      }),
+    }).mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({
+        _id: 'order-id',
+        status: 'Delivered',
+        paymentStatus: 'paid',
+        inventoryStatus: 'adjusted',
+      }),
+    });
+
+    await expect(service.updateStatus('order-id', 'Shipped')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(service.updateStatus('order-id', 'Processing')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect((orderModel as any).findOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('requires paid orders to be refunded before cancellation', async () => {
+    (orderModel as any).findById = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue({
+        _id: 'order-id',
+        status: 'Processing',
+        paymentStatus: 'paid',
+        inventoryStatus: 'adjusted',
+      }),
+    });
+
+    await expect(service.updateStatus('order-id', 'Cancelled')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('allows refunded processing orders to be cancelled', async () => {
+    const refundedOrder = {
+      _id: 'order-id',
+      status: 'Processing',
+      paymentStatus: 'refunded',
+      inventoryStatus: 'restored',
+    };
+    const cancelledOrder = { ...refundedOrder, status: 'Cancelled' };
+    (orderModel as any).findById = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(refundedOrder),
+    });
+    (orderModel as any).findOneAndUpdate = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(cancelledOrder),
+    });
+
+    await expect(service.updateStatus('order-id', 'Cancelled')).resolves.toBe(cancelledOrder);
   });
 });

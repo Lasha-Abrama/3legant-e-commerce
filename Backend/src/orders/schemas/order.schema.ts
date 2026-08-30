@@ -13,6 +13,7 @@ export const INVENTORY_STATUSES = [
   'insufficient',
   'restored',
   'restore_failed',
+  'return_required',
 ] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
