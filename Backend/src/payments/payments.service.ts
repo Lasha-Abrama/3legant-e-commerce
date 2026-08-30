@@ -49,6 +49,33 @@ export class PaymentsService {
     return { checkoutUrl: session.url, sessionId: session.id };
   }
 
+  async createRefund(orderId: string) {
+    const order = await this.ordersService.findById(orderId);
+    if (order.paymentStatus !== 'paid' || !order.stripePaymentIntentId) {
+      throw new BadRequestException('Only paid Stripe orders can be refunded');
+    }
+
+    const stripe = this.getStripeClient();
+    let refund: Stripe.Refund;
+    try {
+      refund = await stripe.refunds.create(
+        {
+          payment_intent: order.stripePaymentIntentId,
+          reason: 'requested_by_customer',
+          metadata: { orderId: String(order._id) },
+        },
+        { idempotencyKey: `order-${order._id}-full-refund` },
+      );
+    } catch (error) {
+      if (error instanceof Stripe.errors.StripeError) {
+        throw new BadRequestException(error.message);
+      }
+      throw error;
+    }
+
+    return { refundId: refund.id, status: refund.status };
+  }
+
   async handleWebhook(rawBody: Buffer, signature: string) {
     const stripe = this.getStripeClient();
     let event: Stripe.Event;
@@ -94,6 +121,14 @@ export class PaymentsService {
       }
     }
 
+    if (event.type === 'charge.refunded') {
+      const charge = event.data.object as Stripe.Charge;
+      const paymentIntentId = this.getChargePaymentIntentId(charge);
+      if (charge.refunded && paymentIntentId) {
+        await this.ordersService.refundStripePayment(paymentIntentId, charge.id);
+      }
+    }
+
     return { received: true };
   }
 
@@ -106,5 +141,12 @@ export class PaymentsService {
       return session.payment_intent;
     }
     return session.payment_intent?.id;
+  }
+
+  private getChargePaymentIntentId(charge: Stripe.Charge) {
+    if (typeof charge.payment_intent === 'string') {
+      return charge.payment_intent;
+    }
+    return charge.payment_intent?.id;
   }
 }

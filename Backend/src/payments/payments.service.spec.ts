@@ -10,11 +10,14 @@ describe('PaymentsService', () => {
     getOrThrow: jest.fn().mockReturnValue('configured-secret'),
   } as unknown as ConfigService;
   const ordersService = {
+    findById: jest.fn(),
     findByIdForUser: jest.fn(),
+    refundStripePayment: jest.fn(),
     updateStripePayment: jest.fn(),
   } as unknown as OrdersService;
   const stripeClient = {
     checkout: { sessions: { create: jest.fn() } },
+    refunds: { create: jest.fn() },
     webhooks: { constructEvent: jest.fn() },
   } as unknown as Stripe;
   const service = new PaymentsService(configService, ordersService);
@@ -64,6 +67,41 @@ describe('PaymentsService', () => {
     expect(stripeClient.checkout.sessions.create).not.toHaveBeenCalled();
   });
 
+  it('creates an idempotent full refund for a paid Stripe order', async () => {
+    ordersService.findById = jest.fn().mockResolvedValue({
+      _id: 'order-id',
+      paymentStatus: 'paid',
+      stripePaymentIntentId: 'payment-intent-id',
+    });
+    stripeClient.refunds.create = jest.fn().mockResolvedValue({
+      id: 'refund-id',
+      status: 'succeeded',
+    });
+
+    await expect(service.createRefund('order-id')).resolves.toEqual({
+      refundId: 'refund-id',
+      status: 'succeeded',
+    });
+    expect(stripeClient.refunds.create).toHaveBeenCalledWith(
+      {
+        payment_intent: 'payment-intent-id',
+        reason: 'requested_by_customer',
+        metadata: { orderId: 'order-id' },
+      },
+      { idempotencyKey: 'order-order-id-full-refund' },
+    );
+  });
+
+  it('rejects refunds for orders without a completed Stripe payment', async () => {
+    ordersService.findById = jest.fn().mockResolvedValue({
+      _id: 'order-id',
+      paymentStatus: 'pending',
+    });
+
+    await expect(service.createRefund('order-id')).rejects.toBeInstanceOf(BadRequestException);
+    expect(stripeClient.refunds.create).not.toHaveBeenCalled();
+  });
+
   it('marks an order paid only after a verified Stripe webhook', async () => {
     stripeClient.webhooks.constructEvent = jest.fn().mockReturnValue({
       type: 'checkout.session.completed',
@@ -111,6 +149,46 @@ describe('PaymentsService', () => {
       'checkout-session-id',
       undefined,
     );
+  });
+
+  it('finalizes a full refund only after a verified Stripe webhook', async () => {
+    stripeClient.webhooks.constructEvent = jest.fn().mockReturnValue({
+      type: 'charge.refunded',
+      data: {
+        object: {
+          id: 'charge-id',
+          refunded: true,
+          payment_intent: 'payment-intent-id',
+        },
+      },
+    });
+    ordersService.refundStripePayment = jest.fn().mockResolvedValue({});
+
+    await expect(service.handleWebhook(Buffer.from('{}'), 'stripe-signature')).resolves.toEqual({
+      received: true,
+    });
+    expect(ordersService.refundStripePayment).toHaveBeenCalledWith(
+      'payment-intent-id',
+      'charge-id',
+    );
+  });
+
+  it('ignores partial charge refunds', async () => {
+    stripeClient.webhooks.constructEvent = jest.fn().mockReturnValue({
+      type: 'charge.refunded',
+      data: {
+        object: {
+          id: 'charge-id',
+          refunded: false,
+          payment_intent: 'payment-intent-id',
+        },
+      },
+    });
+
+    await expect(service.handleWebhook(Buffer.from('{}'), 'stripe-signature')).resolves.toEqual({
+      received: true,
+    });
+    expect(ordersService.refundStripePayment).not.toHaveBeenCalled();
   });
 
   it('rejects webhook requests with invalid Stripe signatures', async () => {

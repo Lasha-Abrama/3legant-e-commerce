@@ -6,6 +6,7 @@ describe('OrdersService', () => {
   const productsService = {
     findOne: jest.fn(),
     decrementStock: jest.fn(),
+    incrementStock: jest.fn(),
   } as unknown as ProductsService;
   const orderModel = jest.fn().mockImplementation((data) => ({
     ...data,
@@ -213,6 +214,112 @@ describe('OrdersService', () => {
         $set: expect.objectContaining({
           paymentStatus: 'paid',
           inventoryStatus: 'insufficient',
+        }),
+      },
+      { new: true },
+    );
+  });
+
+  it('restores stock once when a paid order is refunded', async () => {
+    const refundedOrder = {
+      _id: 'order-id',
+      paymentStatus: 'refunded',
+      inventoryStatus: 'adjusted',
+      items: [{ productId: 'product-id', qty: 2 }],
+    };
+    (orderModel as any).findOneAndUpdate = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(refundedOrder),
+    });
+    (orderModel as any).updateOne = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
+    });
+    productsService.incrementStock = jest.fn().mockResolvedValue(undefined);
+
+    await expect(
+      service.refundStripePayment('payment-intent-id', 'charge-id'),
+    ).resolves.toEqual(expect.objectContaining({
+      paymentStatus: 'refunded',
+      inventoryStatus: 'restored',
+    }));
+    expect(productsService.incrementStock).toHaveBeenCalledWith(refundedOrder.items, session);
+    expect((orderModel as any).updateOne).toHaveBeenCalledWith(
+      { _id: 'order-id' },
+      {
+        $set: {
+          inventoryStatus: 'restored',
+          inventoryRestoredAt: expect.any(Date),
+        },
+      },
+      { session },
+    );
+  });
+
+  it('does not restore stock twice for duplicate refund webhooks', async () => {
+    const alreadyRefundedOrder = {
+      _id: 'order-id',
+      paymentStatus: 'refunded',
+      inventoryStatus: 'restored',
+    };
+    (orderModel as any).findOneAndUpdate = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+    (orderModel as any).findOne = jest.fn().mockReturnValue({
+      session: jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(alreadyRefundedOrder),
+      }),
+    });
+
+    await expect(
+      service.refundStripePayment('payment-intent-id', 'charge-id'),
+    ).resolves.toBe(alreadyRefundedOrder);
+    expect(productsService.incrementStock).not.toHaveBeenCalled();
+  });
+
+  it('ignores refund webhooks for charges unrelated to an order', async () => {
+    (orderModel as any).findOneAndUpdate = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+    (orderModel as any).findOne = jest.fn().mockReturnValue({
+      session: jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      }),
+    });
+
+    await expect(
+      service.refundStripePayment('unrelated-payment-intent', 'charge-id'),
+    ).resolves.toBeNull();
+    expect(productsService.incrementStock).not.toHaveBeenCalled();
+  });
+
+  it('tracks refunds whose inventory could not be restored', async () => {
+    const transactionOrder = {
+      _id: 'order-id',
+      paymentStatus: 'refunded',
+      inventoryStatus: 'adjusted',
+      items: [{ productId: 'missing-product', qty: 1 }],
+    };
+    const restoreFailedOrder = {
+      ...transactionOrder,
+      inventoryStatus: 'restore_failed',
+    };
+    (orderModel as any).findOneAndUpdate = jest
+      .fn()
+      .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(transactionOrder) })
+      .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(restoreFailedOrder) });
+    productsService.incrementStock = jest
+      .fn()
+      .mockRejectedValue(new ConflictException('Product missing'));
+
+    await expect(
+      service.refundStripePayment('payment-intent-id', 'charge-id'),
+    ).resolves.toBe(restoreFailedOrder);
+    expect((orderModel as any).findOneAndUpdate).toHaveBeenNthCalledWith(
+      2,
+      { stripePaymentIntentId: 'payment-intent-id', paymentStatus: 'paid' },
+      {
+        $set: expect.objectContaining({
+          paymentStatus: 'refunded',
+          inventoryStatus: 'restore_failed',
         }),
       },
       { new: true },

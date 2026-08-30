@@ -79,6 +79,14 @@ export class OrdersService {
     return order;
   }
 
+  async findById(orderId: string) {
+    const order = await this.orderModel.findById(orderId).exec();
+    if (!order) {
+      throw new NotFoundException('შეკვეთა ვერ მოიძებნა');
+    }
+    return order;
+  }
+
   async updateStripePayment(
     orderId: string,
     paymentStatus: Extract<PaymentStatus, 'paid' | 'failed'>,
@@ -203,6 +211,87 @@ export class OrdersService {
     if (!existingOrder) {
       throw new NotFoundException('შეკვეთა ვერ მოიძებნა');
     }
+    return existingOrder;
+  }
+
+  async refundStripePayment(stripePaymentIntentId: string, stripeChargeId: string) {
+    const session = await this.connection.startSession();
+    let refundedOrder: OrderDocument | null = null;
+    try {
+      await session.withTransaction(async () => {
+        refundedOrder = await this.orderModel
+          .findOneAndUpdate(
+            { stripePaymentIntentId, paymentStatus: 'paid' },
+            {
+              $set: {
+                paymentStatus: 'refunded',
+                stripeChargeId,
+                refundedAt: new Date(),
+              },
+            },
+            { new: true, session },
+          )
+          .exec();
+        if (!refundedOrder) {
+          refundedOrder = await this.orderModel
+            .findOne({ stripePaymentIntentId })
+            .session(session)
+            .exec();
+          return;
+        }
+
+        if (refundedOrder.inventoryStatus === 'adjusted') {
+          await this.productsService.incrementStock(refundedOrder.items, session);
+          const inventoryRestoredAt = new Date();
+          await this.orderModel
+            .updateOne(
+              { _id: refundedOrder._id },
+              { $set: { inventoryStatus: 'restored', inventoryRestoredAt } },
+              { session },
+            )
+            .exec();
+          refundedOrder.inventoryStatus = 'restored';
+          refundedOrder.inventoryRestoredAt = inventoryRestoredAt;
+        }
+      });
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        refundedOrder = await this.markRefundedWithInventoryIssue(
+          stripePaymentIntentId,
+          stripeChargeId,
+        );
+      } else {
+        throw error;
+      }
+    } finally {
+      await session.endSession();
+    }
+    return refundedOrder;
+  }
+
+  private async markRefundedWithInventoryIssue(
+    stripePaymentIntentId: string,
+    stripeChargeId: string,
+  ) {
+    const order = await this.orderModel
+      .findOneAndUpdate(
+        { stripePaymentIntentId, paymentStatus: 'paid' },
+        {
+          $set: {
+            paymentStatus: 'refunded',
+            stripeChargeId,
+            refundedAt: new Date(),
+            inventoryStatus: 'restore_failed',
+          },
+        },
+        { new: true },
+      )
+      .exec();
+    if (order) {
+      return order;
+    }
+
+    const existingOrder = await this.orderModel.findOne({ stripePaymentIntentId }).exec();
     return existingOrder;
   }
 

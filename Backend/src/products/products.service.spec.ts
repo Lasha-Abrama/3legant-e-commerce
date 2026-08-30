@@ -50,4 +50,35 @@ describe('ProductsService', () => {
       service.decrementStock([{ productId: 'product-one', qty: 2 }], session),
     ).rejects.toBeInstanceOf(ConflictException);
   });
+
+  it('restores aggregated product quantities after a refund', async () => {
+    productModel.updateOne = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
+    });
+
+    await expect(
+      service.incrementStock(
+        [
+          { productId: 'product-one', qty: 1 },
+          { productId: 'product-one', qty: 2 },
+        ],
+        session,
+      ),
+    ).resolves.toBeUndefined();
+    expect(productModel.updateOne).toHaveBeenCalledWith(
+      { _id: 'product-one' },
+      { $inc: { stock: 3 } },
+      { session },
+    );
+  });
+
+  it('rejects stock restoration when a product no longer exists', async () => {
+    productModel.updateOne = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ modifiedCount: 0 }),
+    });
+
+    await expect(
+      service.incrementStock([{ productId: 'missing-product', qty: 1 }], session),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
 });

@@ -103,6 +103,30 @@ export class ProductsService {
     }
   }
 
+  async incrementStock(
+    items: Array<{ productId: Types.ObjectId | string; qty: number }>,
+    session: ClientSession,
+  ) {
+    const quantities = new Map<string, number>();
+    items.forEach((item) => {
+      const productId = String(item.productId);
+      quantities.set(productId, (quantities.get(productId) ?? 0) + item.qty);
+    });
+
+    for (const [productId, quantity] of quantities) {
+      const result = await this.productModel
+        .updateOne(
+          { _id: productId },
+          { $inc: { stock: quantity } },
+          { session },
+        )
+        .exec();
+      if (result.modifiedCount !== 1) {
+        throw new ConflictException('პროდუქტის მარაგის აღდგენა ვერ მოხერხდა');
+      }
+    }
+  }
+
   private async buildUniqueSlug(name: string): Promise<string> {
     const base = name
       .toLowerCase()
