@@ -11,7 +11,7 @@ describe('PaymentsService', () => {
   } as unknown as ConfigService;
   const ordersService = {
     findByIdForUser: jest.fn(),
-    updatePaymentStatus: jest.fn(),
+    updateStripePayment: jest.fn(),
   } as unknown as OrdersService;
   const stripeClient = {
     checkout: { sessions: { create: jest.fn() } },
@@ -69,16 +69,58 @@ describe('PaymentsService', () => {
       type: 'checkout.session.completed',
       data: {
         object: {
+          id: 'checkout-session-id',
           metadata: { orderId: 'order-id' },
           payment_status: 'paid',
+          payment_intent: 'payment-intent-id',
         },
       },
     });
-    ordersService.updatePaymentStatus = jest.fn().mockResolvedValue({});
+    ordersService.updateStripePayment = jest.fn().mockResolvedValue({});
 
     await expect(service.handleWebhook(Buffer.from('{}'), 'stripe-signature')).resolves.toEqual({
       received: true,
     });
-    expect(ordersService.updatePaymentStatus).toHaveBeenCalledWith('order-id', 'paid');
+    expect(ordersService.updateStripePayment).toHaveBeenCalledWith(
+      'order-id',
+      'paid',
+      'checkout-session-id',
+      'payment-intent-id',
+    );
+  });
+
+  it('marks an order failed when its Stripe Checkout Session expires', async () => {
+    stripeClient.webhooks.constructEvent = jest.fn().mockReturnValue({
+      type: 'checkout.session.expired',
+      data: {
+        object: {
+          id: 'checkout-session-id',
+          metadata: { orderId: 'order-id' },
+          payment_intent: null,
+        },
+      },
+    });
+    ordersService.updateStripePayment = jest.fn().mockResolvedValue({});
+
+    await expect(service.handleWebhook(Buffer.from('{}'), 'stripe-signature')).resolves.toEqual({
+      received: true,
+    });
+    expect(ordersService.updateStripePayment).toHaveBeenCalledWith(
+      'order-id',
+      'failed',
+      'checkout-session-id',
+      undefined,
+    );
+  });
+
+  it('rejects webhook requests with invalid Stripe signatures', async () => {
+    stripeClient.webhooks.constructEvent = jest.fn().mockImplementation(() => {
+      throw new Error('Invalid signature');
+    });
+
+    await expect(
+      service.handleWebhook(Buffer.from('{}'), 'invalid-signature'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(ordersService.updateStripePayment).not.toHaveBeenCalled();
   });
 });

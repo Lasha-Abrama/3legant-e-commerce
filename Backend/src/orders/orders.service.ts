@@ -77,14 +77,41 @@ export class OrdersService {
     return order;
   }
 
-  async updatePaymentStatus(orderId: string, paymentStatus: PaymentStatus) {
+  async updateStripePayment(
+    orderId: string,
+    paymentStatus: Extract<PaymentStatus, 'paid' | 'failed'>,
+    stripeCheckoutSessionId: string,
+    stripePaymentIntentId?: string,
+  ) {
+    const allowedCurrentStatuses: PaymentStatus[] =
+      paymentStatus === 'paid' ? ['pending', 'failed'] : ['pending'];
+    const paymentUpdate: Record<string, unknown> = {
+      paymentStatus,
+      stripeCheckoutSessionId,
+    };
+    if (stripePaymentIntentId) {
+      paymentUpdate.stripePaymentIntentId = stripePaymentIntentId;
+    }
+    if (paymentStatus === 'paid') {
+      paymentUpdate.paidAt = new Date();
+    }
+
     const order = await this.orderModel
-      .findByIdAndUpdate(orderId, { paymentStatus }, { new: true })
+      .findOneAndUpdate(
+        { _id: orderId, paymentStatus: { $in: allowedCurrentStatuses } },
+        { $set: paymentUpdate },
+        { new: true },
+      )
       .exec();
-    if (!order) {
+    if (order) {
+      return order;
+    }
+
+    const existingOrder = await this.orderModel.findById(orderId).exec();
+    if (!existingOrder) {
       throw new NotFoundException('შეკვეთა ვერ მოიძებნა');
     }
-    return order;
+    return existingOrder;
   }
 
   findAll() {

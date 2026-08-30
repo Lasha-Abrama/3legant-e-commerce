@@ -51,17 +51,46 @@ export class PaymentsService {
 
   async handleWebhook(rawBody: Buffer, signature: string) {
     const stripe = this.getStripeClient();
-    const event = stripe.webhooks.constructEvent(
-      rawBody,
-      signature,
-      this.configService.getOrThrow<string>('STRIPE_WEBHOOK_SECRET'),
-    );
+    let event: Stripe.Event;
+    try {
+      event = stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        this.configService.getOrThrow<string>('STRIPE_WEBHOOK_SECRET'),
+      );
+    } catch {
+      throw new BadRequestException('Invalid Stripe webhook signature');
+    }
 
-    if (event.type === 'checkout.session.completed') {
+    if (
+      event.type === 'checkout.session.completed' ||
+      event.type === 'checkout.session.async_payment_succeeded'
+    ) {
       const session = event.data.object as Stripe.Checkout.Session;
       const orderId = session.metadata?.orderId;
       if (orderId && session.payment_status === 'paid') {
-        await this.ordersService.updatePaymentStatus(orderId, 'paid');
+        await this.ordersService.updateStripePayment(
+          orderId,
+          'paid',
+          session.id,
+          this.getPaymentIntentId(session),
+        );
+      }
+    }
+
+    if (
+      event.type === 'checkout.session.async_payment_failed' ||
+      event.type === 'checkout.session.expired'
+    ) {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const orderId = session.metadata?.orderId;
+      if (orderId) {
+        await this.ordersService.updateStripePayment(
+          orderId,
+          'failed',
+          session.id,
+          this.getPaymentIntentId(session),
+        );
       }
     }
 
@@ -70,5 +99,12 @@ export class PaymentsService {
 
   private getStripeClient() {
     return new Stripe(this.configService.getOrThrow<string>('STRIPE_SECRET_KEY'));
+  }
+
+  private getPaymentIntentId(session: Stripe.Checkout.Session) {
+    if (typeof session.payment_intent === 'string') {
+      return session.payment_intent;
+    }
+    return session.payment_intent?.id;
   }
 }

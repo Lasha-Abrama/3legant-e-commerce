@@ -93,6 +93,15 @@ export class Order {
   @Prop({ required: true, enum: PAYMENT_STATUSES, default: 'pending' })
   paymentStatus: PaymentStatus;
 
+  @Prop({ trim: true })
+  stripeCheckoutSessionId?: string;
+
+  @Prop({ trim: true })
+  stripePaymentIntentId?: string;
+
+  @Prop()
+  paidAt?: Date;
+
   @Prop({ required: true, min: 0 })
   subtotal: number;
 

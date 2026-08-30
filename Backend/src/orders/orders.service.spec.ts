@@ -91,4 +91,66 @@ describe('OrdersService', () => {
     })).rejects.toBeInstanceOf(BadRequestException);
     expect(productsService.findOne).not.toHaveBeenCalled();
   });
+
+  it('records Stripe references when a pending order becomes paid', async () => {
+    const updatedOrder = { _id: 'order-id', paymentStatus: 'paid' };
+    (orderModel as any).findOneAndUpdate = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(updatedOrder),
+    });
+
+    await expect(
+      service.updateStripePayment(
+        '507f1f77bcf86cd799439011',
+        'paid',
+        'checkout-session-id',
+        'payment-intent-id',
+      ),
+    ).resolves.toBe(updatedOrder);
+    expect((orderModel as any).findOneAndUpdate).toHaveBeenCalledWith(
+      {
+        _id: '507f1f77bcf86cd799439011',
+        paymentStatus: { $in: ['pending', 'failed'] },
+      },
+      {
+        $set: expect.objectContaining({
+          paymentStatus: 'paid',
+          stripeCheckoutSessionId: 'checkout-session-id',
+          stripePaymentIntentId: 'payment-intent-id',
+          paidAt: expect.any(Date),
+        }),
+      },
+      { new: true },
+    );
+  });
+
+  it('does not downgrade a paid order when a late failure event arrives', async () => {
+    const paidOrder = { _id: 'order-id', paymentStatus: 'paid' };
+    (orderModel as any).findOneAndUpdate = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+    (orderModel as any).findById = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(paidOrder),
+    });
+
+    await expect(
+      service.updateStripePayment(
+        '507f1f77bcf86cd799439011',
+        'failed',
+        'checkout-session-id',
+      ),
+    ).resolves.toBe(paidOrder);
+    expect((orderModel as any).findOneAndUpdate).toHaveBeenCalledWith(
+      {
+        _id: '507f1f77bcf86cd799439011',
+        paymentStatus: { $in: ['pending'] },
+      },
+      {
+        $set: {
+          paymentStatus: 'failed',
+          stripeCheckoutSessionId: 'checkout-session-id',
+        },
+      },
+      { new: true },
+    );
+  });
 });
