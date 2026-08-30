@@ -1,6 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import { Connection, Model, Types } from 'mongoose';
 import { Order, OrderDocument, OrderStatus, PaymentStatus } from './schemas/order.schema';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ProductsService } from '../products/products.service';
@@ -16,6 +16,7 @@ export class OrdersService {
   constructor(
     @InjectModel(Order.name) private readonly orderModel: Model<OrderDocument>,
     private readonly productsService: ProductsService,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
 
   async create(userId: string, dto: CreateOrderDto) {
@@ -59,6 +60,7 @@ export class OrdersService {
       paymentMethod: dto.paymentMethod,
       shippingOption: dto.shippingOption,
       paymentStatus: 'pending',
+      inventoryStatus: 'pending',
       subtotal: Math.round(subtotal * 100) / 100,
       total,
     });
@@ -83,8 +85,16 @@ export class OrdersService {
     stripeCheckoutSessionId: string,
     stripePaymentIntentId?: string,
   ) {
+    if (paymentStatus === 'paid') {
+      return this.markStripePaymentPaid(
+        orderId,
+        stripeCheckoutSessionId,
+        stripePaymentIntentId,
+      );
+    }
+
     const allowedCurrentStatuses: PaymentStatus[] =
-      paymentStatus === 'paid' ? ['pending', 'failed'] : ['pending'];
+      ['pending'];
     const paymentUpdate: Record<string, unknown> = {
       paymentStatus,
       stripeCheckoutSessionId,
@@ -92,13 +102,95 @@ export class OrdersService {
     if (stripePaymentIntentId) {
       paymentUpdate.stripePaymentIntentId = stripePaymentIntentId;
     }
-    if (paymentStatus === 'paid') {
-      paymentUpdate.paidAt = new Date();
+    const order = await this.orderModel
+      .findOneAndUpdate(
+        { _id: orderId, paymentStatus: { $in: allowedCurrentStatuses } },
+        { $set: paymentUpdate },
+        { new: true },
+      )
+      .exec();
+    if (order) {
+      return order;
+    }
+
+    const existingOrder = await this.orderModel.findById(orderId).exec();
+    if (!existingOrder) {
+      throw new NotFoundException('შეკვეთა ვერ მოიძებნა');
+    }
+    return existingOrder;
+  }
+
+  private async markStripePaymentPaid(
+    orderId: string,
+    stripeCheckoutSessionId: string,
+    stripePaymentIntentId?: string,
+  ) {
+    const session = await this.connection.startSession();
+    let paidOrder: OrderDocument | null = null;
+    try {
+      await session.withTransaction(async () => {
+        const paymentUpdate: Record<string, unknown> = {
+          paymentStatus: 'paid',
+          stripeCheckoutSessionId,
+          paidAt: new Date(),
+          inventoryStatus: 'adjusted',
+          inventoryAdjustedAt: new Date(),
+        };
+        if (stripePaymentIntentId) {
+          paymentUpdate.stripePaymentIntentId = stripePaymentIntentId;
+        }
+
+        paidOrder = await this.orderModel
+          .findOneAndUpdate(
+            { _id: orderId, paymentStatus: { $in: ['pending', 'failed'] } },
+            { $set: paymentUpdate },
+            { new: true, session },
+          )
+          .exec();
+        if (!paidOrder) {
+          paidOrder = await this.orderModel.findById(orderId).session(session).exec();
+          if (!paidOrder) {
+            throw new NotFoundException('შეკვეთა ვერ მოიძებნა');
+          }
+          return;
+        }
+
+        await this.productsService.decrementStock(paidOrder.items, session);
+      });
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        paidOrder = await this.markPaidWithInventoryIssue(
+          orderId,
+          stripeCheckoutSessionId,
+          stripePaymentIntentId,
+        );
+      } else {
+        throw error;
+      }
+    } finally {
+      await session.endSession();
+    }
+    return paidOrder;
+  }
+
+  private async markPaidWithInventoryIssue(
+    orderId: string,
+    stripeCheckoutSessionId: string,
+    stripePaymentIntentId?: string,
+  ) {
+    const paymentUpdate: Record<string, unknown> = {
+      paymentStatus: 'paid',
+      stripeCheckoutSessionId,
+      paidAt: new Date(),
+      inventoryStatus: 'insufficient',
+    };
+    if (stripePaymentIntentId) {
+      paymentUpdate.stripePaymentIntentId = stripePaymentIntentId;
     }
 
     const order = await this.orderModel
       .findOneAndUpdate(
-        { _id: orderId, paymentStatus: { $in: allowedCurrentStatuses } },
+        { _id: orderId, paymentStatus: { $in: ['pending', 'failed'] } },
         { $set: paymentUpdate },
         { new: true },
       )

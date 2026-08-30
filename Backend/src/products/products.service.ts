@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, QueryFilter } from 'mongoose';
+import { ClientSession, Model, QueryFilter, Types } from 'mongoose';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -77,6 +77,30 @@ export class ProductsService {
     await this.productModel
       .updateOne({ _id: productId }, { $set: { ratingAvg, reviewsCount } })
       .exec();
+  }
+
+  async decrementStock(
+    items: Array<{ productId: Types.ObjectId | string; qty: number }>,
+    session: ClientSession,
+  ) {
+    const quantities = new Map<string, number>();
+    items.forEach((item) => {
+      const productId = String(item.productId);
+      quantities.set(productId, (quantities.get(productId) ?? 0) + item.qty);
+    });
+
+    for (const [productId, quantity] of quantities) {
+      const result = await this.productModel
+        .updateOne(
+          { _id: productId, stock: { $gte: quantity } },
+          { $inc: { stock: -quantity } },
+          { session },
+        )
+        .exec();
+      if (result.modifiedCount !== 1) {
+        throw new ConflictException('პროდუქტის მარაგი აღარ არის საკმარისი');
+      }
+    }
   }
 
   private async buildUniqueSlug(name: string): Promise<string> {

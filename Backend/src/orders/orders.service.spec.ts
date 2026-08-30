@@ -1,16 +1,24 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { ProductsService } from '../products/products.service';
 
 describe('OrdersService', () => {
   const productsService = {
     findOne: jest.fn(),
+    decrementStock: jest.fn(),
   } as unknown as ProductsService;
   const orderModel = jest.fn().mockImplementation((data) => ({
     ...data,
     save: jest.fn().mockResolvedValue(data),
   }));
-  const service = new OrdersService(orderModel as never, productsService);
+  const session = {
+    withTransaction: jest.fn(async (callback: () => Promise<void>) => callback()),
+    endSession: jest.fn().mockResolvedValue(undefined),
+  };
+  const connection = {
+    startSession: jest.fn().mockResolvedValue(session),
+  };
+  const service = new OrdersService(orderModel as never, productsService, connection as never);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -49,6 +57,7 @@ describe('OrdersService', () => {
     expect(order.subtotal).toBe(38);
     expect(order.total).toBe(53);
     expect(order.paymentStatus).toBe('pending');
+    expect(order.inventoryStatus).toBe('pending');
     expect(order).not.toHaveProperty('cardNumber');
   });
 
@@ -93,10 +102,15 @@ describe('OrdersService', () => {
   });
 
   it('records Stripe references when a pending order becomes paid', async () => {
-    const updatedOrder = { _id: 'order-id', paymentStatus: 'paid' };
+    const updatedOrder = {
+      _id: 'order-id',
+      paymentStatus: 'paid',
+      items: [{ productId: 'product-id', qty: 2 }],
+    };
     (orderModel as any).findOneAndUpdate = jest.fn().mockReturnValue({
       exec: jest.fn().mockResolvedValue(updatedOrder),
     });
+    productsService.decrementStock = jest.fn().mockResolvedValue(undefined);
 
     await expect(
       service.updateStripePayment(
@@ -117,10 +131,14 @@ describe('OrdersService', () => {
           stripeCheckoutSessionId: 'checkout-session-id',
           stripePaymentIntentId: 'payment-intent-id',
           paidAt: expect.any(Date),
+          inventoryStatus: 'adjusted',
+          inventoryAdjustedAt: expect.any(Date),
         }),
       },
-      { new: true },
+      { new: true, session },
     );
+    expect(productsService.decrementStock).toHaveBeenCalledWith(updatedOrder.items, session);
+    expect(session.endSession).toHaveBeenCalled();
   });
 
   it('does not downgrade a paid order when a late failure event arrives', async () => {
@@ -128,8 +146,12 @@ describe('OrdersService', () => {
     (orderModel as any).findOneAndUpdate = jest.fn().mockReturnValue({
       exec: jest.fn().mockResolvedValue(null),
     });
+    const findPaidOrder = jest.fn().mockResolvedValue(paidOrder);
     (orderModel as any).findById = jest.fn().mockReturnValue({
-      exec: jest.fn().mockResolvedValue(paidOrder),
+      exec: findPaidOrder,
+      session: jest.fn().mockReturnValue({
+        exec: findPaidOrder,
+      }),
     });
 
     await expect(
@@ -149,6 +171,49 @@ describe('OrdersService', () => {
           paymentStatus: 'failed',
           stripeCheckoutSessionId: 'checkout-session-id',
         },
+      },
+      { new: true },
+    );
+    expect(productsService.decrementStock).not.toHaveBeenCalled();
+  });
+
+  it('records paid orders with an inventory issue when stock changed before payment', async () => {
+    const transactionOrder = {
+      _id: 'order-id',
+      paymentStatus: 'paid',
+      items: [{ productId: 'product-id', qty: 2 }],
+    };
+    const inventoryIssueOrder = {
+      ...transactionOrder,
+      inventoryStatus: 'insufficient',
+    };
+    (orderModel as any).findOneAndUpdate = jest
+      .fn()
+      .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(transactionOrder) })
+      .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(inventoryIssueOrder) });
+    productsService.decrementStock = jest
+      .fn()
+      .mockRejectedValue(new ConflictException('Insufficient stock'));
+
+    await expect(
+      service.updateStripePayment(
+        '507f1f77bcf86cd799439011',
+        'paid',
+        'checkout-session-id',
+        'payment-intent-id',
+      ),
+    ).resolves.toBe(inventoryIssueOrder);
+    expect((orderModel as any).findOneAndUpdate).toHaveBeenNthCalledWith(
+      2,
+      {
+        _id: '507f1f77bcf86cd799439011',
+        paymentStatus: { $in: ['pending', 'failed'] },
+      },
+      {
+        $set: expect.objectContaining({
+          paymentStatus: 'paid',
+          inventoryStatus: 'insufficient',
+        }),
       },
       { new: true },
     );

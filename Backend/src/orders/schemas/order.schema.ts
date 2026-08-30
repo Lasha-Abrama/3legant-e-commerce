@@ -7,11 +7,13 @@ export const ORDER_STATUSES = ['Processing', 'Shipped', 'Delivered', 'Cancelled'
 export const PAYMENT_METHODS = ['card', 'paypal'] as const;
 export const SHIPPING_OPTIONS = ['free', 'express', 'pickup'] as const;
 export const PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'refunded'] as const;
+export const INVENTORY_STATUSES = ['pending', 'adjusted', 'insufficient'] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export type ShippingOption = (typeof SHIPPING_OPTIONS)[number];
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+export type InventoryStatus = (typeof INVENTORY_STATUSES)[number];
 
 @Schema({ _id: false })
 export class OrderItem {
@@ -101,6 +103,12 @@ export class Order {
 
   @Prop()
   paidAt?: Date;
+
+  @Prop({ required: true, enum: INVENTORY_STATUSES, default: 'pending' })
+  inventoryStatus: InventoryStatus;
+
+  @Prop()
+  inventoryAdjustedAt?: Date;
 
   @Prop({ required: true, min: 0 })
   subtotal: number;
