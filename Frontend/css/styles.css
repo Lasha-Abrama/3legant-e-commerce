@@ -358,12 +358,13 @@ button, input, select, textarea { font-family: inherit; }
 .product-desc { color: var(--muted); font-size: 13px; line-height: 1.8; margin-bottom: 18px; }
 .product-price { font-size: 24px; font-weight: 700; margin-bottom: 20px; }
 .product-price .original { color: #a39e93; text-decoration: line-through; font-size: 16px; font-weight: 400; margin-left: 8px; }
-.countdown-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
-.countdown { display: flex; gap: 10px; margin-bottom: 20px; }
-.countdown-box { background: var(--bg-soft); border-radius: 8px; padding: 10px 14px; text-align: center; min-width: 50px; }
-.countdown-box__value { font-size: 16px; font-weight: 700; }
-.countdown-box__label { font-size: 10px; color: var(--faint); }
+.product-option-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.stock-status { width: fit-content; margin-bottom: 20px; border-radius: 999px; padding: 5px 10px; background: #e8f6ee; color: var(--green); font-size: 12px; font-weight: 600; }
+.stock-status.is-empty { background: #fbeceb; color: var(--red); }
 .product-meta { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+.gallery-thumb { border: 2px solid transparent; border-radius: 10px; padding: 0; background: none; cursor: pointer; overflow: hidden; }
+.gallery-thumb.is-active { border-color: var(--ink); }
+.gallery-thumb .ph { width: 100%; }
 .color-row { display: flex; gap: 10px; }
 .color-swatch { width: 44px; height: 44px; border-radius: 8px; border: 2px solid var(--border); cursor: pointer; }
 .color-swatch.is-active { border-color: var(--ink); }

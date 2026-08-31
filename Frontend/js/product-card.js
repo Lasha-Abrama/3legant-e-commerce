@@ -18,6 +18,7 @@ function imageBoxHtml(url, fallbackLabel, sizeStyle) {
 function productCardHtml(p) {
   var color = (p.colors && p.colors[0]) || { name: 'Default' };
   var mainImage = p.images && p.images[0];
+  var inStock = Number(p.stock) > 0;
   return (
     '<div class="product-card" data-product-id="' + escapeHtml(p._id) + '">' +
       '<div class="product-card__media">' +
@@ -26,7 +27,7 @@ function productCardHtml(p) {
         '</a>' +
         (p.newArrival ? '<span class="badge badge--new">NEW</span>' : '') +
         (p.discountLabel ? '<span class="badge badge--discount" style="' + (p.newArrival ? 'top:34px;' : '') + '">' + escapeHtml(p.discountLabel) + '</span>' : '') +
-        '<button class="product-card__add" data-add-id="' + escapeHtml(p._id) + '" data-add-name="' + escapeHtml(p.name) + '" data-add-color="' + escapeHtml(color.name) + '" data-add-price="' + escapeHtml(p.price) + '">Add to Cart</button>' +
+        '<button class="product-card__add" data-add-id="' + escapeHtml(p._id) + '" data-add-name="' + escapeHtml(p.name) + '" data-add-color="' + escapeHtml(color.name) + '" data-add-price="' + escapeHtml(p.price) + '"' + (inStock ? '' : ' disabled') + '>' + (inStock ? 'Add to Cart' : 'Out of stock') + '</button>' +
       '</div>' +
       '<a href="product.html?id=' + encodeURIComponent(p._id) + '" style="text-decoration:none;color:inherit;">' +
         '<div class="product-card__stars">' + starString(p.ratingAvg) + '</div>' +

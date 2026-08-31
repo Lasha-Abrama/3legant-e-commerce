@@ -1,16 +1,15 @@
 (function () {
   var productId = qs('id');
-  var state = { product: null, reviews: null, color: null, qty: 1, tab: 'reviews', wishlisted: false, me: null };
+  var state = { product: null, reviews: null, color: null, qty: 1, imageIndex: 0, tab: 'reviews', wishlisted: false, me: null };
 
   if (!productId) {
     document.getElementById('product-content').innerHTML = '<p>Product not found.</p>';
     return;
   }
 
-  function pad2(n) { return String(n).padStart(2, '0'); }
-
   function renderProduct() {
     var p = state.product;
+    var stock = Math.max(0, Number(p.stock) || 0);
     document.getElementById('crumb').textContent = 'Home / Shop / ' + p.category + ' / ' + p.name;
     document.title = p.name + ' — Gita_3_Team_2';
 
@@ -18,41 +17,35 @@
       '<div class="product-detail-grid">' +
         '<div>' +
           '<div class="product-main-media">' +
-            imageBoxHtml(p.images && p.images[0], p.imageLabel, '') +
-            '<span class="badge badge--new" style="position:absolute;top:14px;left:14px;">' + (p.newArrival ? 'NEW' : '') + '</span>' +
+            '<div id="product-main-image"></div>' +
+            (p.newArrival ? '<span class="badge badge--new" style="position:absolute;top:14px;left:14px;">NEW</span>' : '') +
             (p.discountLabel ? '<span class="badge badge--discount" style="top:44px;left:14px;position:absolute;">' + escapeHtml(p.discountLabel) + '</span>' : '') +
           '</div>' +
-          '<div class="product-thumbs">' +
-            imageBoxHtml(p.images && p.images[1], 'Angle photo', '') +
-            imageBoxHtml(p.images && p.images[2], 'Lifestyle photo', '') +
-            imageBoxHtml(p.images && p.images[3], 'In-room photo', '') +
-          '</div>' +
+          '<div class="product-thumbs" id="product-thumbs"></div>' +
         '</div>' +
         '<div>' +
           '<div class="product-rating">' + starString(p.ratingAvg) + '&nbsp;&nbsp;' + p.reviewsCount + ' Reviews</div>' +
           '<h1 class="product-title">' + escapeHtml(p.name) + '</h1>' +
           '<p class="product-desc">' + escapeHtml(p.description) + '</p>' +
           '<div class="product-price">' + fmt(p.price) + (p.originalPrice ? '<span class="original">' + fmt(p.originalPrice) + '</span>' : '') + '</div>' +
-          '<div>' +
-            '<div class="countdown-label">Offer expires in:</div>' +
-            '<div class="countdown" id="countdown"></div>' +
-          '</div>' +
+          '<div class="stock-status' + (stock ? '' : ' is-empty') + '">' + (stock ? stock + ' in stock' : 'Out of stock') + '</div>' +
           (p.measurements ? '<div class="product-meta">Measurements: ' + escapeHtml(p.measurements) + '</div>' : '') +
           '<div style="margin-bottom:20px;">' +
-            '<div class="countdown-label">Choose Color &middot; <span style="color:var(--ink);font-weight:600;" id="color-label"></span></div>' +
+            '<div class="product-option-label">Choose Color &middot; <span style="color:var(--ink);font-weight:600;" id="color-label"></span></div>' +
             '<div class="color-row" id="color-row"></div>' +
           '</div>' +
           '<div class="qty-wishlist-row">' +
             '<div class="qty-stepper qty-stepper--lg">' +
-              '<button id="qty-dec">&minus;</button><span id="qty-val">1</span><button id="qty-inc">+</button>' +
+              '<button id="qty-dec" type="button">&minus;</button><span id="qty-val">1</span><button id="qty-inc" type="button">+</button>' +
             '</div>' +
             '<button class="wishlist-btn" id="wishlist-btn">♡ Wishlist</button>' +
           '</div>' +
-          '<button class="btn btn--dark btn--block" id="add-to-cart-btn" style="margin-bottom:20px;">Add to Cart</button>' +
+          '<button class="btn btn--dark btn--block" id="add-to-cart-btn" style="margin-bottom:20px;"' + (stock ? '' : ' disabled') + '>' + (stock ? 'Add to Cart' : 'Out of stock') + '</button>' +
           '<div class="product-sku"><div>SKU: ' + escapeHtml(p.sku) + '</div><div>CATEGORY: ' + escapeHtml(p.category) + '</div></div>' +
         '</div>' +
       '</div>';
 
+    renderGallery();
     renderColors();
     wireQty();
     document.getElementById('add-to-cart-btn').addEventListener('click', function () {
@@ -64,7 +57,31 @@
     });
     document.getElementById('wishlist-btn').addEventListener('click', toggleWishlist);
     updateWishlistButton();
-    startCountdown();
+  }
+
+  function renderGallery() {
+    var p = state.product;
+    var images = (p.images || []).filter(function (image) { return safeImageUrl(image); });
+    if (state.imageIndex >= images.length) state.imageIndex = 0;
+    document.getElementById('product-main-image').innerHTML =
+      imageBoxHtml(images[state.imageIndex], p.imageLabel, '');
+    var thumbs = document.getElementById('product-thumbs');
+    if (!images.length) {
+      thumbs.style.display = 'none';
+      return;
+    }
+    thumbs.style.display = 'grid';
+    thumbs.innerHTML = images.map(function (image, index) {
+      return '<button class="gallery-thumb' + (index === state.imageIndex ? ' is-active' : '') + '" type="button" data-image-index="' + index + '" aria-label="View image ' + (index + 1) + '" aria-pressed="' + (index === state.imageIndex) + '">' +
+        imageBoxHtml(image, p.name + ' image ' + (index + 1), '') +
+      '</button>';
+    }).join('');
+    thumbs.querySelectorAll('[data-image-index]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        state.imageIndex = Number(button.getAttribute('data-image-index'));
+        renderGallery();
+      });
+    });
   }
 
   function renderColors() {
@@ -84,14 +101,21 @@
   }
 
   function wireQty() {
+    var stock = Math.max(0, Number(state.product.stock) || 0);
+    function updateQtyControls() {
+      document.getElementById('qty-val').textContent = state.qty;
+      document.getElementById('qty-dec').disabled = state.qty <= 1;
+      document.getElementById('qty-inc').disabled = !stock || state.qty >= stock;
+    }
     document.getElementById('qty-dec').addEventListener('click', function () {
       state.qty = Math.max(1, state.qty - 1);
-      document.getElementById('qty-val').textContent = state.qty;
+      updateQtyControls();
     });
     document.getElementById('qty-inc').addEventListener('click', function () {
-      state.qty += 1;
-      document.getElementById('qty-val').textContent = state.qty;
+      state.qty = Math.min(stock, state.qty + 1);
+      updateQtyControls();
     });
+    updateQtyControls();
   }
 
   function updateWishlistButton() {
@@ -121,35 +145,9 @@
     });
   }
 
-  var countdownTimer;
-  function startCountdown() {
-    var deadline = Date.now() + (2 * 86400 + 12 * 3600 + 45 * 60 + 5) * 1000;
-    function tick() {
-      var diff = Math.max(0, deadline - Date.now());
-      var days = Math.floor(diff / 86400000);
-      var hours = Math.floor((diff % 86400000) / 3600000);
-      var mins = Math.floor((diff % 3600000) / 60000);
-      var secs = Math.floor((diff % 60000) / 1000);
-      var boxes = [
-        { v: pad2(days), l: 'Days' }, { v: pad2(hours), l: 'Hours' },
-        { v: pad2(mins), l: 'Minutes' }, { v: pad2(secs), l: 'Seconds' },
-      ];
-      var el = document.getElementById('countdown');
-      if (el) {
-        el.innerHTML = boxes.map(function (b) {
-          return '<div class="countdown-box"><div class="countdown-box__value">' + b.v + '</div><div class="countdown-box__label">' + b.l + '</div></div>';
-        }).join('');
-      }
-    }
-    tick();
-    clearInterval(countdownTimer);
-    countdownTimer = setInterval(tick, 1000);
-  }
-
   function renderTabs() {
     var tabs = [
       { key: 'info', label: 'Additional Info' },
-      { key: 'questions', label: 'Questions' },
       { key: 'reviews', label: 'Reviews (' + (state.product.reviewsCount || 0) + ')' },
     ];
     document.getElementById('tab-row').innerHTML = tabs.map(function (t) {
@@ -177,11 +175,6 @@
         '</div>';
       return;
     }
-    if (state.tab === 'questions') {
-      body.innerHTML = '<div class="faint" style="font-size:13px;">No questions yet. Be the first to ask about this product.</div>';
-      return;
-    }
-
     var reviews = state.reviews || [];
     body.innerHTML =
       '<div>' +
