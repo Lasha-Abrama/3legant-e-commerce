@@ -40,7 +40,7 @@ import { validateEnvironment } from './config/environment';
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'Frontend'),
-      exclude: ['/api/(.*)'],
+      exclude: ['/api/{*path}'],
     }),
     AuthModule,
     UsersModule,
