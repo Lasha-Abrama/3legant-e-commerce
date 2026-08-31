@@ -24,11 +24,12 @@
               '<div>' +
                 '<div style="font-size:14px;font-weight:500;">' + escapeHtml(item.name) + '</div>' +
                 '<div class="faint" style="font-size:12px;margin-top:2px;">Color: ' + escapeHtml(item.color) + '</div>' +
+                (window.CartStore.stockLimit(item) === null ? '' : '<div class="faint" style="font-size:12px;margin-top:2px;">' + window.CartStore.stockLimit(item) + ' available</div>') +
                 '<button class="remove-btn" data-idx="' + idx + '" data-act="remove" style="margin-top:6px;text-decoration:underline;">&#10005; Remove</button>' +
               '</div>' +
             '</div>' +
             '<div class="qty-stepper" data-idx="' + idx + '">' +
-              '<button data-act="dec">&minus;</button><span>' + item.qty + '</span><button data-act="inc">+</button>' +
+              '<button data-act="dec"' + (item.qty <= 1 ? ' disabled' : '') + '>&minus;</button><span>' + item.qty + '</span><button data-act="inc"' + (window.CartStore.canIncrement(item) ? '' : ' disabled') + '>+</button>' +
             '</div>' +
             '<div style="font-size:14px;">' + fmt(item.price) + '</div>' +
             '<div style="font-size:14px;font-weight:600;">' + fmt(item.price * item.qty) + '</div>' +

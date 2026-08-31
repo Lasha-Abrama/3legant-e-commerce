@@ -27,7 +27,7 @@ function productCardHtml(p) {
         '</a>' +
         (p.newArrival ? '<span class="badge badge--new">NEW</span>' : '') +
         (p.discountLabel ? '<span class="badge badge--discount" style="' + (p.newArrival ? 'top:34px;' : '') + '">' + escapeHtml(p.discountLabel) + '</span>' : '') +
-        '<button class="product-card__add" data-add-id="' + escapeHtml(p._id) + '" data-add-name="' + escapeHtml(p.name) + '" data-add-color="' + escapeHtml(color.name) + '" data-add-price="' + escapeHtml(p.price) + '"' + (inStock ? '' : ' disabled') + '>' + (inStock ? 'Add to Cart' : 'Out of stock') + '</button>' +
+        '<button class="product-card__add" data-add-id="' + escapeHtml(p._id) + '" data-add-name="' + escapeHtml(p.name) + '" data-add-color="' + escapeHtml(color.name) + '" data-add-price="' + escapeHtml(p.price) + '" data-add-stock="' + escapeHtml(p.stock) + '"' + (inStock ? '' : ' disabled') + '>' + (inStock ? 'Add to Cart' : 'Out of stock') + '</button>' +
       '</div>' +
       '<a href="product.html?id=' + encodeURIComponent(p._id) + '" style="text-decoration:none;color:inherit;">' +
         '<div class="product-card__stars">' + starString(p.ratingAvg) + '</div>' +
@@ -49,6 +49,7 @@ function wireAddToCartButtons(root) {
         name: btn.getAttribute('data-add-name'),
         color: btn.getAttribute('data-add-color'),
         price: parseFloat(btn.getAttribute('data-add-price')),
+        stock: parseInt(btn.getAttribute('data-add-stock'), 10),
         qty: 1,
       });
       var original = btn.textContent;

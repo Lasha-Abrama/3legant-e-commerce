@@ -223,14 +223,14 @@
               '<div class="faint" style="font-size:11px;">Color: ' + escapeHtml(color) + '</div>' +
               '<div style="font-size:13px;font-weight:600;margin-top:2px;">' + fmt(p.price) + '</div>' +
             '</div>' +
-            '<button class="btn btn--dark" data-add="' + escapeHtml(p._id) + '" data-name="' + escapeHtml(p.name) + '" data-color="' + escapeHtml(color) + '" data-price="' + escapeHtml(p.price) + '" style="padding:10px 18px;font-size:12px;">Add to cart</button>' +
+            '<button class="btn btn--dark" data-add="' + escapeHtml(p._id) + '" data-name="' + escapeHtml(p.name) + '" data-color="' + escapeHtml(color) + '" data-price="' + escapeHtml(p.price) + '" data-stock="' + escapeHtml(p.stock) + '" style="padding:10px 18px;font-size:12px;"' + (Number(p.stock) > 0 ? '' : ' disabled') + '>' + (Number(p.stock) > 0 ? 'Add to cart' : 'Out of stock') + '</button>' +
             '<button class="remove-btn" data-remove="' + escapeHtml(p._id) + '" style="margin-left:8px;">&#10005;</button>' +
           '</div>'
         );
       }).join('');
       list.querySelectorAll('[data-add]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          window.CartStore.addItem({ id: btn.getAttribute('data-add'), name: btn.getAttribute('data-name'), color: btn.getAttribute('data-color'), price: parseFloat(btn.getAttribute('data-price')), qty: 1 });
+          window.CartStore.addItem({ id: btn.getAttribute('data-add'), name: btn.getAttribute('data-name'), color: btn.getAttribute('data-color'), price: parseFloat(btn.getAttribute('data-price')), stock: parseInt(btn.getAttribute('data-stock'), 10), qty: 1 });
           btn.textContent = 'Added ✓';
         });
       });

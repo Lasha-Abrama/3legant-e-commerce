@@ -49,7 +49,7 @@
     renderColors();
     wireQty();
     document.getElementById('add-to-cart-btn').addEventListener('click', function () {
-      window.CartStore.addItem({ id: p._id, name: p.name, color: state.color, price: p.price, qty: state.qty });
+      window.CartStore.addItem({ id: p._id, name: p.name, color: state.color, price: p.price, stock: stock, qty: state.qty });
       var btn = document.getElementById('add-to-cart-btn');
       var original = btn.textContent;
       btn.textContent = 'Added to cart ✓';
