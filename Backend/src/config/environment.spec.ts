@@ -55,4 +55,25 @@ describe('validateEnvironment', () => {
       }),
     ).toThrow('Environment validation failed: JWT_SECRET must contain at least 32 characters');
   });
+
+  it('requires password reset email configuration in production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        NODE_ENV: 'production',
+        JWT_SECRET: 'a-production-secret-with-32-characters',
+      }),
+    ).toThrow('Environment validation failed: RESEND_API_KEY and EMAIL_FROM are required in production');
+  });
+
+  it('accepts valid password reset email configuration', () => {
+    expect(validateEnvironment({
+      ...validEnvironment,
+      RESEND_API_KEY: 're_example',
+      EMAIL_FROM: 'Store <noreply@example.com>',
+    })).toMatchObject({
+      RESEND_API_KEY: 're_example',
+      EMAIL_FROM: 'Store <noreply@example.com>',
+    });
+  });
 });

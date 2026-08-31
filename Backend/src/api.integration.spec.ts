@@ -26,6 +26,8 @@ describe('API integration boundaries', () => {
     validateUser: jest.fn(),
     logout: jest.fn(),
     getUserFromAuthorization: jest.fn(),
+    requestPasswordReset: jest.fn(),
+    resetPassword: jest.fn(),
   };
   const usersService = {
     findById: jest.fn(),
@@ -138,6 +140,36 @@ describe('API integration boundaries', () => {
       email: 'test@example.com',
       password: 'password123',
     });
+  });
+
+  it('validates password reset requests at the HTTP boundary', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/forgot-password')
+      .send({ email: 'not-an-email' })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/api/auth/reset-password')
+      .send({ token: 'short', password: 'short' })
+      .expect(400);
+
+    expect(authService.requestPasswordReset).not.toHaveBeenCalled();
+    expect(authService.resetPassword).not.toHaveBeenCalled();
+  });
+
+  it('accepts valid password recovery requests', async () => {
+    authService.requestPasswordReset.mockResolvedValue({ message: 'Check your email' });
+    authService.resetPassword.mockResolvedValue({ message: 'Password reset' });
+
+    await request(app.getHttpServer())
+      .post('/api/auth/forgot-password')
+      .send({ email: 'test@example.com' })
+      .expect(200)
+      .expect({ message: 'Check your email' });
+    await request(app.getHttpServer())
+      .post('/api/auth/reset-password')
+      .send({ token: 'a'.repeat(43), password: 'new-password' })
+      .expect(200)
+      .expect({ message: 'Password reset' });
   });
 
   it('rejects protected order access without a bearer token', async () => {

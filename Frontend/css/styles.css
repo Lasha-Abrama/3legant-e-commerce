@@ -83,6 +83,9 @@ button, input, select, textarea { font-family: inherit; }
 .input:focus, textarea.input:focus, select.input:focus { outline: 1px solid var(--ink); }
 .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .error-text { color: var(--red); font-size: 12px; margin: 4px 0 0; }
+.success-text { color: var(--green); font-size: 12px; line-height: 1.6; margin: 4px 0 0; }
+.success-text a { color: var(--ink); font-weight: 600; }
+.development-reset-link { display: block; margin-top: 8px; }
 
 /* ---------- Placeholder image box ---------- */
 .ph {

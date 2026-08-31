@@ -84,6 +84,52 @@ describe('UsersService', () => {
     expect(user.save).toHaveBeenCalled();
   });
 
+  it('stores a normalized password reset token for an existing email', async () => {
+    (userModel as any).findOneAndUpdate = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ _id: 'user-id' }),
+    });
+    const expiresAt = new Date(Date.now() + 60_000);
+
+    await service.setPasswordResetToken('  SOFIA@Example.com ', 'token-hash', expiresAt);
+
+    expect((userModel as any).findOneAndUpdate).toHaveBeenCalledWith(
+      { email: 'sofia@example.com' },
+      { passwordResetTokenHash: 'token-hash', passwordResetExpiresAt: expiresAt },
+      { new: true },
+    );
+  });
+
+  it('resets a password once and invalidates existing access tokens', async () => {
+    const user = {
+      passwordHash: 'old-hash',
+      tokenVersion: 2,
+      passwordResetTokenHash: 'token-hash',
+      passwordResetExpiresAt: new Date(Date.now() + 60_000),
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    (userModel as any).findOne = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(user) }),
+    });
+
+    await service.resetPasswordWithToken('token-hash', 'new-hash');
+
+    expect(user.passwordHash).toBe('new-hash');
+    expect(user.tokenVersion).toBe(3);
+    expect(user.passwordResetTokenHash).toBeUndefined();
+    expect(user.passwordResetExpiresAt).toBeUndefined();
+    expect(user.save).toHaveBeenCalled();
+  });
+
+  it('rejects an invalid or expired password reset token', async () => {
+    (userModel as any).findOne = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(null) }),
+    });
+
+    await expect(service.resetPasswordWithToken('expired-hash', 'new-hash')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
   it('rejects missing products before changing a wishlist', async () => {
     productModel.exists = jest.fn().mockResolvedValue(null);
     (userModel as any).updateOne = jest.fn();

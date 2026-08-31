@@ -97,6 +97,34 @@ export class UsersService {
     await user.save();
   }
 
+  async setPasswordResetToken(email: string, tokenHash: string, expiresAt: Date) {
+    return this.userModel
+      .findOneAndUpdate(
+        { email: email.toLowerCase().trim() },
+        { passwordResetTokenHash: tokenHash, passwordResetExpiresAt: expiresAt },
+        { new: true },
+      )
+      .exec();
+  }
+
+  async resetPasswordWithToken(tokenHash: string, passwordHash: string) {
+    const user = await this.userModel
+      .findOne({
+        passwordResetTokenHash: tokenHash,
+        passwordResetExpiresAt: { $gt: new Date() },
+      })
+      .select('+passwordResetTokenHash +passwordResetExpiresAt')
+      .exec();
+    if (!user) {
+      throw new BadRequestException('The reset link is invalid or has expired.');
+    }
+    user.passwordHash = passwordHash;
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
+    user.passwordResetTokenHash = undefined;
+    user.passwordResetExpiresAt = undefined;
+    await user.save();
+  }
+
   async getWishlist(userId: string) {
     const user = await this.userModel
       .findById(userId)

@@ -63,6 +63,12 @@ export class User {
 
   @Prop({ required: true, default: 0, min: 0 })
   tokenVersion: number;
+
+  @Prop({ select: false })
+  passwordResetTokenHash?: string;
+
+  @Prop({ select: false })
+  passwordResetExpiresAt?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -1,7 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
+import { PasswordResetEmailService } from './password-reset-email.service';
 
 describe('AuthService', () => {
   const usersService = {
@@ -10,12 +13,21 @@ describe('AuthService', () => {
     findById: jest.fn(),
     toSafeUser: jest.fn(),
     invalidateAccessTokens: jest.fn(),
+    setPasswordResetToken: jest.fn(),
+    resetPasswordWithToken: jest.fn(),
   } as unknown as UsersService;
   const jwtService = {
     signAsync: jest.fn(),
     verifyAsync: jest.fn(),
   } as unknown as JwtService;
-  const service = new AuthService(usersService, jwtService);
+  const configService = {
+    get: jest.fn((key: string) => key === 'NODE_ENV' ? 'development' : undefined),
+    getOrThrow: jest.fn((key: string) => key === 'FRONTEND_URL' ? 'http://localhost:5000' : undefined),
+  } as unknown as ConfigService;
+  const passwordResetEmailService = {
+    send: jest.fn(),
+  } as unknown as PasswordResetEmailService;
+  const service = new AuthService(usersService, jwtService, configService, passwordResetEmailService);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -106,5 +118,44 @@ describe('AuthService', () => {
       message: 'წარმატებით გამოხვედით',
     });
     expect(usersService.invalidateAccessTokens).toHaveBeenCalledWith('user-id');
+  });
+
+  it('creates a hashed reset token and development link for an existing account', async () => {
+    usersService.setPasswordResetToken = jest.fn().mockResolvedValue({ email: 'sofia@example.com' });
+    passwordResetEmailService.send = jest.fn().mockResolvedValue(false);
+
+    const response = await service.requestPasswordReset('SOFIA@example.com');
+
+    expect(usersService.setPasswordResetToken).toHaveBeenCalledWith(
+      'SOFIA@example.com',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+      expect.any(Date),
+    );
+    expect(response.message).toContain('If an account exists');
+    expect(response.developmentResetUrl).toMatch(/^http:\/\/localhost:5000\/reset-password\.html\?token=/);
+    expect(response.developmentResetUrl).not.toContain(
+      (usersService.setPasswordResetToken as jest.Mock).mock.calls[0][1],
+    );
+  });
+
+  it('returns the same generic reset response for a missing account', async () => {
+    usersService.setPasswordResetToken = jest.fn().mockResolvedValue(null);
+
+    await expect(service.requestPasswordReset('missing@example.com')).resolves.toEqual({
+      message: 'If an account exists for that email, a password reset link has been sent.',
+    });
+    expect(passwordResetEmailService.send).not.toHaveBeenCalled();
+  });
+
+  it('hashes the new password before completing a reset', async () => {
+    usersService.resetPasswordWithToken = jest.fn().mockResolvedValue(undefined);
+
+    await expect(service.resetPassword('a'.repeat(43), 'new-password')).resolves.toEqual({
+      message: 'Your password has been reset. You can now sign in.',
+    });
+    const [tokenHash, passwordHash] = (usersService.resetPasswordWithToken as jest.Mock).mock.calls[0];
+    expect(tokenHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(passwordHash).not.toBe('new-password');
+    await expect(bcrypt.compare('new-password', passwordHash)).resolves.toBe(true);
   });
 });
