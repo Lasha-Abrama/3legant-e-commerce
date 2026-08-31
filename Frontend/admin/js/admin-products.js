@@ -8,12 +8,6 @@
     images: [],
   };
 
-  function escapeHtml(str) {
-    return String(str == null ? '' : str).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-
   function loadProducts() {
     return apiGetSilent('/products?take=200').then(function (res) {
       state.products = (res && res.data) || [];
@@ -23,8 +17,9 @@
 
   function renderTable() {
     document.getElementById('products-tbody').innerHTML = state.products.map(function (p) {
-      var thumb = p.images && p.images[0]
-        ? '<img src="' + p.images[0] + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px;">'
+      var thumbUrl = p.images && p.images[0] ? safeImageUrl(p.images[0]) : '';
+      var thumb = thumbUrl
+        ? '<img src="' + thumbUrl + '" alt="' + escapeHtml(p.name || 'Product') + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px;">'
         : '<div style="width:40px;height:40px;border-radius:6px;background:#f2f1ef;"></div>';
       return (
         '<tr>' +
@@ -34,8 +29,8 @@
           '<td>' + fmt(p.price) + (p.originalPrice ? ' <span class="faint" style="text-decoration:line-through;">' + fmt(p.originalPrice) + '</span>' : '') + '</td>' +
           '<td>' + p.stock + '</td>' +
           '<td style="white-space:nowrap;">' +
-            '<button class="btn btn--ghost btn-sm" data-edit="' + p._id + '">Edit</button> ' +
-            '<button class="btn btn-danger btn-sm" data-delete="' + p._id + '">Delete</button>' +
+            '<button class="btn btn--ghost btn-sm" data-edit="' + escapeHtml(p._id) + '">Edit</button> ' +
+            '<button class="btn btn-danger btn-sm" data-delete="' + escapeHtml(p._id) + '">Delete</button>' +
           '</td>' +
         '</tr>'
       );
@@ -79,7 +74,7 @@
       return (
         '<div class="color-row-editor" data-color-idx="' + idx + '">' +
           '<input class="input" style="flex:1;" placeholder="Color name" value="' + escapeHtml(c.name) + '" data-color-name>' +
-          '<input type="color" value="' + c.hex + '" data-color-hex>' +
+          '<input type="color" value="' + safeCssColor(c.hex) + '" data-color-hex>' +
           '<button type="button" class="btn btn--ghost btn-sm" data-remove-color>&#10005;</button>' +
         '</div>'
       );
@@ -88,9 +83,10 @@
 
   function renderImageThumbs() {
     return state.images.map(function (url, idx) {
+      var safeUrl = safeImageUrl(url);
       return (
         '<div class="img-thumb">' +
-          '<img src="' + url + '">' +
+          (safeUrl ? '<img src="' + safeUrl + '" alt="Product preview">' : '') +
           '<button type="button" class="img-thumb__remove" data-remove-image="' + idx + '">&#10005;</button>' +
         '</div>'
       );
@@ -233,7 +229,8 @@
     call.then(function (res) {
       if (!res) return;
       if (res._status >= 400) {
-        alertBox.innerHTML = '<div class="admin-alert admin-alert--error">' + (res.message || 'Save failed') + '</div>';
+        var message = Array.isArray(res.message) ? res.message.join(', ') : (res.message || 'Save failed');
+        alertBox.innerHTML = '<div class="admin-alert admin-alert--error">' + escapeHtml(message) + '</div>';
         return;
       }
       closeForm();

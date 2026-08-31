@@ -1,9 +1,4 @@
 (function () {
-  function escapeHtml(str) {
-    return String(str == null ? '' : str).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
   function stars(rating) {
     var full = Math.round(rating || 0);
     return '★★★★★'.slice(0, full) + '☆☆☆☆☆'.slice(0, 5 - full);
@@ -24,7 +19,7 @@
             '<td style="color:#e8b400;">' + stars(r.rating) + '</td>' +
             '<td style="max-width:320px;">' + escapeHtml(r.text) + '</td>' +
             '<td>' + date + '</td>' +
-            '<td><button class="btn btn-danger btn-sm" data-remove-review="' + r._id + '">Delete</button></td>' +
+            '<td><button class="btn btn-danger btn-sm" data-remove-review="' + escapeHtml(r._id) + '">Delete</button></td>' +
           '</tr>'
         );
       }).join('');

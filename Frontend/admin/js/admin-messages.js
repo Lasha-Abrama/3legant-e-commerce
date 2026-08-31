@@ -1,9 +1,4 @@
 (function () {
-  function escapeHtml(str) {
-    return String(str == null ? '' : str).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
   function fmtDate(d) {
     return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   }
@@ -21,7 +16,7 @@
             '<td>' + escapeHtml(m.email) + '</td>' +
             '<td style="max-width:320px;">' + escapeHtml(m.message) + '</td>' +
             '<td>' + fmtDate(m.createdAt) + '</td>' +
-            '<td><button class="btn btn-danger btn-sm" data-remove-msg="' + m._id + '">Delete</button></td>' +
+            '<td><button class="btn btn-danger btn-sm" data-remove-msg="' + escapeHtml(m._id) + '">Delete</button></td>' +
           '</tr>'
         );
       }).join('');
@@ -44,7 +39,7 @@
           '<tr>' +
             '<td>' + escapeHtml(s.email) + '</td>' +
             '<td>' + fmtDate(s.createdAt) + '</td>' +
-            '<td><button class="btn btn-danger btn-sm" data-remove-sub="' + s._id + '">Delete</button></td>' +
+            '<td><button class="btn btn-danger btn-sm" data-remove-sub="' + escapeHtml(s._id) + '">Delete</button></td>' +
           '</tr>'
         );
       }).join('');

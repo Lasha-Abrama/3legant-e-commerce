@@ -5,12 +5,6 @@
     image: null,
   };
 
-  function escapeHtml(str) {
-    return String(str == null ? '' : str).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-
   function loadBlogs() {
     return apiGetSilent('/blogs?take=200').then(function (res) {
       state.blogs = (res && res.data) || [];
@@ -20,8 +14,9 @@
 
   function renderTable() {
     document.getElementById('blogs-tbody').innerHTML = state.blogs.map(function (b) {
-      var thumb = b.image
-        ? '<img src="' + b.image + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px;">'
+      var thumbUrl = safeImageUrl(b.image);
+      var thumb = thumbUrl
+        ? '<img src="' + thumbUrl + '" alt="' + escapeHtml(b.title || 'Blog post') + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px;">'
         : '<div style="width:40px;height:40px;border-radius:6px;background:#f2f1ef;"></div>';
       var date = new Date(b.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
       return (
@@ -31,8 +26,8 @@
           '<td>' + date + '</td>' +
           '<td>' + (b.featured ? '<span class="pill pill--admin">FEATURED</span>' : '') + '</td>' +
           '<td style="white-space:nowrap;">' +
-            '<button class="btn btn--ghost btn-sm" data-edit="' + b._id + '">Edit</button> ' +
-            '<button class="btn btn-danger btn-sm" data-delete="' + b._id + '">Delete</button>' +
+            '<button class="btn btn--ghost btn-sm" data-edit="' + escapeHtml(b._id) + '">Edit</button> ' +
+            '<button class="btn btn-danger btn-sm" data-delete="' + escapeHtml(b._id) + '">Delete</button>' +
           '</td>' +
         '</tr>'
       );
@@ -73,10 +68,11 @@
   }
 
   function renderImagePreview() {
-    if (!state.image) return '';
+    var safeUrl = safeImageUrl(state.image);
+    if (!safeUrl) return '';
     return (
       '<div class="img-thumb">' +
-        '<img src="' + state.image + '">' +
+        '<img src="' + safeUrl + '" alt="Blog post preview">' +
         '<button type="button" class="img-thumb__remove" id="remove-blog-image">&#10005;</button>' +
       '</div>'
     );
@@ -163,7 +159,8 @@
     call.then(function (res) {
       if (!res) return;
       if (res._status >= 400) {
-        alertBox.innerHTML = '<div class="admin-alert admin-alert--error">' + (res.message || 'Save failed') + '</div>';
+        var message = Array.isArray(res.message) ? res.message.join(', ') : (res.message || 'Save failed');
+        alertBox.innerHTML = '<div class="admin-alert admin-alert--error">' + escapeHtml(message) + '</div>';
         return;
       }
       closeForm();

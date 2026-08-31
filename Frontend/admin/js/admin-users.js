@@ -1,10 +1,4 @@
 (function () {
-  function escapeHtml(str) {
-    return String(str == null ? '' : str).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-
   function loadUsers() {
     apiGetSilent('/admin/users').then(function (users) {
       if (!users || !users.length) {
@@ -16,9 +10,9 @@
           '<tr>' +
             '<td>' + escapeHtml(u.displayName || (u.firstName + ' ' + u.lastName)) + '</td>' +
             '<td>' + escapeHtml(u.email) + '</td>' +
-            '<td>' + escapeHtml(u.phone || '&mdash;') + '</td>' +
+            '<td>' + escapeHtml(u.phone || '—') + '</td>' +
             '<td><span class="pill ' + (u.isAdmin ? 'pill--admin' : 'pill--user') + '">' + (u.isAdmin ? 'Admin' : 'Customer') + '</span></td>' +
-            '<td><button class="btn btn--ghost btn-sm" data-toggle-role="' + u.id + '" data-current="' + u.isAdmin + '">' +
+            '<td><button class="btn btn--ghost btn-sm" data-toggle-role="' + escapeHtml(u.id) + '" data-current="' + (u.isAdmin ? 'true' : 'false') + '">' +
               (u.isAdmin ? 'Revoke admin' : 'Make admin') +
             '</button></td>' +
           '</tr>'

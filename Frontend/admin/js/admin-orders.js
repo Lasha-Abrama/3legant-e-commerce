@@ -1,12 +1,6 @@
 (function () {
   var STATUSES = ['Processing', 'Shipped', 'Delivered', 'Cancelled'];
 
-  function escapeHtml(str) {
-    return String(str == null ? '' : str).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-
   function loadOrders() {
     apiGetSilent('/admin/orders').then(function (orders) {
       if (!orders || !orders.length) {
@@ -16,7 +10,9 @@
       document.getElementById('orders-tbody').innerHTML = orders.map(function (o) {
         var customer = o.user ? (o.user.firstName + ' ' + o.user.lastName) : (o.contact.firstName + ' ' + o.contact.lastName);
         var date = new Date(o.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-        var itemsSummary = o.items.map(function (it) { return it.name + ' &times;' + it.qty; }).join(', ');
+        var itemsSummary = o.items.map(function (it) {
+          return escapeHtml(it.name) + ' &times;' + escapeHtml(it.qty);
+        }).join(', ');
         return (
           '<tr>' +
             '<td>#' + o._id.slice(-8) + '</td>' +
@@ -25,7 +21,7 @@
             '<td style="max-width:260px;">' + itemsSummary + '</td>' +
             '<td>' + fmt(o.total) + '</td>' +
             '<td>' +
-              '<select class="status-select" data-order-id="' + o._id + '" data-current-status="' + o.status + '">' +
+              '<select class="status-select" data-order-id="' + escapeHtml(o._id) + '" data-current-status="' + escapeHtml(o.status) + '">' +
                 STATUSES.map(function (s) { return '<option ' + (o.status === s ? 'selected' : '') + '>' + s + '</option>'; }).join('') +
               '</select>' +
             '</td>' +
