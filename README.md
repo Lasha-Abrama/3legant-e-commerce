@@ -10,6 +10,8 @@ Full-stack e-commerce application based on the 3legant Figma design. The current
 
 ## Local development
 
+Use Node.js 20.11 or newer.
+
 1. Copy `Backend/.env.example` to `Backend/.env` and set each value locally.
 2. Install API dependencies from the lockfile:
    ```bash
