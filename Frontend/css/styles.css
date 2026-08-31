@@ -262,9 +262,6 @@ button, input, select, textarea { font-family: inherit; }
 .auth-head { text-align: center; margin-bottom: 32px; }
 .auth-head__title { font-size: 28px; font-weight: 600; margin-bottom: 8px; }
 .auth-head__sub { font-size: 13px; color: var(--muted); }
-.auth-divider { display: flex; align-items: center; gap: 12px; margin: 28px 0; }
-.auth-divider__line { flex: 1; height: 1px; background: var(--line); }
-.auth-divider__label { font-size: 12px; color: #a39e93; }
 .auth-footer { text-align: center; margin-top: 24px; font-size: 13px; color: var(--muted); }
 .auth-footer a { color: var(--ink); text-decoration: underline; font-weight: 500; }
 
@@ -399,6 +396,7 @@ button, input, select, textarea { font-family: inherit; }
 .form-section-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
 .pay-option { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; font-size: 13px; cursor: pointer; margin-bottom: 10px; }
 .pay-option.is-active { border-color: var(--ink); }
+.pay-option.is-disabled { cursor: not-allowed; opacity: 0.65; }
 .order-complete { text-align: center; padding: 60px 20px; }
 .order-complete__icon { width: 64px; height: 64px; border-radius: 50%; background: var(--green); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 20px; }
 

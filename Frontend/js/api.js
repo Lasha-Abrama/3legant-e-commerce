@@ -2,18 +2,20 @@ var API = '/api';
 var ACCESS_TOKEN_KEY = 'threelegant_access_token';
 
 function getAuthHeaders() {
-  var token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  var token = localStorage.getItem(ACCESS_TOKEN_KEY) || sessionStorage.getItem(ACCESS_TOKEN_KEY);
   return token ? { Authorization: 'Bearer ' + token } : {};
 }
 
-function setAccessToken(token) {
-  if (token) {
-    localStorage.setItem(ACCESS_TOKEN_KEY, token);
-  }
+function setAccessToken(token, remember) {
+  clearAccessToken();
+  if (!token) return;
+  var storage = remember === false ? sessionStorage : localStorage;
+  storage.setItem(ACCESS_TOKEN_KEY, token);
 }
 
 function clearAccessToken() {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
+  sessionStorage.removeItem(ACCESS_TOKEN_KEY);
 }
 
 function redirectToLogin() {

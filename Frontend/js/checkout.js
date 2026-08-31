@@ -63,7 +63,7 @@
           '<div>' +
             '<div class="form-section-title">Payment method</div>' +
             '<label class="pay-option' + (form.paymentMethod === 'card' ? ' is-active' : '') + '"><input type="radio" name="pay" data-pay="card" ' + (form.paymentMethod === 'card' ? 'checked' : '') + '> Pay by Card Credit</label>' +
-            '<label class="pay-option' + (form.paymentMethod === 'paypal' ? ' is-active' : '') + '"><input type="radio" name="pay" data-pay="paypal" ' + (form.paymentMethod === 'paypal' ? 'checked' : '') + '> PayPal</label>' +
+            '<label class="pay-option is-disabled"><input type="radio" name="pay" value="paypal" disabled> PayPal <span class="faint">(coming soon)</span></label>' +
           '<p class="faint" style="margin:16px 0 0;">Card details are entered securely on Stripe Checkout.</p>' +
           '</div>' +
           '<div id="checkout-error" class="error-text"></div>' +
@@ -84,10 +84,6 @@
                 '</div>'
               );
             }).join('') +
-          '</div>' +
-          '<div style="display:flex;gap:8px;margin:16px 0;">' +
-            '<input class="input" placeholder="Coupon code" style="flex:1;background:#fff;">' +
-            '<button class="btn btn--dark" type="button" style="padding:10px 16px;">Apply</button>' +
           '</div>' +
           '<div class="summary-line"><span>Shipping</span><span>' + shipping.label + (shippingCost ? ' (' + fmt(shippingCost) + ')' : '') + '</span></div>' +
           '<div class="summary-line" style="padding-bottom:12px;border-bottom:1px solid var(--border);"><span>Subtotal</span><span>' + fmt(subtotal) + '</span></div>' +
