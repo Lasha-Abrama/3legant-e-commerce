@@ -6,12 +6,14 @@ import { ReviewsController } from './reviews.controller';
 import { ReviewsAdminController } from './reviews-admin.controller';
 import { UsersModule } from '../users/users.module';
 import { ProductsModule } from '../products/products.module';
+import { OrdersModule } from '../orders/orders.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Review.name, schema: ReviewSchema }]),
     UsersModule,
     ProductsModule,
+    OrdersModule,
   ],
   controllers: [ReviewsController, ReviewsAdminController],
   providers: [ReviewsService],

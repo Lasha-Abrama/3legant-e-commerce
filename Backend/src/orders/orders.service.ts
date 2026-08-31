@@ -85,6 +85,16 @@ export class OrdersService {
     return this.orderModel.find({ user: userId }).sort({ createdAt: -1 }).lean().exec();
   }
 
+  async hasPurchasedProduct(userId: string, productId: string) {
+    const order = await this.orderModel.exists({
+      user: userId,
+      paymentStatus: 'paid',
+      status: { $ne: 'Cancelled' },
+      'items.productId': productId,
+    });
+    return Boolean(order);
+  }
+
   async findByIdForUser(orderId: string, userId: string) {
     const order = await this.orderModel.findOne({ _id: orderId, user: userId }).exec();
     if (!order) {

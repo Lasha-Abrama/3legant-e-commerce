@@ -1,15 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Review, ReviewDocument } from './schemas/review.schema';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ProductsService } from '../products/products.service';
+import { OrdersService } from '../orders/orders.service';
 
 @Injectable()
 export class ReviewsService {
   constructor(
     @InjectModel(Review.name) private readonly reviewModel: Model<ReviewDocument>,
     private readonly productsService: ProductsService,
+    private readonly ordersService: OrdersService,
   ) {}
 
   findByProduct(productId: string) {
@@ -21,13 +23,34 @@ export class ReviewsService {
   }
 
   async create(productId: string, userId: string, authorName: string, dto: CreateReviewDto) {
-    const review = await new this.reviewModel({
-      product: new Types.ObjectId(productId),
-      user: new Types.ObjectId(userId),
-      authorName,
-      rating: dto.rating,
-      text: dto.text,
-    }).save();
+    await this.productsService.findOne(productId);
+    const hasPurchased = await this.ordersService.hasPurchasedProduct(userId, productId);
+    if (!hasPurchased) {
+      throw new ForbiddenException('Only customers who purchased this product can review it');
+    }
+    const existingReview = await this.reviewModel.findOne({
+      product: productId,
+      user: userId,
+    }).exec();
+    if (existingReview) {
+      throw new ConflictException('You have already reviewed this product');
+    }
+
+    let review: ReviewDocument;
+    try {
+      review = await new this.reviewModel({
+        product: new Types.ObjectId(productId),
+        user: new Types.ObjectId(userId),
+        authorName,
+        rating: dto.rating,
+        text: dto.text,
+      }).save();
+    } catch (error) {
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 11000) {
+        throw new ConflictException('You have already reviewed this product');
+      }
+      throw error;
+    }
 
     await this.recalculateProductRating(productId);
     return review;

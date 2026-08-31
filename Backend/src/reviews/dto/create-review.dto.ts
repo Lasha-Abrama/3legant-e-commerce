@@ -1,4 +1,4 @@
-import { IsInt, IsString, Max, Min, MinLength } from 'class-validator';
+import { IsInt, IsString, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 export class CreateReviewDto {
   @IsInt()
@@ -8,5 +8,7 @@ export class CreateReviewDto {
 
   @IsString()
   @MinLength(1, { message: 'გთხოვთ დაწეროთ შეფასების ტექსტი' })
+  @Matches(/\S/, { message: 'გთხოვთ დაწეროთ შეფასების ტექსტი' })
+  @MaxLength(1000, { message: 'შეფასება არ უნდა აღემატებოდეს 1000 სიმბოლოს' })
   text: string;
 }

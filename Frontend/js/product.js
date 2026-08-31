@@ -2,6 +2,15 @@
   var productId = qs('id');
   var state = { product: null, reviews: null, color: null, qty: 1, tab: 'reviews', wishlisted: false, me: null };
 
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   if (!productId) {
     document.getElementById('product-content').innerHTML = '<p>Product not found.</p>';
     return;
@@ -180,23 +189,27 @@
           '<span style="color:#e8b400;">' + starString(p.ratingAvg) + '</span>' +
           '<span class="faint" style="font-size:13px;">' + p.reviewsCount + ' Reviews</span>' +
         '</div>' +
-        '<textarea class="input" placeholder="Write your review" rows="3" id="review-text" style="margin-bottom:12px;"></textarea>' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:30px;">' +
-          '<select class="input" id="review-rating" style="width:110px;">' +
-            '<option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3">★★★☆☆</option>' +
-            '<option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option>' +
-          '</select>' +
-          '<button class="btn btn--dark" id="submit-review">Write Review</button>' +
-        '</div>' +
+        (state.me
+          ? '<textarea class="input" placeholder="Write your review" rows="3" id="review-text" style="margin-bottom:12px;"></textarea>' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+              '<select class="input" id="review-rating" style="width:110px;">' +
+                '<option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3">★★★☆☆</option>' +
+                '<option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option>' +
+              '</select>' +
+              '<button class="btn btn--dark" id="submit-review">Write Review</button>' +
+            '</div>' +
+            '<div class="faint" style="font-size:11px;margin-bottom:4px;">Reviews are available after purchasing this product. One review per customer.</div>' +
+            '<div class="error-text" id="review-error" style="margin-bottom:24px;"></div>'
+          : '<div class="faint" style="font-size:13px;margin-bottom:24px;"><a href="login.html?next=' + encodeURIComponent('product.html?id=' + p._id) + '" style="color:var(--ink);text-decoration:underline;">Sign in</a> to review a product you purchased.</div>') +
         '<div id="review-list">' +
           reviews.map(function (r) {
             return (
               '<div class="review-row">' +
                 '<div class="ph">Photo</div>' +
                 '<div>' +
-                  '<div class="review-name">' + r.authorName + '</div>' +
+                  '<div class="review-name">' + escapeHtml(r.authorName) + '</div>' +
                   '<div class="review-stars">' + starString(r.rating) + '</div>' +
-                  '<p class="review-text">' + r.text + '</p>' +
+                  '<p class="review-text">' + escapeHtml(r.text) + '</p>' +
                 '</div>' +
               '</div>'
             );
@@ -204,14 +217,32 @@
         '</div>' +
       '</div>';
 
-    document.getElementById('submit-review').addEventListener('click', function () {
+    var submitReviewButton = document.getElementById('submit-review');
+    if (!submitReviewButton) return;
+    submitReviewButton.addEventListener('click', function () {
       var text = document.getElementById('review-text').value.trim();
-      if (!text) return;
+      var errorEl = document.getElementById('review-error');
+      errorEl.textContent = '';
+      if (!text) {
+        errorEl.textContent = 'Please write a review before submitting.';
+        return;
+      }
       var rating = Number(document.getElementById('review-rating').value);
+      submitReviewButton.disabled = true;
       apiPost('/products/' + p._id + '/reviews', { text: text, rating: rating }).then(function (res) {
-        if (!res) return;
-        if (res._status >= 400) { alert(res.message || 'Could not submit review'); return; }
+        if (!res) {
+          submitReviewButton.disabled = false;
+          return;
+        }
+        if (res._status >= 400) {
+          errorEl.textContent = res.message || 'Could not submit review';
+          submitReviewButton.disabled = false;
+          return;
+        }
         reloadReviewsAndProduct();
+      }).catch(function () {
+        errorEl.textContent = 'The review service is currently unavailable.';
+        submitReviewButton.disabled = false;
       });
     });
   }

@@ -52,6 +52,8 @@ Admins can request a full refund for an unshipped paid order with `POST /api/adm
 
 Fulfillment status changes are forward-only: `Processing → Shipped → Delivered`. A processing order can become `Cancelled` only when it has no checkout session or its pending session has failed or expired; active and completed payment sessions cannot be cancelled. Paid orders must be refunded before cancellation. Shipping requires both `paymentStatus: paid` and `inventoryStatus: adjusted`; terminal and backward transitions are rejected.
 
+Product reviews are verified-purchase only. The API confirms the product exists and appears in one of the authenticated customer's paid, non-cancelled orders before accepting a review. A compound unique index permits one review per customer and product, including under concurrent requests; product rating aggregates are recalculated after successful creation or admin deletion.
+
 For local Stripe webhooks:
 
 ```bash

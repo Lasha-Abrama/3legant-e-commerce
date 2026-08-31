@@ -48,6 +48,25 @@ describe('OrdersService', () => {
     );
   });
 
+  it('recognizes products from a paid customer order', async () => {
+    (orderModel as any).exists = jest.fn().mockResolvedValue({ _id: 'order-id' });
+
+    await expect(
+      service.hasPurchasedProduct('user-id', 'product-id'),
+    ).resolves.toBe(true);
+    expect((orderModel as any).exists).toHaveBeenCalledWith({
+      user: 'user-id',
+      paymentStatus: 'paid',
+      status: { $ne: 'Cancelled' },
+      'items.productId': 'product-id',
+    });
+
+    (orderModel as any).exists = jest.fn().mockResolvedValue(null);
+    await expect(
+      service.hasPurchasedProduct('user-id', 'other-product-id'),
+    ).resolves.toBe(false);
+  });
+
   it('uses canonical product data when creating an order', async () => {
     productsService.findOne = jest.fn().mockResolvedValue({
       _id: 'product-id',
