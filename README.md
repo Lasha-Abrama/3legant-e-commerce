@@ -44,6 +44,8 @@ npm test
 
 Run only the isolated HTTP integration suite with `npm run test:api`. It starts a temporary Nest application and exercises routing, validation, authorization, security headers, order boundaries, and multipart uploads with mocked persistence and external integrations, so it never writes to the configured database or Cloudinary account.
 
+After deployment, use `GET /api/health` as the hosting health probe. A ready API returns `200` with `{ "status": "ok" }` and disables response caching.
+
 Seed development catalog data with `npm run seed`. Seeding is blocked when `NODE_ENV=production` because it replaces the product and blog collections. Administrator creation is optional: set both `SEED_ADMIN_EMAIL` and a unique `SEED_ADMIN_PASSWORD` of at least 12 characters. The seed never prints the password and refuses to promote an existing non-admin account.
 
 ## Environment variables

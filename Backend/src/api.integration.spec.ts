@@ -15,6 +15,7 @@ import { UploadsController } from './uploads/uploads.controller';
 import { UploadsService } from './uploads/uploads.service';
 import { UsersService } from './users/users.service';
 import { configureApp } from './setup';
+import { HealthController } from './health.controller';
 
 describe('API integration boundaries', () => {
   let app: NestExpressApplication;
@@ -50,7 +51,13 @@ describe('API integration boundaries', () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      controllers: [AuthController, ProductsController, OrdersController, UploadsController],
+      controllers: [
+        HealthController,
+        AuthController,
+        ProductsController,
+        OrdersController,
+        UploadsController,
+      ],
       providers: [
         JwtAuthGuard,
         AdminGuard,
@@ -85,6 +92,14 @@ describe('API integration boundaries', () => {
       isAdmin: id === 'admin-id',
       tokenVersion: id === 'admin-id' ? 1 : 0,
     }));
+  });
+
+  it('reports API health without caching the response', async () => {
+    await request(app.getHttpServer())
+      .get('/api/health')
+      .expect(200)
+      .expect('Cache-Control', 'no-store')
+      .expect({ status: 'ok' });
   });
 
   it('runs request validation before registration logic', async () => {

@@ -16,6 +16,7 @@ import { ContactModule } from './contact/contact.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { PaymentsModule } from './payments/payments.module';
 import { validateEnvironment } from './config/environment';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { validateEnvironment } from './config/environment';
     UploadsModule,
     PaymentsModule,
   ],
+  controllers: [HealthController],
   providers: [
     {
       provide: APP_GUARD,
