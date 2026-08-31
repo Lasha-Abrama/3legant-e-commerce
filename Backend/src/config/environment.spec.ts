@@ -15,11 +15,18 @@ const validEnvironment = {
 
 describe('validateEnvironment', () => {
   it('normalizes valid configuration', () => {
-    expect(validateEnvironment(validEnvironment)).toMatchObject({
+    expect(validateEnvironment({ ...validEnvironment, TRUST_PROXY: ' 2 ' })).toMatchObject({
       NODE_ENV: 'development',
       PORT: 5000,
       FRONTEND_URL: 'http://localhost:5000',
+      TRUST_PROXY: 2,
     });
+  });
+
+  it('rejects trusting every reverse proxy', () => {
+    expect(() => validateEnvironment({ ...validEnvironment, TRUST_PROXY: 'true' })).toThrow(
+      'Environment validation failed: TRUST_PROXY cannot trust every proxy',
+    );
   });
 
   it('rejects missing required variables without exposing values', () => {

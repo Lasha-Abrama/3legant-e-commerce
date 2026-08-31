@@ -48,7 +48,7 @@ Seed development catalog data with `npm run seed`. Seeding is blocked when `NODE
 
 ## Environment variables
 
-The API requires `MONGO_URL`, `JWT_SECRET`, `CLOUDINARY_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Stripe checkout additionally requires `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `FRONTEND_URL`. Do not commit `.env` files or credentials. Authentication uses bearer access tokens stored by the browser client. When deploying behind a known reverse proxy, set `TRUST_PROXY` to the matching Express trust value so IP-based controls use the correct client address; never trust arbitrary proxies.
+The API requires `MONGO_URL`, `JWT_SECRET`, `CLOUDINARY_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Stripe checkout additionally requires `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `FRONTEND_URL`. Do not commit `.env` files or credentials. Authentication uses bearer access tokens stored by the browser client. When deploying behind a known reverse proxy, set `TRUST_PROXY` to a numeric hop count, a named Express range such as `loopback`, or a trusted subnet so IP-based controls use the correct client address. The unsafe value `true` is rejected.
 
 Startup validates every required integration setting before connecting or listening. MongoDB, Stripe, webhook, frontend URL, port, and JWT formats must be valid; production requires a JWT secret of at least 32 characters. Validation errors identify only the variable name or expected format and never print configured secret values.
 

@@ -1,8 +1,14 @@
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 
-export function configureApp(app: NestExpressApplication): void {
+export function configureApp(app: NestExpressApplication, configService: ConfigService): void {
+  const trustProxy = configService.get<string | number>('TRUST_PROXY');
+  if (trustProxy !== undefined) {
+    app.set('trust proxy', trustProxy);
+  }
+
   app.use(
     helmet({
       contentSecurityPolicy: {

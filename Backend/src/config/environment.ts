@@ -67,6 +67,19 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     throw new Error('Environment validation failed: FRONTEND_URL must use HTTP or HTTPS');
   }
 
+  const trustProxy = config.TRUST_PROXY;
+  if (typeof trustProxy === 'string' && trustProxy.trim()) {
+    const normalizedTrustProxy = trustProxy.trim();
+    if (normalizedTrustProxy === 'true') {
+      throw new Error('Environment validation failed: TRUST_PROXY cannot trust every proxy');
+    }
+    validated.TRUST_PROXY = /^\d+$/.test(normalizedTrustProxy)
+      ? Number(normalizedTrustProxy)
+      : normalizedTrustProxy;
+  } else {
+    delete validated.TRUST_PROXY;
+  }
+
   validated.NODE_ENV = nodeEnv;
   validated.PORT = port;
   validated.FRONTEND_URL = frontendUrl.replace(/\/+$/, '');

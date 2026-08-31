@@ -7,12 +7,7 @@ import { configureApp } from './setup';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
   const configService = app.get(ConfigService);
-  const trustProxy = configService.get<string>('TRUST_PROXY');
-  if (trustProxy) {
-    app.set('trust proxy', trustProxy);
-  }
-
-  configureApp(app);
+  configureApp(app, configService);
 
   const port = configService.getOrThrow<number>('PORT');
   await app.listen(port);

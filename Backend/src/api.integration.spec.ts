@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import request = require('supertest');
@@ -56,6 +57,7 @@ describe('API integration boundaries', () => {
         { provide: AuthService, useValue: authService },
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: jwtService },
+        { provide: ConfigService, useValue: { get: jest.fn() } },
         { provide: ProductsService, useValue: productsService },
         { provide: OrdersService, useValue: ordersService },
         { provide: UploadsService, useValue: uploadsService },
@@ -63,7 +65,7 @@ describe('API integration boundaries', () => {
     }).compile();
 
     app = moduleRef.createNestApplication<NestExpressApplication>();
-    configureApp(app);
+    configureApp(app, app.get(ConfigService));
     await app.init();
   });
 
