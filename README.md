@@ -40,6 +40,8 @@ cd Backend
 npm test
 ```
 
+Seed development catalog data with `npm run seed`. Seeding is blocked when `NODE_ENV=production` because it replaces the product and blog collections. Administrator creation is optional: set both `SEED_ADMIN_EMAIL` and a unique `SEED_ADMIN_PASSWORD` of at least 12 characters. The seed never prints the password and refuses to promote an existing non-admin account.
+
 ## Environment variables
 
 The API requires `MONGO_URL`, `JWT_SECRET`, `CLOUDINARY_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Stripe checkout additionally requires `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `FRONTEND_URL`. Do not commit `.env` files or credentials. Authentication uses bearer access tokens stored by the browser client. When deploying behind a known reverse proxy, set `TRUST_PROXY` to the matching Express trust value so IP-based controls use the correct client address; never trust arbitrary proxies.

@@ -241,11 +241,45 @@ function buildSlug(name: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
+function getSeedAdminConfig() {
+  const email = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.SEED_ADMIN_PASSWORD;
+
+  if (!email && !password) {
+    return null;
+  }
+
+  if (!email || !password) {
+    throw new Error('SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be provided together');
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('SEED_ADMIN_EMAIL must be a valid email address');
+  }
+
+  if (password.length < 12) {
+    throw new Error('SEED_ADMIN_PASSWORD must contain at least 12 characters');
+  }
+
+  return {
+    email,
+    password,
+    firstName: process.env.SEED_ADMIN_FIRST_NAME?.trim() || 'Store',
+    lastName: process.env.SEED_ADMIN_LAST_NAME?.trim() || 'Admin',
+  };
+}
+
 async function seed() {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Database seeding is disabled in production');
+  }
+
   const mongoUrl = process.env.MONGO_URL;
   if (!mongoUrl) {
     throw new Error('MONGO_URL არ არის მითითებული .env ფაილში');
   }
+
+  const adminConfig = getSeedAdminConfig();
 
   await mongoose.connect(mongoUrl);
   console.log('დაკავშირებულია MongoDB-სთან');
@@ -253,6 +287,13 @@ async function seed() {
   const ProductModel = mongoose.model(Product.name, ProductSchema);
   const BlogModel = mongoose.model(Blog.name, BlogSchema);
   const UserModel = mongoose.model(User.name, UserSchema);
+
+  const existingAdminUser = adminConfig
+    ? await UserModel.findOne({ email: adminConfig.email })
+    : null;
+  if (existingAdminUser && !existingAdminUser.isAdmin) {
+    throw new Error('SEED_ADMIN_EMAIL belongs to a non-admin account');
+  }
 
   await ProductModel.deleteMany({});
   await ProductModel.insertMany(
@@ -266,21 +307,21 @@ async function seed() {
   );
   console.log(`${blogPosts.length} ბლოგპოსტი დაემატა`);
 
-  const adminEmail = 'admin@loamandco.com';
-  const existingAdmin = await UserModel.findOne({ email: adminEmail });
-  if (!existingAdmin) {
-    const passwordHash = await bcrypt.hash('Admin1234', 10);
+  if (!adminConfig) {
+    console.log('ადმინისტრატორის შექმნა გამოტოვებულია');
+  } else if (existingAdminUser) {
+    console.log('ადმინისტრატორი უკვე არსებობს, გამოტოვება');
+  } else {
+    const passwordHash = await bcrypt.hash(adminConfig.password, 12);
     await UserModel.create({
-      firstName: 'Loam',
-      lastName: 'Admin',
-      email: adminEmail,
+      firstName: adminConfig.firstName,
+      lastName: adminConfig.lastName,
+      email: adminConfig.email,
       passwordHash,
-      displayName: 'Loam Admin',
+      displayName: `${adminConfig.firstName} ${adminConfig.lastName}`,
       isAdmin: true,
     });
-    console.log(`ადმინისტრატორი შეიქმნა: ${adminEmail} / Admin1234`);
-  } else {
-    console.log('ადმინისტრატორი უკვე არსებობს, გამოტოვება');
+    console.log(`ადმინისტრატორი შეიქმნა: ${adminConfig.email}`);
   }
 
   await mongoose.disconnect();
