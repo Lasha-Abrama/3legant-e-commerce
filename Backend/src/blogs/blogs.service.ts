@@ -6,6 +6,7 @@ import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { FindBlogsQueryDto } from './dto/find-blogs-query.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { escapeRegularExpression } from '../common/utils/escape-regular-expression';
 
 @Injectable()
 export class BlogsService {
@@ -17,15 +18,19 @@ export class BlogsService {
     const filter: QueryFilter<BlogDocument> = {};
     if (typeof query.featured === 'boolean') filter.featured = query.featured;
     if (query.search) {
-      filter.title = { $regex: query.search, $options: 'i' };
+      filter.title = { $regex: escapeRegularExpression(query.search), $options: 'i' };
     }
+
+    const sort: Record<string, 1 | -1> = {
+      createdAt: query.sort === 'oldest' ? 1 : -1,
+    };
 
     const page = query.page ?? 1;
     const take = query.take ?? 12;
     const skip = (page - 1) * take;
 
     const [data, total] = await Promise.all([
-      this.blogModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(take).lean().exec(),
+      this.blogModel.find(filter).sort(sort).skip(skip).limit(take).lean().exec(),
       this.blogModel.countDocuments(filter).exec(),
     ]);
 

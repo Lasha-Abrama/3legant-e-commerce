@@ -7,10 +7,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { FindProductsQueryDto } from './dto/find-products-query.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { UsersService } from '../users/users.service';
-
-function escapeRegularExpression(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+import { escapeRegularExpression } from '../common/utils/escape-regular-expression';
 
 @Injectable()
 export class ProductsService {

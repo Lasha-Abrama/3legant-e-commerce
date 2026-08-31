@@ -23,17 +23,22 @@
 
   <div class="wrap">
     <div class="section-head" style="margin-bottom:28px;">
-      <div style="display:flex;gap:24px;font-size:14px;">
-        <span style="font-weight:600;border-bottom:2px solid var(--ink);padding-bottom:6px;">All Blog</span>
-        <span class="faint">Featured</span>
+      <div class="blog-tabs" aria-label="Blog filters">
+        <button class="blog-tab is-active" type="button" data-filter="all">All Blog</button>
+        <button class="blog-tab" type="button" data-filter="featured">Featured</button>
       </div>
-      <div class="muted" style="font-size:13px;">Sort by ⌄</div>
+      <label class="blog-sort">Sort by
+        <select id="blog-sort-select">
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+        </select>
+      </label>
     </div>
 
     <div class="grid-3" id="post-grid"></div>
 
     <div class="center" style="margin-top:40px;">
-      <button class="btn btn--outline">Show more</button>
+      <button class="btn btn--outline" id="blog-show-more" type="button">Show more</button>
     </div>
   </div>
 
