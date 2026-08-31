@@ -40,7 +40,7 @@ npm test
 
 ## Environment variables
 
-The API requires `MONGO_URL`, `JWT_SECRET`, `CLOUDINARY_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Stripe checkout additionally requires `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `FRONTEND_URL`. Do not commit `.env` files or credentials. Authentication uses bearer access tokens stored by the browser client.
+The API requires `MONGO_URL`, `JWT_SECRET`, `CLOUDINARY_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Stripe checkout additionally requires `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `FRONTEND_URL`. Do not commit `.env` files or credentials. Authentication uses bearer access tokens stored by the browser client. When deploying behind a known reverse proxy, set `TRUST_PROXY` to the matching Express trust value so IP-based controls use the correct client address; never trust arbitrary proxies.
 
 JWTs carry the user's token version. Password changes and authenticated logout increment that version, immediately rejecting every previously issued token. Existing pre-version tokens remain valid only while the account version is `0`. Profile email changes are normalized and checked for uniqueness before saving, with duplicate-key races returned as a validation error instead of an internal server error.
 
@@ -60,6 +60,8 @@ Wishlist mutations validate both the authenticated user and product reference. M
 
 Customer-facing and admin HTML rendering treats API and browser-storage values as untrusted. Shared helpers encode text and quoted attributes, allow only HTTP(S) image URLs, and restrict dynamic color values to hexadecimal CSS colors before account, checkout, cart, catalog, product, review, order, user, message, or blog content is inserted with `innerHTML`.
 
+Helmet adds browser security headers and a content security policy that permits the storefront's local assets, HTTPS images, Google Fonts, and existing inline styles. A global in-memory rate limit allows 120 requests per IP per minute, while login, registration, contact, and newsletter endpoints use tighter limits. The in-memory store is process-local; use a shared throttler storage provider before scaling the API across multiple instances.
+
 For local Stripe webhooks:
 
 ```bash
@@ -73,7 +75,7 @@ Copy the `whsec_...` value printed by `stripe listen` into `Backend/.env` as `ST
 
 1. Establish repository documentation, secret handling, and a repeatable local setup.
 2. Add backend quality checks and baseline tests.
-3. Replace session authentication with JWT access tokens and protected API guards.
+3. Maintain JWT access tokens, token-version invalidation, and protected API guards.
 4. Harden core domains: products, cart/checkout, orders, reviews, and admin authorization.
 5. Document and test public/admin API flows.
 6. Rebuild the storefront in Next.js only after the API contract is stable.
