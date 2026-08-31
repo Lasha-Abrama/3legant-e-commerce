@@ -154,6 +154,12 @@ export class UsersService {
 
   async setAdmin(userId: string, isAdmin: boolean) {
     const user = await this.findById(userId);
+    if (user.isAdmin && !isAdmin) {
+      const adminCount = await this.userModel.countDocuments({ isAdmin: true }).exec();
+      if (adminCount <= 1) {
+        throw new BadRequestException('ბოლო ადმინისტრატორის გაუქმება არ შეიძლება');
+      }
+    }
     user.isAdmin = isAdmin;
     await user.save();
     return this.toSafeUser(user);

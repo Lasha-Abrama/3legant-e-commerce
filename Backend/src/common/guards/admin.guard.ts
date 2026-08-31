@@ -20,8 +20,14 @@ export class AdminGuard implements CanActivate {
 
     let user;
     try {
-      const payload = await this.jwtService.verifyAsync<{ sub: string }>(token);
+      const payload = await this.jwtService.verifyAsync<{
+        sub: string;
+        tokenVersion?: number;
+      }>(token);
       user = await this.usersService.findById(payload.sub);
+      if ((user.tokenVersion ?? 0) !== (payload.tokenVersion ?? 0)) {
+        throw new UnauthorizedException('გაიარეთ ავტორიზაცია');
+      }
     } catch {
       throw new UnauthorizedException('გაიარეთ ავტორიზაცია');
     }

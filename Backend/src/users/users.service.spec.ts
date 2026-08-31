@@ -134,4 +134,40 @@ describe('UsersService', () => {
       { $pull: { wishlist: expect.anything() } },
     );
   });
+
+  it('rejects demoting the final administrator', async () => {
+    const admin = {
+      isAdmin: true,
+      save: jest.fn(),
+    };
+    service.findById = jest.fn().mockResolvedValue(admin as never);
+    (userModel as any).countDocuments = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(1),
+    });
+
+    await expect(service.setAdmin('admin-id', false)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(admin.save).not.toHaveBeenCalled();
+  });
+
+  it('allows demoting an administrator when another remains', async () => {
+    const admin = {
+      isAdmin: true,
+      save: jest.fn().mockResolvedValue(undefined),
+      _id: 'admin-id',
+    };
+    service.findById = jest.fn().mockResolvedValue(admin as never);
+    (userModel as any).countDocuments = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(2),
+    });
+    service.toSafeUser = jest.fn().mockReturnValue({ id: 'admin-id', isAdmin: false });
+
+    await expect(service.setAdmin('admin-id', false)).resolves.toEqual({
+      id: 'admin-id',
+      isAdmin: false,
+    });
+    expect(admin.isAdmin).toBe(false);
+    expect(admin.save).toHaveBeenCalled();
+  });
 });
