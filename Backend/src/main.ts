@@ -14,7 +14,7 @@ async function bootstrap() {
 
   configureApp(app);
 
-  const port = configService.get<string>('PORT', '5000');
+  const port = configService.getOrThrow<number>('PORT');
   await app.listen(port);
   console.log(`Gita_3_Team_2. სერვერი გაშვებულია: http://localhost:${port}`);
 }

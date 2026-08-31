@@ -46,6 +46,8 @@ Seed development catalog data with `npm run seed`. Seeding is blocked when `NODE
 
 The API requires `MONGO_URL`, `JWT_SECRET`, `CLOUDINARY_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Stripe checkout additionally requires `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `FRONTEND_URL`. Do not commit `.env` files or credentials. Authentication uses bearer access tokens stored by the browser client. When deploying behind a known reverse proxy, set `TRUST_PROXY` to the matching Express trust value so IP-based controls use the correct client address; never trust arbitrary proxies.
 
+Startup validates every required integration setting before connecting or listening. MongoDB, Stripe, webhook, frontend URL, port, and JWT formats must be valid; production requires a JWT secret of at least 32 characters. Validation errors identify only the variable name or expected format and never print configured secret values.
+
 JWTs carry the user's token version. Password changes and authenticated logout increment that version, immediately rejecting every previously issued token. Existing pre-version tokens remain valid only while the account version is `0`. Profile email changes are normalized and checked for uniqueness before saving, with duplicate-key races returned as a validation error instead of an internal server error.
 
 Administrator guards enforce the same token-version invalidation as customer routes. Role management prevents self-demotion and rejects attempts to remove the final administrator account; the dashboard locks the current administrator row and confirms every role change.

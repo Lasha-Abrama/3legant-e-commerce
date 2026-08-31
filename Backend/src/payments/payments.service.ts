@@ -53,7 +53,7 @@ export class PaymentsService {
       }
     }
 
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5000');
+    const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
     let session: Stripe.Checkout.Session;
     try {
       session = await stripe.checkout.sessions.create(

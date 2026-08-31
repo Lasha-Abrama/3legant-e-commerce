@@ -15,10 +15,11 @@ import { OrdersModule } from './orders/orders.module';
 import { ContactModule } from './contact/contact.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { PaymentsModule } from './payments/payments.module';
+import { validateEnvironment } from './config/environment';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
     ThrottlerModule.forRoot({
       throttlers: [{ ttl: 60_000, limit: 120 }],
       errorMessage: 'Too many requests. Please try again later.',
@@ -34,10 +35,7 @@ import { PaymentsModule } from './payments/payments.module';
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>(
-          'MONGO_URL',
-          'mongodb://127.0.0.1:27017/e-commerce',
-        ),
+        uri: configService.getOrThrow<string>('MONGO_URL'),
       }),
     }),
     ServeStaticModule.forRoot({
