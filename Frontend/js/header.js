@@ -33,7 +33,7 @@
         '<a href="index.html" class="site-header__logo">Gita_3_Team_2</a>' +
         '<nav class="site-nav">' + navHtml(active, '') + '</nav>' +
         '<div class="header-actions">' +
-          '<button class="icon-btn search-btn" aria-label="Search">' +
+          '<button class="icon-btn search-btn" aria-label="Search" aria-controls="header-search-form">' +
             '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>' +
           '</button>' +
           '<a href="admin/index.html" id="admin-link" class="icon-btn" aria-label="Admin" style="display:none;font-size:11px;font-weight:600;letter-spacing:.02em;">ADMIN</a>' +
@@ -49,7 +49,19 @@
           '</button>' +
         '</div>' +
       '</div>' +
-      '<nav class="mobile-nav" id="mobile-nav" style="display:none;">' + navHtml(active, '') + '</nav>' +
+      '<form class="header-search-panel" id="header-search-form" hidden>' +
+        '<label for="header-search-input">Search products</label>' +
+        '<input class="input" id="header-search-input" type="search" maxlength="80" placeholder="What are you looking for?" required>' +
+        '<button class="btn btn--dark" type="submit">Search</button>' +
+        '<button class="icon-btn" id="header-search-close" type="button" aria-label="Close search">&times;</button>' +
+      '</form>' +
+      '<nav class="mobile-nav" id="mobile-nav" style="display:none;">' +
+        navHtml(active, '') +
+        '<form class="mobile-search" id="mobile-search-form">' +
+          '<input class="input" type="search" maxlength="80" placeholder="Search products" aria-label="Search products" required>' +
+          '<button class="btn btn--dark" type="submit">Search</button>' +
+        '</form>' +
+      '</nav>' +
       '<div id="cart-overlay-slot"></div>' +
       '<div class="cart-drawer" id="cart-drawer">' +
         '<div class="cart-drawer__head">' +
@@ -73,6 +85,23 @@
       nav.style.display = nav.style.display === 'none' ? 'flex' : 'none';
     });
 
+    var searchButton = root.querySelector('.search-btn');
+    var searchForm = document.getElementById('header-search-form');
+    var searchInput = document.getElementById('header-search-input');
+    searchButton.setAttribute('aria-expanded', 'false');
+    searchButton.addEventListener('click', function () {
+      searchForm.hidden = false;
+      searchButton.setAttribute('aria-expanded', 'true');
+      searchInput.focus();
+    });
+    document.getElementById('header-search-close').addEventListener('click', function () {
+      searchForm.hidden = true;
+      searchButton.setAttribute('aria-expanded', 'false');
+      searchButton.focus();
+    });
+    wireSearchForm(searchForm, searchInput);
+    wireSearchForm(document.getElementById('mobile-search-form'));
+
     document.getElementById('cart-open').addEventListener('click', openCart);
     document.getElementById('cart-close').addEventListener('click', closeCart);
 
@@ -90,6 +119,17 @@
 
     refreshCart();
     window.addEventListener('cart-updated', refreshCart);
+  }
+
+  function wireSearchForm(form, input) {
+    var searchInput = input || form.querySelector('input');
+    searchInput.value = qs('q') || '';
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      var query = searchInput.value.trim();
+      if (!query) return;
+      window.location.href = 'shop.html?q=' + encodeURIComponent(query);
+    });
   }
 
   function openCart() {

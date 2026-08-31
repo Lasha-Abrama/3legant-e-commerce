@@ -10,7 +10,20 @@
   ];
   var PAGE_SIZE = 9;
 
-  var state = { category: 'All Rooms', prices: {}, sort: '', visible: PAGE_SIZE, allProducts: [] };
+  var state = {
+    category: 'All Rooms',
+    prices: {},
+    search: (qs('q') || '').trim(),
+    sort: '',
+    visible: PAGE_SIZE,
+    allProducts: [],
+  };
+
+  function updateResultsLabel() {
+    document.getElementById('active-category-label').textContent = state.search
+      ? 'Search: “' + state.search + '”'
+      : state.category;
+  }
 
   function renderCategoryList() {
     document.getElementById('category-list').innerHTML = CATEGORIES.map(function (c) {
@@ -20,7 +33,7 @@
       btn.addEventListener('click', function () {
         state.category = btn.getAttribute('data-cat');
         state.visible = PAGE_SIZE;
-        document.getElementById('active-category-label').textContent = state.category;
+        updateResultsLabel();
         loadProducts();
       });
     });
@@ -61,7 +74,11 @@
     var filtered = applySort(state.allProducts.filter(function (p) { return matchesPrice(p.price); }));
     var slice = filtered.slice(0, state.visible);
     var grid = document.getElementById('product-grid');
-    grid.innerHTML = slice.map(productCardHtml).join('');
+    grid.innerHTML = slice.length
+      ? slice.map(productCardHtml).join('')
+      : '<div class="shop-empty">No products found' +
+        (state.search ? ' for “' + escapeHtml(state.search) + '”' : '') +
+        '.</div>';
     wireAddToCartButtons(grid);
     document.getElementById('show-more').style.display = slice.length >= filtered.length ? 'none' : 'inline-flex';
   }
@@ -69,12 +86,14 @@
   function loadProducts() {
     renderCategoryList();
     var url = '/products?take=200' + (state.category !== 'All Rooms' ? '&category=' + encodeURIComponent(state.category) : '');
+    if (state.search) url += '&search=' + encodeURIComponent(state.search);
     apiGetSilent(url).then(function (res) {
       state.allProducts = (res && res.data) || [];
       renderGrid();
     });
   }
 
+  updateResultsLabel();
   renderPriceList();
   loadProducts();
 

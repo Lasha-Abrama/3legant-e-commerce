@@ -8,6 +8,10 @@ import { FindProductsQueryDto } from './dto/find-products-query.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { UsersService } from '../users/users.service';
 
+function escapeRegularExpression(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 @Injectable()
 export class ProductsService {
   constructor(
@@ -25,7 +29,7 @@ export class ProductsService {
       if (query.maxPrice !== undefined) filter.price.$lte = query.maxPrice;
     }
     if (query.search) {
-      filter.name = { $regex: query.search, $options: 'i' };
+      filter.name = { $regex: escapeRegularExpression(query.search), $options: 'i' };
     }
 
     const sortMap: Record<string, Record<string, 1 | -1>> = {

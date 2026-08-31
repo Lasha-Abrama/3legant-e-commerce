@@ -218,6 +218,14 @@ describe('API integration boundaries', () => {
     );
   });
 
+  it('rejects oversized product searches before querying persistence', async () => {
+    await request(app.getHttpServer())
+      .get('/api/products?search=' + 'a'.repeat(81))
+      .expect(400);
+
+    expect(productsService.findAll).not.toHaveBeenCalled();
+  });
+
   it('rejects spoofed image uploads before the upload service', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/admin/uploads/image')

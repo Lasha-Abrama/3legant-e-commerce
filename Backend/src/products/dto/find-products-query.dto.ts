@@ -1,5 +1,5 @@
-import { Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { PRODUCT_CATEGORIES, ProductCategory } from '../schemas/product.schema';
 
 const SORT_OPTIONS = ['price_asc', 'price_desc', 'newest'] as const;
@@ -29,7 +29,9 @@ export class FindProductsQueryDto {
   sort?: (typeof SORT_OPTIONS)[number];
 
   @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
+  @MaxLength(80)
   search?: string;
 
   @IsOptional()

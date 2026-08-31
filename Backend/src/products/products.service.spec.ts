@@ -96,4 +96,27 @@ describe('ProductsService', () => {
     await expect(service.remove('product-id')).resolves.toBe(deletedProduct);
     expect(usersService.removeProductFromWishlists).toHaveBeenCalledWith('product-id');
   });
+
+  it('treats product search text as literal input', async () => {
+    (productModel as any).find = jest.fn().mockReturnValue({
+      sort: jest.fn().mockReturnValue({
+        skip: jest.fn().mockReturnValue({
+          limit: jest.fn().mockReturnValue({
+            lean: jest.fn().mockReturnValue({
+              exec: jest.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
+      }),
+    });
+    (productModel as any).countDocuments = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(0),
+    });
+
+    await service.findAll({ search: 'Tray (Black)+' });
+
+    expect((productModel as any).find).toHaveBeenCalledWith({
+      name: { $regex: 'Tray \\(Black\\)\\+', $options: 'i' },
+    });
+  });
 });
