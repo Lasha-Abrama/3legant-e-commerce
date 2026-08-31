@@ -7,6 +7,7 @@ Full-stack e-commerce application based on the 3legant Figma design. The current
 - `Frontend/` — static HTML, CSS, and vanilla JavaScript storefront plus admin pages.
 - `Backend/` — NestJS API for authentication, users, products, blogs, reviews, orders, contact messages, newsletter subscriptions, and Cloudinary uploads.
 - `vercel.json` — deploys the static storefront and routes `/api/*` to the NestJS Vercel handler.
+- `DEPLOYMENT.md` — production environment, provider, webhook, and smoke-test checklist.
 
 ## Local development
 
@@ -74,7 +75,7 @@ Customer-facing and admin HTML rendering treats API and browser-storage values a
 
 Helmet adds browser security headers and a content security policy that permits the storefront's local assets, HTTPS images, Google Fonts, and existing inline styles. A global in-memory rate limit allows 120 requests per IP per minute, while login, registration, contact, and newsletter endpoints use tighter limits. The in-memory store is process-local; use a shared throttler storage provider before scaling the API across multiple instances.
 
-Administrator image uploads accept one file up to 5 MB and verify its binary signature instead of trusting the browser-provided MIME type. Only JPEG, PNG, GIF, and WebP files are accepted; SVG and other active or executable formats are rejected before Cloudinary upload. Uploads are additionally limited to 10 requests per IP every 15 minutes.
+Administrator image uploads accept one file up to 4 MB and verify its binary signature instead of trusting the browser-provided MIME type. The limit leaves room for multipart overhead under Vercel's request-body limit. Only JPEG, PNG, GIF, and WebP files are accepted; SVG and other active or executable formats are rejected before Cloudinary upload. Uploads are additionally limited to 10 requests per IP every 15 minutes.
 
 For local Stripe webhooks:
 

@@ -21,7 +21,7 @@ export class UploadsController {
   @Throttle({ default: { limit: 10, ttl: 15 * 60 * 1000 } })
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 0, parts: 2 },
+      limits: { fileSize: 4 * 1024 * 1024, files: 1, fields: 0, parts: 2 },
     }),
   )
   async uploadImage(@UploadedFile() file: Express.Multer.File) {

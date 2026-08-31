@@ -1,10 +1,30 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "builds": [
     { "src": "Backend/api/index.ts", "use": "@vercel/node" },
     { "src": "Frontend/**", "use": "@vercel/static" }
   ],
   "routes": [
+    {
+      "src": "/(.*)",
+      "headers": {
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; font-src 'self' https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'self'; img-src 'self' data: https:; object-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; upgrade-insecure-requests",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "Referrer-Policy": "no-referrer",
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "continue": true
+    },
+    {
+      "src": "/(account|checkout|login|register|forgot-password|reset-password)\\.html",
+      "headers": {
+        "Cache-Control": "private, no-store"
+      },
+      "continue": true
+    },
     { "src": "/api/(.*)", "dest": "Backend/api/index.ts" },
     { "src": "/", "dest": "/Frontend/index.html" },
     { "src": "/(.*)", "dest": "/Frontend/$1" }

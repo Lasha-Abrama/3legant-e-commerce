@@ -107,8 +107,8 @@ function validateImageUpload(file) {
   if (allowedTypes.indexOf(file.type) === -1) {
     return 'Choose a JPEG, PNG, GIF, or WebP image.';
   }
-  if (file.size > 5 * 1024 * 1024) {
-    return 'Images must be 5 MB or smaller.';
+  if (file.size > 4 * 1024 * 1024) {
+    return 'Images must be 4 MB or smaller.';
   }
   return '';
 }
