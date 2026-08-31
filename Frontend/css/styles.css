@@ -201,8 +201,29 @@ button, input, select, textarea { font-family: inherit; }
 .site-footer__tag { font-size: 12px; color: #a8a49a; }
 .site-footer__links { display: flex; gap: 32px; font-size: 13px; color: #cfcbc1; flex-wrap: wrap; }
 .site-footer__links a { text-decoration: none; }
-.site-footer__bottom { max-width: 1280px; margin: 0 auto; padding-top: 16px; font-size: 11px; color: var(--faint); }
+.site-footer__bottom { max-width: 1280px; margin: 0 auto; padding-top: 16px; font-size: 11px; color: var(--faint); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.site-footer__legal { display: flex; gap: 18px; }
+.site-footer__legal a { color: #cfcbc1; text-decoration: none; }
+.site-footer__legal a:hover { color: #fff; }
 @media (max-width: 859px) { .site-footer { padding: 40px 20px 20px; } }
+
+/* ---------- Legal pages ---------- */
+.legal-page { max-width: 860px; padding-top: 56px; padding-bottom: 72px; }
+.legal-page__header { margin: 42px 0 48px; padding-bottom: 30px; border-bottom: 1px solid var(--line); }
+.legal-page__eyebrow { color: var(--green); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; margin-bottom: 12px; }
+.legal-page__header h1 { font-size: clamp(38px, 6vw, 56px); line-height: 1.1; letter-spacing: -0.03em; margin: 0 0 12px; }
+.legal-page__header p { color: var(--faint); font-size: 13px; margin: 0; }
+.legal-page section { margin-bottom: 32px; }
+.legal-page section:last-child { margin-bottom: 0; }
+.legal-page h2 { font-size: 19px; line-height: 1.4; margin: 0 0 10px; }
+.legal-page p { color: #4a4843; font-size: 14px; line-height: 1.85; margin: 0 0 12px; }
+.legal-page p:last-child { margin-bottom: 0; }
+.legal-page p a { color: var(--ink); font-weight: 500; }
+@media (max-width: 859px) {
+  .site-footer__bottom { justify-content: center; text-align: center; }
+  .legal-page { padding-top: 30px; padding-bottom: 48px; }
+  .legal-page__header { margin: 28px 0 36px; }
+}
 
 /* ---------- Product cards / grids ---------- */
 .product-card { position: relative; }

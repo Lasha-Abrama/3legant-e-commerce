@@ -225,7 +225,8 @@
         topHtml +
         '<div class="site-footer__bottom' + (variant === 'minimal' ? '' : '') + '"' +
           (variant === 'minimal' ? ' style="text-align:center;padding-top:0;border-top:none;"' : '') + '>' +
-          '&copy; 2026 Gita_3_Team_2. All rights reserved.' +
+          '<span>&copy; 2026 Gita_3_Team_2. All rights reserved.</span>' +
+          '<span class="site-footer__legal"><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Use</a></span>' +
         '</div>' +
       '</div>';
   }
