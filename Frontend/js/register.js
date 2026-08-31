@@ -31,8 +31,7 @@
         return;
       }
       setAccessToken(res.accessToken);
-      var next = qs('next');
-      window.location.href = next || 'account.html';
+      window.location.href = safeLocalRedirect(qs('next'), 'account.html');
     });
   });
 })();

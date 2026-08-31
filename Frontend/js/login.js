@@ -15,8 +15,7 @@
         return;
       }
       setAccessToken(res.accessToken, form.querySelector('[name="remember"]').checked);
-      var next = qs('next');
-      window.location.href = next || 'account.html';
+      window.location.href = safeLocalRedirect(qs('next'), 'account.html');
     });
   });
 })();

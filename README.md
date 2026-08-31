@@ -73,6 +73,8 @@ Wishlist mutations validate both the authenticated user and product reference. M
 
 Customer-facing and admin HTML rendering treats API and browser-storage values as untrusted. Shared helpers encode text and quoted attributes, allow only HTTP(S) image URLs, and restrict dynamic color values to hexadecimal CSS colors before account, checkout, cart, catalog, product, review, order, user, message, or blog content is inserted with `innerHTML`.
 
+Authentication return URLs are restricted to the storefront's current origin before navigation. External, malformed, and non-HTTP(S) `next` values fall back to the account page instead of becoming post-authentication redirects.
+
 Helmet adds browser security headers and a content security policy that permits the storefront's local assets, HTTPS images, Google Fonts, and existing inline styles. A global in-memory rate limit allows 120 requests per IP per minute, while login, registration, contact, and newsletter endpoints use tighter limits. The in-memory store is process-local; use a shared throttler storage provider before scaling the API across multiple instances.
 
 Administrator image uploads accept one file up to 4 MB and verify its binary signature instead of trusting the browser-provided MIME type. The limit leaves room for multipart overhead under Vercel's request-body limit. Only JPEG, PNG, GIF, and WebP files are accepted; SVG and other active or executable formats are rejected before Cloudinary upload. Uploads are additionally limited to 10 requests per IP every 15 minutes.

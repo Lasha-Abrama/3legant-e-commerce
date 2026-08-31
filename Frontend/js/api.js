@@ -133,6 +133,21 @@ function qs(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
+function safeLocalRedirect(value, fallback) {
+  var fallbackPath = fallback || 'index.html';
+  var candidate = String(value == null ? '' : value).trim();
+  if (!candidate) return fallbackPath;
+  try {
+    var parsed = new URL(candidate, window.location.href);
+    if (!/^https?:$/.test(parsed.protocol) || parsed.origin !== window.location.origin) {
+      return fallbackPath;
+    }
+    return parsed.pathname + parsed.search + parsed.hash;
+  } catch (error) {
+    return fallbackPath;
+  }
+}
+
 function escapeHtml(value) {
   return String(value == null ? '' : value).replace(/[&<>"']/g, function (character) {
     return {
