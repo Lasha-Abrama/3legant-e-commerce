@@ -205,6 +205,10 @@
     apiGet('/users/me/wishlist').then(function (items) {
       if (!items) return;
       var list = document.getElementById('wishlist-list');
+      if (!Array.isArray(items)) {
+        list.innerHTML = '<div class="error-text">' + (items.message || 'Wishlist could not be loaded.') + '</div>';
+        return;
+      }
       if (!items.length) {
         list.innerHTML = '<div class="faint" style="font-size:13px;">Your wishlist is empty. <a href="shop.html" style="color:var(--ink);">Browse products &rarr;</a></div>';
         return;
@@ -232,7 +236,9 @@
       });
       list.querySelectorAll('[data-remove]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          apiDelete('/users/me/wishlist/' + btn.getAttribute('data-remove')).then(function () { renderWishlistTab(content); });
+          apiDelete('/users/me/wishlist/' + btn.getAttribute('data-remove')).then(function (res) {
+            if (res && res._status < 400) renderWishlistTab(content);
+          });
         });
       });
     });

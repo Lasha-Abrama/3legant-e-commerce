@@ -6,11 +6,13 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { FindProductsQueryDto } from './dto/find-products-query.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectModel(Product.name) private readonly productModel: Model<ProductDocument>,
+    private readonly usersService: UsersService,
   ) {}
 
   async findAll(query: FindProductsQueryDto): Promise<PaginatedResult<Product>> {
@@ -70,6 +72,7 @@ export class ProductsService {
     if (!product) {
       throw new NotFoundException('პროდუქტი ვერ მოიძებნა');
     }
+    await this.usersService.removeProductFromWishlists(id);
     return product;
   }
 

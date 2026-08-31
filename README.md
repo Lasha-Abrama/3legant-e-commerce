@@ -54,6 +54,8 @@ Fulfillment status changes are forward-only: `Processing → Shipped → Deliver
 
 Product reviews are verified-purchase only. The API confirms the product exists and appears in one of the authenticated customer's paid, non-cancelled orders before accepting a review. A compound unique index permits one review per customer and product, including under concurrent requests; product rating aggregates are recalculated after successful creation or admin deletion.
 
+Wishlist mutations validate both the authenticated user and product reference. Missing products and users return `404`, duplicate additions remain idempotent through `$addToSet`, populated legacy references to deleted products are filtered from responses, and deleting a product removes it from every customer wishlist.
+
 For local Stripe webhooks:
 
 ```bash

@@ -115,8 +115,18 @@
     var call = state.wishlisted ? apiDelete('/users/me/wishlist/' + p._id) : apiPost('/users/me/wishlist/' + p._id);
     call.then(function (res) {
       if (!res) return;
+      if (res._status >= 400) {
+        var btn = document.getElementById('wishlist-btn');
+        btn.textContent = res.message || 'Wishlist unavailable';
+        window.setTimeout(updateWishlistButton, 1400);
+        return;
+      }
       state.wishlisted = !state.wishlisted;
       updateWishlistButton();
+    }).catch(function () {
+      var btn = document.getElementById('wishlist-btn');
+      btn.textContent = 'Wishlist unavailable';
+      window.setTimeout(updateWishlistButton, 1400);
     });
   }
 

@@ -6,6 +6,7 @@ import { User, UserDocument } from './schemas/user.schema';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { Product, ProductDocument } from '../products/schemas/product.schema';
 
 const SALT_ROUNDS = 10;
 
@@ -20,6 +21,7 @@ export interface CreateUserInput {
 export class UsersService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Product.name) private readonly productModel: Model<ProductDocument>,
   ) {}
 
   findByEmail(email: string) {
@@ -103,27 +105,46 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('მომხმარებელი ვერ მოიძებნა');
     }
-    return user.wishlist;
+    return user.wishlist.filter(Boolean);
   }
 
   async addToWishlist(userId: string, productId: string) {
-    await this.userModel
+    const productExists = await this.productModel.exists({ _id: productId });
+    if (!productExists) {
+      throw new NotFoundException('პროდუქტი ვერ მოიძებნა');
+    }
+    const result = await this.userModel
       .updateOne(
         { _id: userId },
         { $addToSet: { wishlist: new Types.ObjectId(productId) } },
       )
       .exec();
+    if (result.matchedCount !== 1) {
+      throw new NotFoundException('მომხმარებელი ვერ მოიძებნა');
+    }
     return this.getWishlist(userId);
   }
 
   async removeFromWishlist(userId: string, productId: string) {
-    await this.userModel
+    const result = await this.userModel
       .updateOne(
         { _id: userId },
         { $pull: { wishlist: new Types.ObjectId(productId) } },
       )
       .exec();
+    if (result.matchedCount !== 1) {
+      throw new NotFoundException('მომხმარებელი ვერ მოიძებნა');
+    }
     return this.getWishlist(userId);
+  }
+
+  async removeProductFromWishlists(productId: string) {
+    await this.userModel
+      .updateMany(
+        { wishlist: productId },
+        { $pull: { wishlist: new Types.ObjectId(productId) } },
+      )
+      .exec();
   }
 
   async findAll() {

@@ -1,11 +1,15 @@
 import { ConflictException } from '@nestjs/common';
 import { ProductsService } from './products.service';
+import { UsersService } from '../users/users.service';
 
 describe('ProductsService', () => {
   const productModel = {
     updateOne: jest.fn(),
   };
-  const service = new ProductsService(productModel as never);
+  const usersService = {
+    removeProductFromWishlists: jest.fn(),
+  } as unknown as UsersService;
+  const service = new ProductsService(productModel as never, usersService);
   const session = {} as never;
 
   beforeEach(() => {
@@ -80,5 +84,16 @@ describe('ProductsService', () => {
     await expect(
       service.incrementStock([{ productId: 'missing-product', qty: 1 }], session),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('removes a deleted product from customer wishlists', async () => {
+    const deletedProduct = { _id: 'product-id', name: 'Tray Table' };
+    (productModel as any).findByIdAndDelete = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(deletedProduct),
+    });
+    usersService.removeProductFromWishlists = jest.fn().mockResolvedValue(undefined);
+
+    await expect(service.remove('product-id')).resolves.toBe(deletedProduct);
+    expect(usersService.removeProductFromWishlists).toHaveBeenCalledWith('product-id');
   });
 });

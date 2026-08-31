@@ -1,13 +1,17 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from './users.service';
 
 describe('UsersService', () => {
   const userModel = jest.fn();
-  const service = new UsersService(userModel as never);
+  const productModel = {
+    exists: jest.fn(),
+  };
+  const service = new UsersService(userModel as never, productModel as never);
 
   beforeEach(() => {
     jest.clearAllMocks();
+    service.getWishlist = UsersService.prototype.getWishlist.bind(service);
   });
 
   it('normalizes profile emails before saving', async () => {
@@ -78,5 +82,56 @@ describe('UsersService', () => {
     await expect(service.invalidateAccessTokens('user-id')).resolves.toBeUndefined();
     expect(user.tokenVersion).toBe(2);
     expect(user.save).toHaveBeenCalled();
+  });
+
+  it('rejects missing products before changing a wishlist', async () => {
+    productModel.exists = jest.fn().mockResolvedValue(null);
+    (userModel as any).updateOne = jest.fn();
+
+    await expect(
+      service.addToWishlist('user-id', '507f1f77bcf86cd799439011'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect((userModel as any).updateOne).not.toHaveBeenCalled();
+  });
+
+  it('adds an existing product to a valid user wishlist', async () => {
+    productModel.exists = jest.fn().mockResolvedValue({ _id: 'product-id' });
+    (userModel as any).updateOne = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ matchedCount: 1 }),
+    });
+    service.getWishlist = jest.fn().mockResolvedValue([{ _id: 'product-id' }] as never);
+
+    await expect(
+      service.addToWishlist('user-id', '507f1f77bcf86cd799439011'),
+    ).resolves.toEqual([{ _id: 'product-id' }]);
+    expect((userModel as any).updateOne).toHaveBeenCalledWith(
+      { _id: 'user-id' },
+      { $addToSet: { wishlist: expect.anything() } },
+    );
+  });
+
+  it('rejects wishlist changes for a missing user', async () => {
+    productModel.exists = jest.fn().mockResolvedValue({ _id: 'product-id' });
+    (userModel as any).updateOne = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ matchedCount: 0 }),
+    });
+
+    await expect(
+      service.addToWishlist('missing-user', '507f1f77bcf86cd799439011'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('removes deleted products from every wishlist', async () => {
+    (userModel as any).updateMany = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ modifiedCount: 2 }),
+    });
+
+    await expect(
+      service.removeProductFromWishlists('507f1f77bcf86cd799439011'),
+    ).resolves.toBeUndefined();
+    expect((userModel as any).updateMany).toHaveBeenCalledWith(
+      { wishlist: '507f1f77bcf86cd799439011' },
+      { $pull: { wishlist: expect.anything() } },
+    );
   });
 });
