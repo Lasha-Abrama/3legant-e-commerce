@@ -46,4 +46,23 @@ describe('JwtAuthGuard', () => {
       UnauthorizedException,
     );
   });
+
+  it('rejects tokens issued before a password change', async () => {
+    const request = {
+      headers: { authorization: 'Bearer stale-token' },
+    } as Record<string, unknown>;
+    jwtService.verifyAsync = jest.fn().mockResolvedValue({
+      sub: 'user-id',
+      tokenVersion: 0,
+    });
+    usersService.findById = jest.fn().mockResolvedValue({
+      _id: 'user-id',
+      tokenVersion: 1,
+    });
+
+    await expect(guard.canActivate(contextFor(request))).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    expect(request.user).toBeUndefined();
+  });
 });

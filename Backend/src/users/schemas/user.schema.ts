@@ -60,6 +60,9 @@ export class User {
 
   @Prop({ default: false })
   isAdmin: boolean;
+
+  @Prop({ required: true, default: 0, min: 0 })
+  tokenVersion: number;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

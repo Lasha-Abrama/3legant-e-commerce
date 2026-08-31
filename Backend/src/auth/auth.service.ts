@@ -42,7 +42,10 @@ export class AuthService {
 
   async createAuthResponse(userId: string) {
     const user = await this.usersService.findById(userId);
-    const accessToken = await this.jwtService.signAsync({ sub: String(user._id) });
+    const accessToken = await this.jwtService.signAsync({
+      sub: String(user._id),
+      tokenVersion: user.tokenVersion ?? 0,
+    });
     return { accessToken, user: this.usersService.toSafeUser(user) };
   }
 
@@ -53,11 +56,22 @@ export class AuthService {
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync<{ sub: string }>(token);
+      const payload = await this.jwtService.verifyAsync<{
+        sub: string;
+        tokenVersion?: number;
+      }>(token);
       const user = await this.usersService.findById(payload.sub);
+      if ((user.tokenVersion ?? 0) !== (payload.tokenVersion ?? 0)) {
+        return null;
+      }
       return this.usersService.toSafeUser(user);
     } catch {
       return null;
     }
+  }
+
+  async logout(userId: string) {
+    await this.usersService.invalidateAccessTokens(userId);
+    return { message: 'წარმატებით გამოხვედით' };
   }
 }

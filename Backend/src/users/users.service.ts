@@ -34,19 +34,38 @@ export class UsersService {
     return user;
   }
 
-  create(input: CreateUserInput) {
+  async create(input: CreateUserInput) {
     const user = new this.userModel({
       ...input,
       email: input.email.toLowerCase().trim(),
       displayName: `${input.firstName} ${input.lastName}`.trim(),
     });
-    return user.save();
+    try {
+      return await user.save();
+    } catch (error) {
+      this.rethrowDuplicateEmail(error);
+    }
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     const user = await this.findById(userId);
-    Object.assign(user, dto);
-    return user.save();
+    const { email, ...profile } = dto;
+    if (email !== undefined) {
+      const normalizedEmail = email.toLowerCase().trim();
+      const existingUser = await this.userModel
+        .findOne({ _id: { $ne: user._id }, email: normalizedEmail })
+        .exec();
+      if (existingUser) {
+        throw new BadRequestException('ეს ელფოსტა უკვე რეგისტრირებულია');
+      }
+      user.email = normalizedEmail;
+    }
+    Object.assign(user, profile);
+    try {
+      return await user.save();
+    } catch (error) {
+      this.rethrowDuplicateEmail(error);
+    }
   }
 
   async updateAddress(userId: string, dto: UpdateAddressDto) {
@@ -65,8 +84,15 @@ export class UsersService {
       throw new BadRequestException('ძველი პაროლი არასწორია');
     }
     user.passwordHash = await bcrypt.hash(dto.newPassword, SALT_ROUNDS);
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     await user.save();
     return { message: 'პაროლი წარმატებით შეიცვალა' };
+  }
+
+  async invalidateAccessTokens(userId: string) {
+    const user = await this.findById(userId);
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
+    await user.save();
   }
 
   async getWishlist(userId: string) {
@@ -124,5 +150,12 @@ export class UsersService {
       shippingAddress: user.shippingAddress,
       isAdmin: user.isAdmin,
     };
+  }
+
+  private rethrowDuplicateEmail(error: unknown): never {
+    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 11000) {
+      throw new BadRequestException('ეს ელფოსტა უკვე რეგისტრირებულია');
+    }
+    throw error;
   }
 }

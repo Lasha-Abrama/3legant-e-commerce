@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Headers, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { AuthenticatedRequest } from '../common/types/authenticated-request';
 
 @Controller('auth')
 export class AuthController {
@@ -22,8 +24,9 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(200)
-  logout() {
-    return { message: 'წარმატებით გამოხვედით' };
+  @UseGuards(JwtAuthGuard)
+  logout(@Req() request: AuthenticatedRequest) {
+    return this.authService.logout(String(request.user._id));
   }
 
   @Get('me')

@@ -9,6 +9,7 @@ describe('AuthService', () => {
     create: jest.fn(),
     findById: jest.fn(),
     toSafeUser: jest.fn(),
+    invalidateAccessTokens: jest.fn(),
   } as unknown as UsersService;
   const jwtService = {
     signAsync: jest.fn(),
@@ -68,7 +69,10 @@ describe('AuthService', () => {
 
     const response = await service.createAuthResponse('user-id');
 
-    expect(jwtService.signAsync).toHaveBeenCalledWith({ sub: 'user-id' });
+    expect(jwtService.signAsync).toHaveBeenCalledWith({
+      sub: 'user-id',
+      tokenVersion: 0,
+    });
     expect(response).toEqual({ accessToken: 'access-token', user: { id: 'user-id' } });
   });
 
@@ -77,5 +81,30 @@ describe('AuthService', () => {
 
     jwtService.verifyAsync = jest.fn().mockRejectedValue(new Error('invalid token'));
     expect(await service.getUserFromAuthorization('Bearer invalid-token')).toBeNull();
+  });
+
+  it('rejects a valid JWT issued before the user token version changed', async () => {
+    jwtService.verifyAsync = jest.fn().mockResolvedValue({
+      sub: 'user-id',
+      tokenVersion: 1,
+    });
+    usersService.findById = jest.fn().mockResolvedValue({
+      _id: 'user-id',
+      tokenVersion: 2,
+    });
+
+    await expect(
+      service.getUserFromAuthorization('Bearer stale-token'),
+    ).resolves.toBeNull();
+    expect(usersService.toSafeUser).not.toHaveBeenCalled();
+  });
+
+  it('invalidates existing access tokens on logout', async () => {
+    usersService.invalidateAccessTokens = jest.fn().mockResolvedValue(undefined);
+
+    await expect(service.logout('user-id')).resolves.toEqual({
+      message: 'წარმატებით გამოხვედით',
+    });
+    expect(usersService.invalidateAccessTokens).toHaveBeenCalledWith('user-id');
   });
 });

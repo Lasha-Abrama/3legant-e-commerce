@@ -96,10 +96,14 @@
         if (!res) return;
         if (res._status >= 400) { msg.style.color = 'var(--red)'; msg.textContent = res.message; return; }
         msg.style.color = 'var(--green)';
-        msg.textContent = 'Password updated.';
+        msg.textContent = 'Password updated. Please sign in again.';
         document.getElementById('f-oldPassword').value = '';
         document.getElementById('f-newPassword').value = '';
         document.getElementById('f-repeatPassword').value = '';
+        clearAccessToken();
+        window.setTimeout(function () {
+          window.location.href = 'login.html?next=' + encodeURIComponent('account.html');
+        }, 900);
       });
     });
   }

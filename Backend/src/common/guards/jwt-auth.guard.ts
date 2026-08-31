@@ -19,8 +19,15 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync<{ sub: string }>(token);
-      request.user = await this.usersService.findById(payload.sub);
+      const payload = await this.jwtService.verifyAsync<{
+        sub: string;
+        tokenVersion?: number;
+      }>(token);
+      const user = await this.usersService.findById(payload.sub);
+      if ((user.tokenVersion ?? 0) !== (payload.tokenVersion ?? 0)) {
+        throw new UnauthorizedException('გაიარეთ ავტორიზაცია');
+      }
+      request.user = user;
       return true;
     } catch {
       throw new UnauthorizedException('გაიარეთ ავტორიზაცია');
