@@ -61,6 +61,10 @@ body { background: #faf9f6; }
 .pill--admin { background: #e8f6ee; color: var(--green); }
 .pill--user { background: var(--line-soft); color: var(--muted); }
 .pill--status { background: var(--bg-soft); color: var(--ink); }
+.pill--paid { background: #e8f6ee; color: var(--green); }
+.pill--refunded { background: #e8eef9; color: #3d5f9f; }
+.pill--failed { background: #fdecea; color: var(--red); }
+.pill--pending { background: #fff4dc; color: #8a6418; }
 
 .status-select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: #fff; }
 

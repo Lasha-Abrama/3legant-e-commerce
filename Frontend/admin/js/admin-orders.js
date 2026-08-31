@@ -1,10 +1,31 @@
 (function () {
   var STATUSES = ['Processing', 'Shipped', 'Delivered', 'Cancelled'];
+  var PAYMENT_CLASSES = {
+    paid: 'pill--paid',
+    refunded: 'pill--refunded',
+    failed: 'pill--failed',
+    pending: 'pill--pending',
+  };
+
+  function paymentStatusHtml(order) {
+    var paymentStatus = String(order.paymentStatus || 'pending');
+    var statusClass = PAYMENT_CLASSES[paymentStatus] || 'pill--user';
+    return (
+      '<span class="pill ' + statusClass + '">' + escapeHtml(paymentStatus) + '</span>' +
+      '<div class="faint" style="font-size:10px;margin-top:4px;">Inventory: ' + escapeHtml(order.inventoryStatus || 'pending') + '</div>'
+    );
+  }
+
+  function refundActionHtml(order) {
+    var canRefund = order.status === 'Processing' && order.paymentStatus === 'paid' && order.stripePaymentIntentId;
+    if (!canRefund) return '<span class="faint">—</span>';
+    return '<button class="btn btn-danger btn-sm" data-refund-order="' + escapeHtml(order._id) + '">Refund</button>';
+  }
 
   function loadOrders() {
     apiGetSilent('/admin/orders').then(function (orders) {
       if (!orders || !orders.length) {
-        document.getElementById('orders-tbody').innerHTML = '<tr><td colspan="6" class="faint">No orders yet.</td></tr>';
+        document.getElementById('orders-tbody').innerHTML = '<tr><td colspan="8" class="faint">No orders yet.</td></tr>';
         return;
       }
       document.getElementById('orders-tbody').innerHTML = orders.map(function (o) {
@@ -20,11 +41,13 @@
             '<td>' + date + '</td>' +
             '<td style="max-width:260px;">' + itemsSummary + '</td>' +
             '<td>' + fmt(o.total) + '</td>' +
+            '<td>' + paymentStatusHtml(o) + '</td>' +
             '<td>' +
               '<select class="status-select" data-order-id="' + escapeHtml(o._id) + '" data-current-status="' + escapeHtml(o.status) + '">' +
                 STATUSES.map(function (s) { return '<option ' + (o.status === s ? 'selected' : '') + '>' + s + '</option>'; }).join('') +
               '</select>' +
             '</td>' +
+            '<td>' + refundActionHtml(o) + '</td>' +
           '</tr>'
         );
       }).join('');
@@ -43,6 +66,28 @@
             }
             select.value = res.status;
             select.setAttribute('data-current-status', res.status);
+          });
+        });
+      });
+
+      document.querySelectorAll('[data-refund-order]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var orderId = btn.getAttribute('data-refund-order');
+          var orderCode = '#' + orderId.slice(-8);
+          if (!confirm('Issue a full Stripe refund for order ' + orderCode + '?')) return;
+
+          btn.disabled = true;
+          btn.textContent = 'Requesting…';
+          apiPost('/admin/payments/orders/' + encodeURIComponent(orderId) + '/refund', {}).then(function (res) {
+            if (!res || res._status >= 400) {
+              btn.disabled = false;
+              btn.textContent = 'Refund';
+              var message = res && res.message ? res.message : 'Refund could not be requested.';
+              window.alert(Array.isArray(message) ? message.join('\n') : message);
+              return;
+            }
+            btn.textContent = 'Refund requested';
+            window.alert('Refund requested. Stripe will finalize the order after the signed webhook arrives.');
           });
         });
       });
