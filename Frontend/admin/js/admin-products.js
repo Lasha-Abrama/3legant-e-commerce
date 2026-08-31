@@ -126,7 +126,7 @@
       '<div id="image-thumbs" class="img-thumb-row">' + renderImageThumbs() + '</div>' +
       '<label class="btn btn--ghost btn-sm img-upload-btn" style="width:fit-content;">' +
         '<span id="upload-label">+ Upload photo</span>' +
-        '<input type="file" accept="image/*" id="image-input" style="display:none;" multiple>' +
+        '<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" id="image-input" style="display:none;" multiple>' +
       '</label>' +
 
       '<div style="margin-top:20px;display:flex;gap:10px;">' +
@@ -145,6 +145,18 @@
     document.getElementById('image-input').addEventListener('change', function (e) {
       var files = Array.prototype.slice.call(e.target.files);
       if (!files.length) return;
+      var alertBox = document.getElementById('product-form-alert');
+      var validationError = files.length > 10 ? 'Upload no more than 10 images at once.' : '';
+      files.some(function (file) {
+        validationError = validationError || validateImageUpload(file);
+        return Boolean(validationError);
+      });
+      if (validationError) {
+        alertBox.innerHTML = '<div class="admin-alert admin-alert--error">' + escapeHtml(validationError) + '</div>';
+        e.target.value = '';
+        return;
+      }
+      alertBox.innerHTML = '';
       var label = document.getElementById('upload-label');
       var remaining = files.length;
       label.textContent = 'Uploading…';
@@ -155,6 +167,9 @@
             state.images.push(res.url);
             document.getElementById('image-thumbs').innerHTML = renderImageThumbs();
             wireImageRemove();
+          } else if (res && res._status >= 400) {
+            var message = Array.isArray(res.message) ? res.message.join(', ') : (res.message || 'Upload failed');
+            alertBox.innerHTML = '<div class="admin-alert admin-alert--error">' + escapeHtml(message) + '</div>';
           }
           if (remaining === 0) label.textContent = '+ Upload photo';
         });

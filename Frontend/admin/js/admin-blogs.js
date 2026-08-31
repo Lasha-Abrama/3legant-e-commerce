@@ -95,7 +95,7 @@
       '<div id="blog-image-thumb" class="img-thumb-row">' + renderImagePreview() + '</div>' +
       '<label class="btn btn--ghost btn-sm img-upload-btn" style="width:fit-content;">' +
         '<span id="blog-upload-label">' + (state.image ? '+ Replace photo' : '+ Upload photo') + '</span>' +
-        '<input type="file" accept="image/*" id="blog-image-input" style="display:none;">' +
+        '<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" id="blog-image-input" style="display:none;">' +
       '</label>' +
 
       '<div style="margin-top:20px;display:flex;gap:10px;">' +
@@ -108,6 +108,14 @@
     document.getElementById('blog-image-input').addEventListener('change', function (e) {
       var file = e.target.files[0];
       if (!file) return;
+      var alertBox = document.getElementById('blog-form-alert');
+      var validationError = validateImageUpload(file);
+      if (validationError) {
+        alertBox.innerHTML = '<div class="admin-alert admin-alert--error">' + escapeHtml(validationError) + '</div>';
+        e.target.value = '';
+        return;
+      }
+      alertBox.innerHTML = '';
       var label = document.getElementById('blog-upload-label');
       label.textContent = 'Uploading…';
       apiUpload('/admin/uploads/image', file).then(function (res) {
@@ -115,6 +123,9 @@
           state.image = res.url;
           document.getElementById('blog-image-thumb').innerHTML = renderImagePreview();
           wireImageRemove();
+        } else if (res && res._status >= 400) {
+          var message = Array.isArray(res.message) ? res.message.join(', ') : (res.message || 'Upload failed');
+          alertBox.innerHTML = '<div class="admin-alert admin-alert--error">' + escapeHtml(message) + '</div>';
         }
         label.textContent = state.image ? '+ Replace photo' : '+ Upload photo';
       });

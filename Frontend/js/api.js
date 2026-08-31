@@ -90,6 +90,17 @@ function apiUpload(url, file) {
   });
 }
 
+function validateImageUpload(file) {
+  var allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  if (allowedTypes.indexOf(file.type) === -1) {
+    return 'Choose a JPEG, PNG, GIF, or WebP image.';
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return 'Images must be 5 MB or smaller.';
+  }
+  return '';
+}
+
 function apiPost(url, data) {
   return apiSend('POST', url, data);
 }
