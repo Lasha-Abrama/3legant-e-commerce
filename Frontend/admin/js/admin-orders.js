@@ -1,5 +1,4 @@
 (function () {
-  var STATUSES = ['Processing', 'Shipped', 'Delivered', 'Cancelled'];
   var PAYMENT_CLASSES = {
     paid: 'pill--paid',
     refunded: 'pill--refunded',
@@ -22,6 +21,43 @@
     return '<button class="btn btn-danger btn-sm" data-refund-order="' + escapeHtml(order._id) + '">Refund</button>';
   }
 
+  function hasActiveCheckoutSession(order) {
+    if (order.checkoutSessionStatus === 'completed') return true;
+    if (order.checkoutSessionStatus !== 'open') return false;
+    if (!order.stripeCheckoutExpiresAt) return true;
+    return new Date(order.stripeCheckoutExpiresAt).getTime() > Date.now();
+  }
+
+  function canCancel(order) {
+    if (order.paymentStatus === 'paid') return false;
+    return order.paymentStatus !== 'pending' || !hasActiveCheckoutSession(order);
+  }
+
+  function availableStatuses(order) {
+    var statuses = [order.status];
+    if (order.status === 'Processing') {
+      if (order.paymentStatus === 'paid' && order.inventoryStatus === 'adjusted') {
+        statuses.push('Shipped');
+      }
+      if (canCancel(order)) statuses.push('Cancelled');
+    } else if (order.status === 'Shipped') {
+      statuses.push('Delivered');
+    }
+    return statuses;
+  }
+
+  function statusSelectHtml(order) {
+    var statuses = availableStatuses(order);
+    var disabled = statuses.length === 1 ? ' disabled title="No status changes available"' : '';
+    return (
+      '<select class="status-select" data-order-id="' + escapeHtml(order._id) + '" data-current-status="' + escapeHtml(order.status) + '"' + disabled + '>' +
+        statuses.map(function (status) {
+          return '<option ' + (order.status === status ? 'selected' : '') + '>' + status + '</option>';
+        }).join('') +
+      '</select>'
+    );
+  }
+
   function loadOrders() {
     apiGetSilent('/admin/orders').then(function (orders) {
       if (!orders || !orders.length) {
@@ -42,11 +78,7 @@
             '<td style="max-width:260px;">' + itemsSummary + '</td>' +
             '<td>' + fmt(o.total) + '</td>' +
             '<td>' + paymentStatusHtml(o) + '</td>' +
-            '<td>' +
-              '<select class="status-select" data-order-id="' + escapeHtml(o._id) + '" data-current-status="' + escapeHtml(o.status) + '">' +
-                STATUSES.map(function (s) { return '<option ' + (o.status === s ? 'selected' : '') + '>' + s + '</option>'; }).join('') +
-              '</select>' +
-            '</td>' +
+            '<td>' + statusSelectHtml(o) + '</td>' +
             '<td>' + refundActionHtml(o) + '</td>' +
           '</tr>'
         );
@@ -64,8 +96,7 @@
               window.alert(Array.isArray(message) ? message.join('\n') : message);
               return;
             }
-            select.value = res.status;
-            select.setAttribute('data-current-status', res.status);
+            loadOrders();
           });
         });
       });
