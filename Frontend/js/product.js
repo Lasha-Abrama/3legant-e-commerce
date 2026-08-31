@@ -1,6 +1,6 @@
 (function () {
   var productId = qs('id');
-  var state = { product: null, reviews: null, color: null, qty: 1, imageIndex: 0, tab: 'reviews', wishlisted: false, me: null };
+  var state = { product: null, reviews: [], reviewsError: '', color: null, qty: 1, imageIndex: 0, tab: 'reviews', wishlisted: false, me: null };
 
   if (!productId) {
     document.getElementById('product-content').innerHTML = '<p>Product not found.</p>';
@@ -175,7 +175,7 @@
         '</div>';
       return;
     }
-    var reviews = state.reviews || [];
+    var reviews = state.reviews;
     body.innerHTML =
       '<div>' +
         '<h2 style="font-size:22px;font-weight:600;margin-bottom:20px;">Customer Reviews</h2>' +
@@ -196,7 +196,7 @@
             '<div class="error-text" id="review-error" style="margin-bottom:24px;"></div>'
           : '<div class="faint" style="font-size:13px;margin-bottom:24px;"><a href="login.html?next=' + encodeURIComponent('product.html?id=' + p._id) + '" style="color:var(--ink);text-decoration:underline;">Sign in</a> to review a product you purchased.</div>') +
         '<div id="review-list">' +
-          reviews.map(function (r) {
+          (state.reviewsError ? '' : reviews.map(function (r) {
             return (
               '<div class="review-row">' +
                 '<div class="ph">Photo</div>' +
@@ -207,9 +207,13 @@
                 '</div>' +
               '</div>'
             );
-          }).join('') +
+          }).join('')) +
         '</div>' +
       '</div>';
+
+    if (state.reviewsError) {
+      renderRetryState(document.getElementById('review-list'), state.reviewsError, loadReviews);
+    }
 
     var submitReviewButton = document.getElementById('submit-review');
     if (!submitReviewButton) return;
@@ -246,40 +250,58 @@
       apiGetSilent('/products/' + productId),
       apiGetSilent('/products/' + productId + '/reviews'),
     ]).then(function (results) {
-      state.product = results[0];
-      state.reviews = results[1];
+      if (results[0] && results[0]._status < 400) state.product = results[0];
+      state.reviews = Array.isArray(results[1]) ? results[1] : [];
+      state.reviewsError = Array.isArray(results[1]) ? '' : (results[1] && results[1].message) || 'Reviews could not be loaded.';
       renderTabs();
       renderTabBody();
     });
   }
 
-  Promise.all([
-    apiGetSilent('/products/' + productId),
-    apiGetSilent('/products/' + productId + '/reviews'),
-    apiGetSilent('/auth/me'),
-  ]).then(function (results) {
-    var product = results[0];
-    if (!product || product._status >= 400) {
-      document.getElementById('product-content').innerHTML = '<p>Product not found.</p>';
-      return;
-    }
-    state.product = product;
-    state.reviews = results[1];
-    state.me = results[2] && results[2].user;
-
-    var afterAuth = function () {
-      renderProduct();
-      renderTabs();
+  function loadReviews() {
+    apiGetSilent('/products/' + productId + '/reviews').then(function (reviews) {
+      state.reviews = Array.isArray(reviews) ? reviews : [];
+      state.reviewsError = Array.isArray(reviews) ? '' : (reviews && reviews.message) || 'Reviews could not be loaded.';
       renderTabBody();
-    };
+    });
+  }
 
-    if (state.me) {
-      apiGetSilent('/users/me/wishlist').then(function (wishlist) {
-        state.wishlisted = Array.isArray(wishlist) && wishlist.some(function (w) { return w._id === productId; });
+  function loadProduct() {
+    Promise.all([
+      apiGetSilent('/products/' + productId),
+      apiGetSilent('/products/' + productId + '/reviews'),
+      apiGetSilent('/auth/me'),
+    ]).then(function (results) {
+      var product = results[0];
+      if (!product || product._status >= 500 || product._networkError) {
+        renderRetryState(document.getElementById('product-content'), product && product.message, loadProduct);
+        return;
+      }
+      if (product._status >= 400) {
+        document.getElementById('product-content').innerHTML = '<p>Product not found.</p>';
+        return;
+      }
+      state.product = product;
+      state.reviews = Array.isArray(results[1]) ? results[1] : [];
+      state.reviewsError = Array.isArray(results[1]) ? '' : (results[1] && results[1].message) || 'Reviews could not be loaded.';
+      state.me = results[2] && results[2].user;
+
+      var afterAuth = function () {
+        renderProduct();
+        renderTabs();
+        renderTabBody();
+      };
+
+      if (state.me) {
+        apiGetSilent('/users/me/wishlist').then(function (wishlist) {
+          state.wishlisted = Array.isArray(wishlist) && wishlist.some(function (w) { return w._id === productId; });
+          afterAuth();
+        });
+      } else {
         afterAuth();
-      });
-    } else {
-      afterAuth();
-    }
-  });
+      }
+    });
+  }
+
+  loadProduct();
 })();

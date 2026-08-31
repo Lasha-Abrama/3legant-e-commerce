@@ -155,6 +155,7 @@
         '<input class="input" placeholder="Zip" id="addr-zip" value="' + escapeHtml(addr.zip || '') + '">' +
         '<input class="input" placeholder="Country" id="addr-country" value="' + escapeHtml(addr.country || '') + '">' +
       '</div>' +
+      '<div class="error-text" id="address-msg"></div>' +
       '<button class="btn btn--dark" id="save-address">Save</button>';
 
     document.getElementById('save-address').addEventListener('click', function () {
@@ -168,7 +169,10 @@
         zip: document.getElementById('addr-zip').value,
         country: document.getElementById('addr-country').value,
       }).then(function (res) {
-        if (!res || res._status >= 400) return;
+        if (!res || res._status >= 400) {
+          document.getElementById('address-msg').textContent = (res && res.message) || 'Address could not be saved.';
+          return;
+        }
         state.user = res;
         renderAddressTab(document.getElementById('account-content'));
       });
@@ -180,6 +184,10 @@
     apiGet('/orders/me').then(function (orders) {
       if (!orders) return;
       var list = document.getElementById('orders-list');
+      if (!Array.isArray(orders)) {
+        renderRetryState(list, orders.message || 'Orders could not be loaded.', function () { renderOrdersTab(content); });
+        return;
+      }
       if (!orders.length) {
         list.innerHTML = '<div class="faint" style="font-size:13px;">No orders yet.</div>';
         return;
@@ -206,7 +214,7 @@
       if (!items) return;
       var list = document.getElementById('wishlist-list');
       if (!Array.isArray(items)) {
-        list.innerHTML = '<div class="error-text">' + escapeHtml(items.message || 'Wishlist could not be loaded.') + '</div>';
+        renderRetryState(list, items.message || 'Wishlist could not be loaded.', function () { renderWishlistTab(content); });
         return;
       }
       if (!items.length) {
@@ -244,14 +252,22 @@
     });
   }
 
-  apiGetSilent('/auth/me').then(function (res) {
-    if (!res || !res.user) {
-      window.location.href = 'login.html?next=' + encodeURIComponent('account.html');
-      return;
-    }
-    state.user = res.user;
-    document.getElementById('account-name').textContent = res.user.displayName || (res.user.firstName + ' ' + res.user.lastName);
-    renderNav();
-    renderContent();
-  });
+  function loadAccount() {
+    apiGetSilent('/auth/me').then(function (res) {
+      if (!res || res._status >= 500 || res._networkError) {
+        renderRetryState(document.getElementById('account-content'), res && res.message, loadAccount);
+        return;
+      }
+      if (!res.user) {
+        window.location.href = 'login.html?next=' + encodeURIComponent('account.html');
+        return;
+      }
+      state.user = res.user;
+      document.getElementById('account-name').textContent = res.user.displayName || (res.user.firstName + ' ' + res.user.lastName);
+      renderNav();
+      renderContent();
+    });
+  }
+
+  loadAccount();
 })();

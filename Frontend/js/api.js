@@ -1,5 +1,32 @@
 var API = '/api';
 var ACCESS_TOKEN_KEY = 'threelegant_access_token';
+var API_UNAVAILABLE_MESSAGE = 'The service is currently unavailable. Please try again.';
+
+function apiFailure() {
+  return { _status: 503, _networkError: true, message: API_UNAVAILABLE_MESSAGE };
+}
+
+function parseApiResponse(res) {
+  return res
+    .json()
+    .catch(function () {
+      return {};
+    })
+    .then(function (json) {
+      json._status = res.status;
+      return json;
+    });
+}
+
+function renderRetryState(container, message, retry) {
+  if (!container) return;
+  container.innerHTML =
+    '<div class="service-state">' +
+      '<p>' + escapeHtml(message || API_UNAVAILABLE_MESSAGE) + '</p>' +
+      '<button class="btn btn--outline" type="button">Try again</button>' +
+    '</div>';
+  container.querySelector('button').addEventListener('click', retry);
+}
 
 function getAuthHeaders() {
   var token = localStorage.getItem(ACCESS_TOKEN_KEY) || sessionStorage.getItem(ACCESS_TOKEN_KEY);
@@ -30,11 +57,8 @@ function apiGet(url) {
       redirectToLogin();
       return null;
     }
-    return res.json().then(function (json) {
-      json._status = res.status;
-      return json;
-    });
-  });
+    return parseApiResponse(res);
+  }).catch(apiFailure);
 }
 
 function apiGetSilent(url) {
@@ -42,11 +66,8 @@ function apiGetSilent(url) {
     if (res.status === 401) {
       clearAccessToken();
     }
-    return res.json().then(function (json) {
-      json._status = res.status;
-      return json;
-    });
-  });
+    return parseApiResponse(res);
+  }).catch(apiFailure);
 }
 
 function apiSend(method, url, data) {
@@ -60,16 +81,8 @@ function apiSend(method, url, data) {
       redirectToLogin();
       return null;
     }
-    return res
-      .json()
-      .catch(function () {
-        return {};
-      })
-      .then(function (json) {
-        json._status = res.status;
-        return json;
-      });
-  });
+    return parseApiResponse(res);
+  }).catch(apiFailure);
 }
 
 function apiUpload(url, file) {
@@ -85,11 +98,8 @@ function apiUpload(url, file) {
       redirectToLogin();
       return null;
     }
-    return res.json().then(function (json) {
-      json._status = res.status;
-      return json;
-    });
-  });
+    return parseApiResponse(res);
+  }).catch(apiFailure);
 }
 
 function validateImageUpload(file) {

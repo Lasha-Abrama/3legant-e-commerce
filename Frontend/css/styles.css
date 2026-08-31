@@ -436,6 +436,9 @@ button, input, select, textarea { font-family: inherit; }
 }
 .wishlist-row { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line-soft); }
 .wishlist-row .ph { width: 56px; height: 56px; border-radius: 8px; flex-shrink: 0; }
+.service-state { width: 100%; padding: 28px 18px; border: 1px solid var(--line); border-radius: 10px; text-align: center; color: var(--muted); }
+.service-state p { margin: 0 0 14px; font-size: 13px; }
+.service-state .btn { min-width: 110px; }
 
 /* ---------- Contact ---------- */
 .about-grid { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap: 24px; align-items: center; margin-bottom: 60px; }

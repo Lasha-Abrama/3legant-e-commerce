@@ -41,9 +41,12 @@
       state.posts = append ? state.posts.concat(res.data || []) : (res.data || []);
       state.total = res.total || 0;
       renderPosts();
-    }).catch(function () {
-      document.getElementById('post-grid').innerHTML =
-        '<div class="shop-empty">Blog posts could not be loaded. Please try again.</div>';
+    }).catch(function (error) {
+      renderRetryState(
+        document.getElementById('post-grid'),
+        error.message || 'Blog posts could not be loaded. Please try again.',
+        function () { loadPosts(append); }
+      );
       showMore.style.display = 'none';
     }).finally(function () {
       state.loading = false;

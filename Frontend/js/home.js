@@ -33,28 +33,44 @@
     );
   }).join('');
 
-  apiGetSilent('/blogs?take=3').then(function (res) {
-    var posts = (res && res.data) || [];
-    document.getElementById('article-grid').innerHTML = posts.map(function (a) {
-      return (
-        '<a class="article-card" href="blog-post.html?id=' + encodeURIComponent(a._id) + '">' +
-          '<div class="ph" style="width:100%;height:160px;border-radius:10px;padding:0;">' +
-            '<img src="' + safeImageUrl(a.image) + '" alt="' + escapeHtml(a.title) + '" style="width:100%;height:100%;object-fit:cover;">' +
-          '</div>' +
-          '<div class="article-card__title">' + escapeHtml(a.title) + '</div>' +
-          '<div class="article-card__date">' + new Date(a.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + '</div>' +
-        '</a>'
-      );
-    }).join('');
-  });
+  function loadArticles() {
+    apiGetSilent('/blogs?take=3').then(function (res) {
+      var grid = document.getElementById('article-grid');
+      if (!res || res._status >= 400 || !Array.isArray(res.data)) {
+        renderRetryState(grid, res && res.message, loadArticles);
+        return;
+      }
+      grid.innerHTML = res.data.length ? res.data.map(function (a) {
+        return (
+          '<a class="article-card" href="blog-post.html?id=' + encodeURIComponent(a._id) + '">' +
+            '<div class="ph" style="width:100%;height:160px;border-radius:10px;padding:0;">' +
+              '<img src="' + safeImageUrl(a.image) + '" alt="' + escapeHtml(a.title) + '" style="width:100%;height:100%;object-fit:cover;">' +
+            '</div>' +
+            '<div class="article-card__title">' + escapeHtml(a.title) + '</div>' +
+            '<div class="article-card__date">' + new Date(a.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + '</div>' +
+          '</a>'
+        );
+      }).join('') : '<div class="shop-empty">No articles published yet.</div>';
+    });
+  }
 
   document.getElementById('newsletter-slot').innerHTML = newsletterHtml();
   wireNewsletterForm();
 
-  apiGetSilent('/products?sort=newest&take=4').then(function (res) {
-    var grid = document.getElementById('new-arrivals');
-    if (!res || !res.data) return;
-    grid.innerHTML = res.data.map(productCardHtml).join('');
-    wireAddToCartButtons(grid);
-  });
+  function loadNewArrivals() {
+    apiGetSilent('/products?sort=newest&take=4').then(function (res) {
+      var grid = document.getElementById('new-arrivals');
+      if (!res || res._status >= 400 || !Array.isArray(res.data)) {
+        renderRetryState(grid, res && res.message, loadNewArrivals);
+        return;
+      }
+      grid.innerHTML = res.data.length
+        ? res.data.map(productCardHtml).join('')
+        : '<div class="shop-empty">No new arrivals yet.</div>';
+      wireAddToCartButtons(grid);
+    });
+  }
+
+  loadArticles();
+  loadNewArrivals();
 })();

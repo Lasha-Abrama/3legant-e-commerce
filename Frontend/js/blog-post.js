@@ -19,16 +19,24 @@
       '<a href="blog.html" style="display:inline-block;margin-top:36px;font-size:13px;text-decoration:underline;">&larr; Back to Blog</a>';
   }
 
-  if (!postId) {
-    document.getElementById('post-content').innerHTML = '<p>Blog post not found.</p>';
-  } else {
+  function loadPost() {
     apiGetSilent('/blogs/' + postId).then(function (post) {
-      if (!post || post._status >= 400) {
+      if (!post || post._status >= 500 || post._networkError) {
+        renderRetryState(document.getElementById('post-content'), post && post.message, loadPost);
+        return;
+      }
+      if (post._status >= 400) {
         document.getElementById('post-content').innerHTML = '<p>Blog post not found.</p>';
         return;
       }
       renderPost(post);
     });
+  }
+
+  if (!postId) {
+    document.getElementById('post-content').innerHTML = '<p>Blog post not found.</p>';
+  } else {
+    loadPost();
   }
 
   document.getElementById('newsletter-slot').innerHTML = newsletterHtml();

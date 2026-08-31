@@ -88,7 +88,13 @@
     var url = '/products?take=200' + (state.category !== 'All Rooms' ? '&category=' + encodeURIComponent(state.category) : '');
     if (state.search) url += '&search=' + encodeURIComponent(state.search);
     apiGetSilent(url).then(function (res) {
-      state.allProducts = (res && res.data) || [];
+      if (!res || res._status >= 400 || !Array.isArray(res.data)) {
+        state.allProducts = [];
+        renderRetryState(document.getElementById('product-grid'), res && res.message, loadProducts);
+        document.getElementById('show-more').style.display = 'none';
+        return;
+      }
+      state.allProducts = res.data;
       renderGrid();
     });
   }

@@ -39,6 +39,12 @@
 
   window.AdminAuth = {
     ready: apiGetSilent('/auth/me').then(function (res) {
+      if (!res || res._status >= 500 || res._networkError) {
+        renderRetryState(document.querySelector('.admin-main'), res && res.message, function () {
+          window.location.reload();
+        });
+        return null;
+      }
       if (!res || !res.user || !res.user.isAdmin) {
         window.location.href = 'login.html';
         return null;
