@@ -109,3 +109,32 @@ function fmt(n) {
 function qs(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, function (character) {
+    return {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[character];
+  });
+}
+
+function safeImageUrl(value) {
+  var url = String(value == null ? '' : value).trim();
+  if (!url) return '';
+  try {
+    var parsed = new URL(url, window.location.href);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+    return escapeHtml(url);
+  } catch (error) {
+    return '';
+  }
+}
+
+function safeCssColor(value) {
+  var color = String(value == null ? '' : value).trim();
+  return /^#[0-9a-f]{3,8}$/i.test(color) ? color : '#c9c4b8';
+}

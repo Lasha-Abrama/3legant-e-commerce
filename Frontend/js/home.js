@@ -37,11 +37,11 @@
     var posts = (res && res.data) || [];
     document.getElementById('article-grid').innerHTML = posts.map(function (a) {
       return (
-        '<a class="article-card" href="blog-post.html?id=' + a._id + '">' +
+        '<a class="article-card" href="blog-post.html?id=' + encodeURIComponent(a._id) + '">' +
           '<div class="ph" style="width:100%;height:160px;border-radius:10px;padding:0;">' +
-            '<img src="' + a.image + '" alt="' + a.title + '" style="width:100%;height:100%;object-fit:cover;">' +
+            '<img src="' + safeImageUrl(a.image) + '" alt="' + escapeHtml(a.title) + '" style="width:100%;height:100%;object-fit:cover;">' +
           '</div>' +
-          '<div class="article-card__title">' + a.title + '</div>' +
+          '<div class="article-card__title">' + escapeHtml(a.title) + '</div>' +
           '<div class="article-card__date">' + new Date(a.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + '</div>' +
         '</a>'
       );

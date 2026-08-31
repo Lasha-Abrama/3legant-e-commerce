@@ -2,15 +2,6 @@
   var productId = qs('id');
   var state = { product: null, reviews: null, color: null, qty: 1, tab: 'reviews', wishlisted: false, me: null };
 
-  function escapeHtml(value) {
-    return String(value == null ? '' : value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
   if (!productId) {
     document.getElementById('product-content').innerHTML = '<p>Product not found.</p>';
     return;
@@ -29,7 +20,7 @@
           '<div class="product-main-media">' +
             imageBoxHtml(p.images && p.images[0], p.imageLabel, '') +
             '<span class="badge badge--new" style="position:absolute;top:14px;left:14px;">' + (p.newArrival ? 'NEW' : '') + '</span>' +
-            (p.discountLabel ? '<span class="badge badge--discount" style="top:44px;left:14px;position:absolute;">' + p.discountLabel + '</span>' : '') +
+            (p.discountLabel ? '<span class="badge badge--discount" style="top:44px;left:14px;position:absolute;">' + escapeHtml(p.discountLabel) + '</span>' : '') +
           '</div>' +
           '<div class="product-thumbs">' +
             imageBoxHtml(p.images && p.images[1], 'Angle photo', '') +
@@ -39,14 +30,14 @@
         '</div>' +
         '<div>' +
           '<div class="product-rating">' + starString(p.ratingAvg) + '&nbsp;&nbsp;' + p.reviewsCount + ' Reviews</div>' +
-          '<h1 class="product-title">' + p.name + '</h1>' +
-          '<p class="product-desc">' + p.description + '</p>' +
+          '<h1 class="product-title">' + escapeHtml(p.name) + '</h1>' +
+          '<p class="product-desc">' + escapeHtml(p.description) + '</p>' +
           '<div class="product-price">' + fmt(p.price) + (p.originalPrice ? '<span class="original">' + fmt(p.originalPrice) + '</span>' : '') + '</div>' +
           '<div>' +
             '<div class="countdown-label">Offer expires in:</div>' +
             '<div class="countdown" id="countdown"></div>' +
           '</div>' +
-          (p.measurements ? '<div class="product-meta">Measurements: ' + p.measurements + '</div>' : '') +
+          (p.measurements ? '<div class="product-meta">Measurements: ' + escapeHtml(p.measurements) + '</div>' : '') +
           '<div style="margin-bottom:20px;">' +
             '<div class="countdown-label">Choose Color &middot; <span style="color:var(--ink);font-weight:600;" id="color-label"></span></div>' +
             '<div class="color-row" id="color-row"></div>' +
@@ -58,7 +49,7 @@
             '<button class="wishlist-btn" id="wishlist-btn">♡ Wishlist</button>' +
           '</div>' +
           '<button class="btn btn--dark btn--block" id="add-to-cart-btn" style="margin-bottom:20px;">Add to Cart</button>' +
-          '<div class="product-sku"><div>SKU: ' + p.sku + '</div><div>CATEGORY: ' + p.category + '</div></div>' +
+          '<div class="product-sku"><div>SKU: ' + escapeHtml(p.sku) + '</div><div>CATEGORY: ' + escapeHtml(p.category) + '</div></div>' +
         '</div>' +
       '</div>';
 
@@ -82,7 +73,7 @@
     if (!state.color) state.color = colors[0].name;
     document.getElementById('color-label').textContent = state.color;
     document.getElementById('color-row').innerHTML = colors.map(function (c) {
-      return '<button class="color-swatch' + (c.name === state.color ? ' is-active' : '') + '" style="background:' + c.hex + ';" data-color="' + c.name + '" title="' + c.name + '"></button>';
+      return '<button class="color-swatch' + (c.name === state.color ? ' is-active' : '') + '" style="background:' + safeCssColor(c.hex) + ';" data-color="' + escapeHtml(c.name) + '" title="' + escapeHtml(c.name) + '"></button>';
     }).join('');
     document.querySelectorAll('.color-swatch').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -179,9 +170,9 @@
     if (state.tab === 'info') {
       body.innerHTML =
         '<div style="font-size:13px;color:#4a4843;line-height:1.9;max-width:640px;">' +
-          'Category: ' + p.category + '<br>' +
-          (p.measurements ? 'Dimensions: ' + p.measurements + '<br>' : '') +
-          'SKU: ' + p.sku + '<br>' +
+          'Category: ' + escapeHtml(p.category) + '<br>' +
+          (p.measurements ? 'Dimensions: ' + escapeHtml(p.measurements) + '<br>' : '') +
+          'SKU: ' + escapeHtml(p.sku) + '<br>' +
           'Assembly: no tools required, ready to use out of the box.' +
         '</div>';
       return;

@@ -118,10 +118,10 @@
       body.innerHTML = items.map(function (item, idx) {
         return (
           '<div class="cart-row">' +
-            '<div class="ph" style="width:64px;height:64px;flex-shrink:0;border-radius:8px;">' + escapeHtml(item.name) + '</div>' +
+            '<div class="ph" style="width:64px;height:64px;flex-shrink:0;border-radius:8px;">' + escapeHtml(item.name || '') + '</div>' +
             '<div class="cart-row__info">' +
-              '<div class="cart-row__top"><span class="cart-row__name">' + escapeHtml(item.name) + '</span><span class="cart-row__name">' + fmt(item.price * item.qty) + '</span></div>' +
-              '<div class="cart-row__color">Color: ' + escapeHtml(item.color) + '</div>' +
+              '<div class="cart-row__top"><span class="cart-row__name">' + escapeHtml(item.name || '') + '</span><span class="cart-row__name">' + fmt(item.price * item.qty) + '</span></div>' +
+              '<div class="cart-row__color">Color: ' + escapeHtml(item.color || '') + '</div>' +
               '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">' +
                 '<div class="qty-stepper" data-idx="' + idx + '">' +
                   '<button data-act="dec">&minus;</button><span>' + item.qty + '</span><button data-act="inc">+</button>' +

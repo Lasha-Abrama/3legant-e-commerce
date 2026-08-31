@@ -49,13 +49,13 @@
     content.innerHTML =
       '<div class="account-section-title">Account Details</div>' +
       '<div class="row-2">' +
-        '<div class="field"><span class="field__label">FIRST NAME *</span><input class="input" id="f-firstName" value="' + (u.firstName || '') + '"></div>' +
-        '<div class="field"><span class="field__label">LAST NAME *</span><input class="input" id="f-lastName" value="' + (u.lastName || '') + '"></div>' +
+        '<div class="field"><span class="field__label">FIRST NAME *</span><input class="input" id="f-firstName" value="' + escapeHtml(u.firstName || '') + '"></div>' +
+        '<div class="field"><span class="field__label">LAST NAME *</span><input class="input" id="f-lastName" value="' + escapeHtml(u.lastName || '') + '"></div>' +
       '</div>' +
-      '<div class="field"><span class="field__label">DISPLAY NAME *</span><input class="input" id="f-displayName" value="' + (u.displayName || '') + '"></div>' +
+      '<div class="field"><span class="field__label">DISPLAY NAME *</span><input class="input" id="f-displayName" value="' + escapeHtml(u.displayName || '') + '"></div>' +
       '<div class="faint" style="font-size:11px;margin-bottom:16px;">This will be how your name will be displayed in the account section and in reviews.</div>' +
-      '<div class="field"><span class="field__label">EMAIL *</span><input class="input" id="f-email" value="' + (u.email || '') + '"></div>' +
-      '<div class="field"><span class="field__label">PHONE</span><input class="input" id="f-phone" value="' + (u.phone || '') + '"></div>' +
+      '<div class="field"><span class="field__label">EMAIL *</span><input class="input" id="f-email" value="' + escapeHtml(u.email || '') + '"></div>' +
+      '<div class="field"><span class="field__label">PHONE</span><input class="input" id="f-phone" value="' + escapeHtml(u.phone || '') + '"></div>' +
       '<div class="error-text" id="profile-msg"></div>' +
       '<button class="btn btn--dark" id="save-profile" style="margin-bottom:28px;">Save changes</button>' +
 
@@ -115,7 +115,7 @@
         '<div class="address-card__head"><span style="font-size:13px;font-weight:600;">' + label + '</span><span style="font-size:12px;text-decoration:underline;cursor:pointer;" class="edit-address" data-type="' + type + '">&#9998; Edit</span></div>' +
         '<div class="address-view" style="font-size:13px;color:#4a4843;line-height:1.7;">' +
           (has
-            ? (addr.fullName || '') + '<br>' + (addr.phone || '') + '<br>' + [addr.street, addr.city, addr.state, addr.zip, addr.country].filter(Boolean).join(', ')
+            ? escapeHtml(addr.fullName || '') + '<br>' + escapeHtml(addr.phone || '') + '<br>' + escapeHtml([addr.street, addr.city, addr.state, addr.zip, addr.country].filter(Boolean).join(', '))
             : '<span class="faint">No address on file yet.</span>') +
         '</div>' +
       '</div>'
@@ -144,16 +144,16 @@
     var card = document.querySelector('.address-card[data-type="' + type + '"]');
     card.innerHTML =
       '<div class="address-card__head"><span style="font-size:13px;font-weight:600;">' + (type === 'billing' ? 'Billing Address' : 'Shipping Address') + '</span></div>' +
-      '<div class="field"><input class="input" placeholder="Full name" id="addr-fullName" value="' + (addr.fullName || '') + '"></div>' +
-      '<div class="field"><input class="input" placeholder="Phone" id="addr-phone" value="' + (addr.phone || '') + '"></div>' +
-      '<div class="field"><input class="input" placeholder="Street" id="addr-street" value="' + (addr.street || '') + '"></div>' +
+      '<div class="field"><input class="input" placeholder="Full name" id="addr-fullName" value="' + escapeHtml(addr.fullName || '') + '"></div>' +
+      '<div class="field"><input class="input" placeholder="Phone" id="addr-phone" value="' + escapeHtml(addr.phone || '') + '"></div>' +
+      '<div class="field"><input class="input" placeholder="Street" id="addr-street" value="' + escapeHtml(addr.street || '') + '"></div>' +
       '<div class="row-2" style="margin-bottom:12px;">' +
-        '<input class="input" placeholder="City" id="addr-city" value="' + (addr.city || '') + '">' +
-        '<input class="input" placeholder="State" id="addr-state" value="' + (addr.state || '') + '">' +
+        '<input class="input" placeholder="City" id="addr-city" value="' + escapeHtml(addr.city || '') + '">' +
+        '<input class="input" placeholder="State" id="addr-state" value="' + escapeHtml(addr.state || '') + '">' +
       '</div>' +
       '<div class="row-2" style="margin-bottom:12px;">' +
-        '<input class="input" placeholder="Zip" id="addr-zip" value="' + (addr.zip || '') + '">' +
-        '<input class="input" placeholder="Country" id="addr-country" value="' + (addr.country || '') + '">' +
+        '<input class="input" placeholder="Zip" id="addr-zip" value="' + escapeHtml(addr.zip || '') + '">' +
+        '<input class="input" placeholder="Country" id="addr-country" value="' + escapeHtml(addr.country || '') + '">' +
       '</div>' +
       '<button class="btn btn--dark" id="save-address">Save</button>';
 
@@ -190,9 +190,9 @@
           var date = new Date(o.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
           return (
             '<div class="order-row">' +
-              '<span data-label="Number ID">#' + o._id.slice(-8) + '</span>' +
+              '<span data-label="Number ID">#' + escapeHtml(o._id.slice(-8)) + '</span>' +
               '<span data-label="Date">' + date + '</span>' +
-              '<span data-label="Status" style="color:var(--green);">' + o.status + '</span>' +
+              '<span data-label="Status" style="color:var(--green);">' + escapeHtml(o.status) + '</span>' +
               '<span data-label="Price">' + fmt(o.total) + '</span>' +
             '</div>'
           );
@@ -206,7 +206,7 @@
       if (!items) return;
       var list = document.getElementById('wishlist-list');
       if (!Array.isArray(items)) {
-        list.innerHTML = '<div class="error-text">' + (items.message || 'Wishlist could not be loaded.') + '</div>';
+        list.innerHTML = '<div class="error-text">' + escapeHtml(items.message || 'Wishlist could not be loaded.') + '</div>';
         return;
       }
       if (!items.length) {
@@ -217,14 +217,14 @@
         var color = (p.colors && p.colors[0] && p.colors[0].name) || 'Default';
         return (
           '<div class="wishlist-row">' +
-            '<div class="ph">' + p.imageLabel + '</div>' +
+            '<div class="ph">' + escapeHtml(p.imageLabel) + '</div>' +
             '<div style="flex:1;">' +
-              '<div style="font-size:13px;font-weight:500;">' + p.name + '</div>' +
-              '<div class="faint" style="font-size:11px;">Color: ' + color + '</div>' +
+              '<div style="font-size:13px;font-weight:500;">' + escapeHtml(p.name) + '</div>' +
+              '<div class="faint" style="font-size:11px;">Color: ' + escapeHtml(color) + '</div>' +
               '<div style="font-size:13px;font-weight:600;margin-top:2px;">' + fmt(p.price) + '</div>' +
             '</div>' +
-            '<button class="btn btn--dark" data-add="' + p._id + '" data-name="' + p.name + '" data-color="' + color + '" data-price="' + p.price + '" style="padding:10px 18px;font-size:12px;">Add to cart</button>' +
-            '<button class="remove-btn" data-remove="' + p._id + '" style="margin-left:8px;">&#10005;</button>' +
+            '<button class="btn btn--dark" data-add="' + escapeHtml(p._id) + '" data-name="' + escapeHtml(p.name) + '" data-color="' + escapeHtml(color) + '" data-price="' + escapeHtml(p.price) + '" style="padding:10px 18px;font-size:12px;">Add to cart</button>' +
+            '<button class="remove-btn" data-remove="' + escapeHtml(p._id) + '" style="margin-left:8px;">&#10005;</button>' +
           '</div>'
         );
       }).join('');

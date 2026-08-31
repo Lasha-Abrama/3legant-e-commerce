@@ -11,11 +11,11 @@
 
     document.getElementById('post-content').innerHTML =
       '<div class="ph" style="width:100%;height:360px;border-radius:14px;padding:0;margin-bottom:28px;">' +
-        '<img src="' + p.image + '" alt="' + p.title + '" style="width:100%;height:100%;object-fit:cover;">' +
+        '<img src="' + safeImageUrl(p.image) + '" alt="' + escapeHtml(p.title) + '" style="width:100%;height:100%;object-fit:cover;">' +
       '</div>' +
-      '<h1 style="font-size:34px;font-weight:500;line-height:1.2;margin-bottom:10px;">' + p.title + '</h1>' +
+      '<h1 style="font-size:34px;font-weight:500;line-height:1.2;margin-bottom:10px;">' + escapeHtml(p.title) + '</h1>' +
       '<div class="muted" style="font-size:13px;margin-bottom:28px;">' + formatDate(p.createdAt) + '</div>' +
-      '<p style="font-size:15px;line-height:1.9;color:#4a4843;white-space:pre-wrap;">' + p.content + '</p>' +
+      '<p style="font-size:15px;line-height:1.9;color:#4a4843;white-space:pre-wrap;">' + escapeHtml(p.content) + '</p>' +
       '<a href="blog.html" style="display:inline-block;margin-top:36px;font-size:13px;text-decoration:underline;">&larr; Back to Blog</a>';
   }
 

@@ -20,10 +20,10 @@
         return (
           '<div class="cart-table-row">' +
             '<div style="display:flex;gap:14px;align-items:center;">' +
-              '<div class="ph">' + item.name + '</div>' +
+              '<div class="ph">' + escapeHtml(item.name) + '</div>' +
               '<div>' +
-                '<div style="font-size:14px;font-weight:500;">' + item.name + '</div>' +
-                '<div class="faint" style="font-size:12px;margin-top:2px;">Color: ' + item.color + '</div>' +
+                '<div style="font-size:14px;font-weight:500;">' + escapeHtml(item.name) + '</div>' +
+                '<div class="faint" style="font-size:12px;margin-top:2px;">Color: ' + escapeHtml(item.color) + '</div>' +
                 '<button class="remove-btn" data-idx="' + idx + '" data-act="remove" style="margin-top:6px;text-decoration:underline;">&#10005; Remove</button>' +
               '</div>' +
             '</div>' +

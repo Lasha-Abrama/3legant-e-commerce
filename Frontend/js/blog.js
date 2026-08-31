@@ -5,11 +5,11 @@
 
   function articleCardHtml(p) {
     return (
-      '<a class="article-card" href="blog-post.html?id=' + p._id + '">' +
+      '<a class="article-card" href="blog-post.html?id=' + encodeURIComponent(p._id) + '">' +
         '<div class="ph" style="width:100%;height:180px;border-radius:10px;padding:0;">' +
-          '<img src="' + p.image + '" alt="' + p.title + '" style="width:100%;height:100%;object-fit:cover;">' +
+          '<img src="' + safeImageUrl(p.image) + '" alt="' + escapeHtml(p.title) + '" style="width:100%;height:100%;object-fit:cover;">' +
         '</div>' +
-        '<div class="article-card__title" style="font-size:15px;">' + p.title + '</div>' +
+        '<div class="article-card__title" style="font-size:15px;">' + escapeHtml(p.title) + '</div>' +
         '<div class="article-card__date">' + formatDate(p.createdAt) + '</div>' +
       '</a>'
     );

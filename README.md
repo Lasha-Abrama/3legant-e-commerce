@@ -56,6 +56,8 @@ Product reviews are verified-purchase only. The API confirms the product exists 
 
 Wishlist mutations validate both the authenticated user and product reference. Missing products and users return `404`, duplicate additions remain idempotent through `$addToSet`, populated legacy references to deleted products are filtered from responses, and deleting a product removes it from every customer wishlist.
 
+Customer-facing HTML rendering treats API and browser-storage values as untrusted. Shared helpers encode text and quoted attributes, allow only HTTP(S) image URLs, and restrict dynamic color values to hexadecimal CSS colors before account, checkout, cart, catalog, product, review, or blog content is inserted with `innerHTML`.
+
 For local Stripe webhooks:
 
 ```bash
