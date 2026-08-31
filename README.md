@@ -26,6 +26,8 @@ Use Node.js 20.11 or newer.
 
 ## Verification
 
+GitHub Actions runs the backend type-check, production build, and full test suite on every push and pull request. The same checks can be run locally with the commands below.
+
 Run the backend type-check and production build together:
 
 ```bash
