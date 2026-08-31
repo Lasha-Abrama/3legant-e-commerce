@@ -66,6 +66,7 @@ button, input, select, textarea { font-family: inherit; }
 .btn--ghost { background: #fff; color: var(--ink); border-color: var(--border); }
 .btn--block { width: 100%; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn.is-disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 
 /* ---------- Forms ---------- */
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }

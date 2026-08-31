@@ -137,6 +137,7 @@
     var slot = document.getElementById('cart-overlay-slot');
     slot.innerHTML = '<div class="cart-overlay" id="cart-overlay"></div>';
     document.getElementById('cart-overlay').addEventListener('click', closeCart);
+    window.CartStore.sync().then(refreshCart);
   }
   function closeCart() {
     document.getElementById('cart-drawer').classList.remove('is-open');
@@ -163,9 +164,10 @@
               '<div class="cart-row__top"><span class="cart-row__name">' + escapeHtml(item.name || '') + '</span><span class="cart-row__name">' + fmt(item.price * item.qty) + '</span></div>' +
               '<div class="cart-row__color">Color: ' + escapeHtml(item.color || '') + '</div>' +
               (window.CartStore.stockLimit(item) === null ? '' : '<div class="cart-row__color">' + window.CartStore.stockLimit(item) + ' available</div>') +
+              (item.unavailable ? '<div class="error-text">Currently unavailable</div>' : '') +
               '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">' +
                 '<div class="qty-stepper" data-idx="' + idx + '">' +
-                  '<button data-act="dec"' + (item.qty <= 1 ? ' disabled' : '') + '>&minus;</button><span>' + item.qty + '</span><button data-act="inc"' + (window.CartStore.canIncrement(item) ? '' : ' disabled') + '>+</button>' +
+                  '<button data-act="dec"' + (item.qty <= 1 || item.unavailable ? ' disabled' : '') + '>&minus;</button><span>' + item.qty + '</span><button data-act="inc"' + (window.CartStore.canIncrement(item) && !item.unavailable ? '' : ' disabled') + '>+</button>' +
                 '</div>' +
                 '<button class="remove-btn" data-act="remove" data-idx="' + idx + '">&#10005;</button>' +
               '</div>' +
@@ -176,10 +178,13 @@
     }
 
     var subtotal = window.CartStore ? window.CartStore.subtotal(items) : 0;
+    var canCheckout = items.length > 0 && items.every(function (item) {
+      return window.CartStore.stockLimit(item) !== 0 && !item.unavailable;
+    });
     foot.innerHTML =
       '<div class="summary-line"><span>Subtotal</span><span>' + fmt(subtotal) + '</span></div>' +
       '<div class="summary-total"><span>Total</span><span>' + fmt(subtotal) + '</span></div>' +
-      '<a href="checkout.html" class="btn btn--dark btn--block">Checkout</a>' +
+      '<a' + (canCheckout ? ' href="checkout.html"' : '') + ' class="btn btn--dark btn--block' + (canCheckout ? '' : ' is-disabled') + '"' + (canCheckout ? '' : ' aria-disabled="true"') + '>Checkout</a>' +
       '<a href="cart.html" class="btn" style="display:block;text-align:center;margin-top:10px;color:var(--ink);text-decoration:underline;">View Cart</a>';
 
     body.querySelectorAll('[data-act]').forEach(function (btn) {

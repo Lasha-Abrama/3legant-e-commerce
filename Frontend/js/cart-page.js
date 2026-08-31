@@ -25,11 +25,12 @@
                 '<div style="font-size:14px;font-weight:500;">' + escapeHtml(item.name) + '</div>' +
                 '<div class="faint" style="font-size:12px;margin-top:2px;">Color: ' + escapeHtml(item.color) + '</div>' +
                 (window.CartStore.stockLimit(item) === null ? '' : '<div class="faint" style="font-size:12px;margin-top:2px;">' + window.CartStore.stockLimit(item) + ' available</div>') +
+                (item.unavailable ? '<div class="error-text">This product is currently unavailable.</div>' : '') +
                 '<button class="remove-btn" data-idx="' + idx + '" data-act="remove" style="margin-top:6px;text-decoration:underline;">&#10005; Remove</button>' +
               '</div>' +
             '</div>' +
             '<div class="qty-stepper" data-idx="' + idx + '">' +
-              '<button data-act="dec"' + (item.qty <= 1 ? ' disabled' : '') + '>&minus;</button><span>' + item.qty + '</span><button data-act="inc"' + (window.CartStore.canIncrement(item) ? '' : ' disabled') + '>+</button>' +
+              '<button data-act="dec"' + (item.qty <= 1 || item.unavailable ? ' disabled' : '') + '>&minus;</button><span>' + item.qty + '</span><button data-act="inc"' + (window.CartStore.canIncrement(item) && !item.unavailable ? '' : ' disabled') + '>+</button>' +
             '</div>' +
             '<div style="font-size:14px;">' + fmt(item.price) + '</div>' +
             '<div style="font-size:14px;font-weight:600;">' + fmt(item.price * item.qty) + '</div>' +
@@ -73,8 +74,15 @@
     var total = Math.max(0, subtotal + shipping.cost(subtotal));
     document.getElementById('subtotal-label').textContent = fmt(subtotal);
     document.getElementById('total-label').textContent = fmt(total);
+    var checkoutLink = document.getElementById('cart-checkout-link');
+    var canCheckout = items.length > 0 && items.every(function (item) { return !item.unavailable; });
+    checkoutLink.classList.toggle('is-disabled', !canCheckout);
+    checkoutLink.setAttribute('aria-disabled', String(!canCheckout));
+    if (canCheckout) checkoutLink.setAttribute('href', 'checkout.html');
+    else checkoutLink.removeAttribute('href');
   }
 
   render();
+  window.CartStore.sync().then(render);
   window.addEventListener('cart-updated', render);
 })();

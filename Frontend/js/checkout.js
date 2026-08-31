@@ -39,6 +39,7 @@
     var shipping = SHIPPING_OPTIONS[shippingKey];
     var shippingCost = shipping.cost(subtotal);
     var total = Math.max(0, subtotal + shippingCost);
+    var hasUnavailableItems = cart.some(function (item) { return item.unavailable; });
 
     document.getElementById('checkout-body').innerHTML =
       '<div class="checkout-form-grid">' +
@@ -88,7 +89,8 @@
           '<div class="summary-line"><span>Shipping</span><span>' + shipping.label + (shippingCost ? ' (' + fmt(shippingCost) + ')' : '') + '</span></div>' +
           '<div class="summary-line" style="padding-bottom:12px;border-bottom:1px solid var(--border);"><span>Subtotal</span><span>' + fmt(subtotal) + '</span></div>' +
           '<div class="summary-total"><span>Total</span><span>' + fmt(total) + '</span></div>' +
-          '<button class="btn btn--dark btn--block" id="place-order-btn">Place Order</button>' +
+          (hasUnavailableItems ? '<div class="error-text" style="margin-bottom:12px;">Remove unavailable products before checkout.</div>' : '') +
+          '<button class="btn btn--dark btn--block" id="place-order-btn"' + (hasUnavailableItems ? ' disabled' : '') + '>Place Order</button>' +
         '</div>' +
       '</div>';
 
@@ -291,7 +293,8 @@
     });
   }
 
-  apiGetSilent('/auth/me').then(function (res) {
+  Promise.all([apiGetSilent('/auth/me'), window.CartStore.sync()]).then(function (results) {
+    var res = results[0];
     if (!res || !res.user) {
       window.location.href = 'login.html?next=' + encodeURIComponent('checkout.html');
       return;
