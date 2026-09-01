@@ -69,11 +69,11 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
 
   const resendApiKey = typeof config.RESEND_API_KEY === 'string' ? config.RESEND_API_KEY.trim() : '';
   const emailFrom = typeof config.EMAIL_FROM === 'string' ? config.EMAIL_FROM.trim() : '';
-  if (nodeEnv === 'production' && (!resendApiKey || !emailFrom)) {
-    throw new Error('Environment validation failed: RESEND_API_KEY and EMAIL_FROM are required in production');
-  }
   if (resendApiKey && !resendApiKey.startsWith('re_')) {
     throw new Error('Environment validation failed: RESEND_API_KEY has an invalid format');
+  }
+  if ((resendApiKey && !emailFrom) || (!resendApiKey && emailFrom)) {
+    throw new Error('Environment validation failed: RESEND_API_KEY and EMAIL_FROM must be configured together');
   }
   validated.RESEND_API_KEY = resendApiKey;
   validated.EMAIL_FROM = emailFrom;

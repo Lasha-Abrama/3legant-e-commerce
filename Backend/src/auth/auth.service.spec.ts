@@ -138,6 +138,25 @@ describe('AuthService', () => {
     );
   });
 
+  it('never exposes a reset link when production email delivery is unavailable', async () => {
+    usersService.setPasswordResetToken = jest.fn().mockResolvedValue({ email: 'sofia@example.com' });
+    passwordResetEmailService.send = jest.fn().mockResolvedValue(false);
+    const productionConfig = {
+      get: jest.fn((key: string) => key === 'NODE_ENV' ? 'production' : undefined),
+      getOrThrow: jest.fn((key: string) => key === 'FRONTEND_URL' ? 'https://store.example' : undefined),
+    } as unknown as ConfigService;
+    const productionService = new AuthService(
+      usersService,
+      jwtService,
+      productionConfig,
+      passwordResetEmailService,
+    );
+
+    await expect(productionService.requestPasswordReset('sofia@example.com')).resolves.toEqual({
+      message: 'If an account exists for that email, a password reset link has been sent.',
+    });
+  });
+
   it('returns the same generic reset response for a missing account', async () => {
     usersService.setPasswordResetToken = jest.fn().mockResolvedValue(null);
 

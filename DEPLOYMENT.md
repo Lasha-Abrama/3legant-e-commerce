@@ -7,7 +7,7 @@ This repository is configured for a single Vercel project: the static storefront
 - Create a production MongoDB database and a least-privilege database user. Configure Atlas network access for the deployment while avoiding broader access than necessary.
 - Create or select the Cloudinary cloud used for product and blog images.
 - Complete Stripe account setup. Use test keys until the complete checkout, webhook, refund, and inventory flows pass.
-- Verify a sending domain in Resend and create an API key for password-reset email.
+- Optionally verify a sending domain in Resend and create an API key to enable password-reset email.
 
 ## 2. Import the project into Vercel
 
@@ -31,11 +31,13 @@ Add these values in the Vercel project for the Production environment. Add them 
 | `STRIPE_SECRET_KEY` | Stripe test or live secret key matching the deployment mode |
 | `STRIPE_WEBHOOK_SECRET` | Signing secret from the production Stripe webhook created in the next step |
 | `FRONTEND_URL` | Canonical HTTPS storefront origin with no trailing slash |
-| `RESEND_API_KEY` | Resend key beginning with `re_` |
-| `EMAIL_FROM` | Sender on the verified Resend domain |
+| `RESEND_API_KEY` | Optional Resend key beginning with `re_`; configure together with `EMAIL_FROM` |
+| `EMAIL_FROM` | Optional sender on the verified Resend domain; configure together with `RESEND_API_KEY` |
 | `TRUST_PROXY` | `1` for Vercel's trusted forwarding hop |
 
 Do not put production secrets in `Backend/.env`, commit them, or expose them through frontend JavaScript. `PORT` is optional on Vercel because the serverless handler does not open its own listener.
+
+If the Resend variables are omitted, the application still starts securely, but password-reset emails are not delivered. The endpoint keeps its generic response and never returns a production reset link. Add both variables later after obtaining and verifying a domain.
 
 ## 4. Create the Stripe webhook
 
