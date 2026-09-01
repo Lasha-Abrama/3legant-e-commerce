@@ -283,6 +283,7 @@ describe('OrdersService', () => {
       service.refundStripePayment('payment-intent-id', 'charge-id'),
     ).resolves.toEqual(expect.objectContaining({
       paymentStatus: 'refunded',
+      status: 'Cancelled',
       inventoryStatus: 'restored',
     }));
     expect(productsService.incrementStock).toHaveBeenCalledWith(refundedOrder.items, session);
@@ -290,6 +291,7 @@ describe('OrdersService', () => {
       { _id: 'order-id' },
       {
         $set: {
+          status: 'Cancelled',
           inventoryStatus: 'restored',
           inventoryRestoredAt: expect.any(Date),
         },
@@ -345,6 +347,7 @@ describe('OrdersService', () => {
     };
     const restoreFailedOrder = {
       ...transactionOrder,
+      status: 'Cancelled',
       inventoryStatus: 'restore_failed',
     };
     (orderModel as any).findOneAndUpdate = jest
@@ -364,6 +367,7 @@ describe('OrdersService', () => {
       {
         $set: expect.objectContaining({
           paymentStatus: 'refunded',
+          status: 'Cancelled',
           inventoryStatus: 'restore_failed',
         }),
       },
@@ -388,7 +392,10 @@ describe('OrdersService', () => {
 
     await expect(
       service.refundStripePayment('payment-intent-id', 'charge-id'),
-    ).resolves.toEqual(expect.objectContaining({ inventoryStatus: 'return_required' }));
+    ).resolves.toEqual(expect.objectContaining({
+      status: 'Shipped',
+      inventoryStatus: 'return_required',
+    }));
     expect(productsService.incrementStock).not.toHaveBeenCalled();
     expect((orderModel as any).updateOne).toHaveBeenCalledWith(
       { _id: 'order-id' },

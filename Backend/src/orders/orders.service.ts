@@ -345,10 +345,17 @@ export class OrdersService {
           await this.orderModel
             .updateOne(
               { _id: refundedOrder._id },
-              { $set: { inventoryStatus: 'restored', inventoryRestoredAt } },
+              {
+                $set: {
+                  status: 'Cancelled',
+                  inventoryStatus: 'restored',
+                  inventoryRestoredAt,
+                },
+              },
               { session },
             )
             .exec();
+          refundedOrder.status = 'Cancelled';
           refundedOrder.inventoryStatus = 'restored';
           refundedOrder.inventoryRestoredAt = inventoryRestoredAt;
         } else if (refundedOrder.inventoryStatus === 'adjusted') {
@@ -389,6 +396,7 @@ export class OrdersService {
             paymentStatus: 'refunded',
             stripeChargeId,
             refundedAt: new Date(),
+            status: 'Cancelled',
             inventoryStatus: 'restore_failed',
           },
         },
