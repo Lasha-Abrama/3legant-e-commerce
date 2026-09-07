@@ -34,11 +34,12 @@ export class AuthController {
 
   @Get('google')
   @Throttle({ default: { limit: 5, ttl: 60 * 60 * 1000 } })
-  googleLogin(@Res() response: Response) {
+  googleLogin(@Query('next') next: string | undefined, @Res() response: Response) {
     const state = this.googleOAuthService.createState();
+    const returnPath = this.googleOAuthService.getSafeReturnPath(next);
     response.cookie(
       this.googleOAuthService.getStateCookieName(),
-      this.googleOAuthService.createStateCookieValue(state),
+      this.googleOAuthService.createStateCookieValue(state, returnPath),
       this.googleOAuthService.getStateCookieOptions(),
     );
     return response.redirect(this.googleOAuthService.getAuthorizationUrl(state));
@@ -51,24 +52,49 @@ export class AuthController {
     @Query('state') state: string | undefined,
     @Query('error') error: string | undefined,
     @Req() request: Request,
-    @Res({ passthrough: true }) response: Response,
+    @Res() response: Response,
   ) {
     response.clearCookie(
       this.googleOAuthService.getStateCookieName(),
       this.googleOAuthService.getStateCookieClearOptions(),
     );
     if (error) {
-      throw new BadRequestException('Google sign-in was cancelled or denied.');
+      return response.redirect(this.googleOAuthService.getFrontendCallbackUrl(undefined, 'cancelled'));
     }
     if (!code) {
-      throw new BadRequestException('Google sign-in did not return an authorization code.');
+      return response.redirect(this.googleOAuthService.getFrontendCallbackUrl(undefined, 'failed'));
     }
-    this.googleOAuthService.validateState(
-      state,
-      this.getCookieValue(request.headers.cookie, this.googleOAuthService.getStateCookieName()),
-    );
-    const profile = await this.googleOAuthService.getProfileFromAuthorizationCode(code);
-    return this.authService.signInWithGoogle(profile);
+    try {
+      const returnPath = this.googleOAuthService.validateState(
+        state,
+        this.getCookieValue(request.headers.cookie, this.googleOAuthService.getStateCookieName()),
+      );
+      const profile = await this.googleOAuthService.getProfileFromAuthorizationCode(code);
+      const authResponse = await this.authService.signInWithGoogle(profile);
+      response.cookie(
+        this.googleOAuthService.getSessionCookieName(),
+        authResponse.accessToken,
+        this.googleOAuthService.getSessionCookieOptions(),
+      );
+      return response.redirect(this.googleOAuthService.getFrontendCallbackUrl(returnPath));
+    } catch {
+      return response.redirect(this.googleOAuthService.getFrontendCallbackUrl(undefined, 'failed'));
+    }
+  }
+
+  @Get('google/session')
+  async googleSession(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
+    const cookieName = this.googleOAuthService.getSessionCookieName();
+    const accessToken = this.getCookieValue(request.headers.cookie, cookieName);
+    response.clearCookie(cookieName, this.googleOAuthService.getSessionCookieClearOptions());
+    if (!accessToken) {
+      throw new BadRequestException('Google sign-in session has expired. Please try again.');
+    }
+    const user = await this.authService.getUserFromAuthorization(`Bearer ${accessToken}`);
+    if (!user) {
+      throw new BadRequestException('Google sign-in session has expired. Please try again.');
+    }
+    return { accessToken, user };
   }
 
   @Post('forgot-password')

@@ -37,7 +37,12 @@ describe('API integration boundaries', () => {
     createStateCookieValue: jest.fn(),
     getStateCookieOptions: jest.fn(),
     getStateCookieClearOptions: jest.fn(),
+    getSessionCookieName: jest.fn(),
+    getSessionCookieOptions: jest.fn(),
+    getSessionCookieClearOptions: jest.fn(),
     getAuthorizationUrl: jest.fn(),
+    getSafeReturnPath: jest.fn(),
+    getFrontendCallbackUrl: jest.fn(),
     validateState: jest.fn(),
     getProfileFromAuthorizationCode: jest.fn(),
   };
@@ -109,7 +114,7 @@ describe('API integration boundaries', () => {
     }));
     googleOAuthService.createState.mockReturnValue('oauth-state');
     googleOAuthService.getStateCookieName.mockReturnValue('google_oauth_state');
-    googleOAuthService.createStateCookieValue.mockReturnValue('oauth-state.signature');
+    googleOAuthService.createStateCookieValue.mockReturnValue('encoded-state.signature');
     googleOAuthService.getStateCookieOptions.mockReturnValue({
       httpOnly: true,
       sameSite: 'lax',
@@ -123,7 +128,27 @@ describe('API integration boundaries', () => {
       secure: false,
       path: '/api/auth/google/callback',
     });
+    googleOAuthService.getSessionCookieName.mockReturnValue('google_oauth_session');
+    googleOAuthService.getSessionCookieOptions.mockReturnValue({
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      maxAge: 60_000,
+      path: '/api/auth/google',
+    });
+    googleOAuthService.getSessionCookieClearOptions.mockReturnValue({
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      path: '/api/auth/google',
+    });
     googleOAuthService.getAuthorizationUrl.mockReturnValue('https://accounts.google.com/oauth');
+    googleOAuthService.getSafeReturnPath.mockReturnValue('/account.html');
+    googleOAuthService.getFrontendCallbackUrl.mockImplementation((next?: string, error?: string) => (
+      error
+        ? `https://store.example/oauth-callback.html?error=${error}`
+        : `https://store.example/oauth-callback.html?next=${encodeURIComponent(next || '/account.html')}`
+    ));
   });
 
   it('reports API health without caching the response', async () => {
@@ -201,17 +226,15 @@ describe('API integration boundaries', () => {
       .expect(302);
 
     expect(response.headers.location).toBe('https://accounts.google.com/oauth');
-    expect(response.headers['set-cookie'][0]).toContain('google_oauth_state=oauth-state.signature');
+    expect(response.headers['set-cookie'][0]).toContain('google_oauth_state=encoded-state.signature');
     expect(googleOAuthService.getAuthorizationUrl).toHaveBeenCalledWith('oauth-state');
   });
 
   it('handles cancelled Google OAuth authentication without exchanging a code', async () => {
     await request(app.getHttpServer())
       .get('/api/auth/google/callback?error=access_denied')
-      .expect(400)
-      .expect(({ body }) => {
-        expect(body.message).toBe('Google sign-in was cancelled or denied.');
-      });
+      .expect(302)
+      .expect('Location', 'https://store.example/oauth-callback.html?error=cancelled');
 
     expect(googleOAuthService.getProfileFromAuthorizationCode).not.toHaveBeenCalled();
   });
@@ -228,12 +251,24 @@ describe('API integration boundaries', () => {
 
     await request(app.getHttpServer())
       .get('/api/auth/google/callback?code=google-code&state=oauth-state')
-      .set('Cookie', 'google_oauth_state=oauth-state.signature')
+      .set('Cookie', 'google_oauth_state=encoded-state.signature')
+      .expect(302)
+      .expect('Location', 'https://store.example/oauth-callback.html?next=%2Faccount.html');
+
+    expect(googleOAuthService.validateState).toHaveBeenCalledWith('oauth-state', 'encoded-state.signature');
+    expect(authService.signInWithGoogle).toHaveBeenCalledWith(profile);
+  });
+
+  it('exchanges the one-time Google session cookie for the normal JWT response', async () => {
+    authService.getUserFromAuthorization.mockResolvedValue({ id: 'google-user-id' });
+
+    await request(app.getHttpServer())
+      .get('/api/auth/google/session')
+      .set('Cookie', 'google_oauth_session=google-token')
       .expect(200)
       .expect({ accessToken: 'google-token', user: { id: 'google-user-id' } });
 
-    expect(googleOAuthService.validateState).toHaveBeenCalledWith('oauth-state', 'oauth-state.signature');
-    expect(authService.signInWithGoogle).toHaveBeenCalledWith(profile);
+    expect(authService.getUserFromAuthorization).toHaveBeenCalledWith('Bearer google-token');
   });
 
   it('validates password reset requests at the HTTP boundary', async () => {

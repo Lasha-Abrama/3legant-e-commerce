@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Completing sign-in — Gita_3_Team_2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="site-header" data-active="Account"></div>
+
+<main>
+  <div class="wrap" style="display:flex;justify-content:center;">
+    <section class="auth-card" aria-labelledby="oauth-title">
+      <div class="auth-head">
+        <div class="auth-head__title" id="oauth-title">Completing sign-in</div>
+        <div class="auth-head__sub" id="oauth-status" role="status">Please wait while we securely sign you in.</div>
+      </div>
+      <div class="error-text" id="oauth-error" role="alert"></div>
+      <div class="auth-footer" id="oauth-actions" hidden><a href="login.html">Back to login</a></div>
+    </section>
+  </div>
+</main>
+
+<div id="site-footer" data-variant="minimal"></div>
+
+<script src="js/api.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/header.js"></script>
+<script src="js/oauth-callback.js"></script>
+</body>
+</html>

@@ -290,6 +290,11 @@ button, input, select, textarea { font-family: inherit; }
 .auth-head__sub { font-size: 13px; color: var(--muted); }
 .auth-footer { text-align: center; margin-top: 24px; font-size: 13px; color: var(--muted); }
 .auth-footer a { color: var(--ink); text-decoration: underline; font-weight: 500; }
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: var(--muted); font-size: 12px; }
+.auth-divider::before, .auth-divider::after { content: ''; height: 1px; flex: 1; background: var(--border); }
+.oauth-button { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 46px; padding: 0 18px; border: 1px solid var(--border); border-radius: 6px; color: var(--ink); background: #fff; font-size: 14px; font-weight: 500; text-decoration: none; transition: border-color .2s, background .2s; }
+.oauth-button:hover { border-color: var(--ink); background: #fafafa; }
+.oauth-button svg { width: 18px; height: 18px; flex: 0 0 auto; }
 
 /* ---------- Home ---------- */
 .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }

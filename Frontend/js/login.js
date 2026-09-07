@@ -1,6 +1,13 @@
 (function () {
   var form = document.getElementById('login-form');
   var errorEl = document.getElementById('login-error');
+  var googleLogin = document.getElementById('google-login');
+
+  if (googleLogin) {
+    googleLogin.href = API + '/auth/google?next=' + encodeURIComponent(
+      safeLocalRedirect(qs('next'), 'account.html'),
+    );
+  }
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();

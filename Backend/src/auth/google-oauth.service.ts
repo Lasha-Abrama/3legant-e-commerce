@@ -5,6 +5,8 @@ import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
 const GOOGLE_STATE_COOKIE = 'google_oauth_state';
 const GOOGLE_STATE_TTL_MS = 10 * 60 * 1000;
+const GOOGLE_SESSION_COOKIE = 'google_oauth_session';
+const GOOGLE_SESSION_TTL_MS = 60 * 1000;
 
 export interface GoogleProfile {
   googleId: string;
@@ -19,6 +21,10 @@ export class GoogleOAuthService {
 
   getStateCookieName() {
     return GOOGLE_STATE_COOKIE;
+  }
+
+  getSessionCookieName() {
+    return GOOGLE_SESSION_COOKIE;
   }
 
   getStateCookieOptions() {
@@ -36,33 +42,84 @@ export class GoogleOAuthService {
     return options;
   }
 
+  getSessionCookieOptions() {
+    return {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      secure: this.configService.get<string>('NODE_ENV') === 'production',
+      maxAge: GOOGLE_SESSION_TTL_MS,
+      path: '/api/auth/google',
+    };
+  }
+
+  getSessionCookieClearOptions() {
+    const { maxAge: _maxAge, ...options } = this.getSessionCookieOptions();
+    return options;
+  }
+
   createState() {
     return randomBytes(32).toString('base64url');
   }
 
-  createStateCookieValue(state: string) {
-    return `${state}.${this.signState(state)}`;
+  createStateCookieValue(state: string, returnPath: string) {
+    const payload = Buffer.from(JSON.stringify({ state, returnPath })).toString('base64url');
+    return `${payload}.${this.signState(payload)}`;
   }
 
   validateState(state: string | undefined, cookieValue: string | undefined) {
     if (!state || !cookieValue) {
       throw new BadRequestException('Google sign-in session has expired. Please try again.');
     }
-    const [cookieState, signature, ...remainder] = cookieValue.split('.');
-    if (!cookieState || !signature || remainder.length > 0) {
+    const [encodedPayload, signature, ...remainder] = cookieValue.split('.');
+    if (!encodedPayload || !signature || remainder.length > 0) {
       throw new BadRequestException('Google sign-in session is invalid. Please try again.');
     }
-    const expectedSignature = Buffer.from(this.signState(cookieState));
+    const expectedSignature = Buffer.from(this.signState(encodedPayload));
     const suppliedSignature = Buffer.from(signature);
-    const suppliedState = Buffer.from(state);
-    const expectedState = Buffer.from(cookieState);
     const signaturesMatch = suppliedSignature.length === expectedSignature.length
       && timingSafeEqual(suppliedSignature, expectedSignature);
-    const statesMatch = suppliedState.length === expectedState.length
-      && timingSafeEqual(suppliedState, expectedState);
-    if (!signaturesMatch || !statesMatch) {
+    if (!signaturesMatch) {
       throw new BadRequestException('Google sign-in session is invalid. Please try again.');
     }
+    let payload: { state?: unknown; returnPath?: unknown };
+    try {
+      payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
+    } catch {
+      throw new BadRequestException('Google sign-in session is invalid. Please try again.');
+    }
+    if (typeof payload.state !== 'string' || typeof payload.returnPath !== 'string') {
+      throw new BadRequestException('Google sign-in session is invalid. Please try again.');
+    }
+    const suppliedState = Buffer.from(state);
+    const expectedState = Buffer.from(payload.state);
+    const statesMatch = suppliedState.length === expectedState.length
+      && timingSafeEqual(suppliedState, expectedState);
+    if (!statesMatch) {
+      throw new BadRequestException('Google sign-in session is invalid. Please try again.');
+    }
+    return payload.returnPath;
+  }
+
+  getSafeReturnPath(value: string | undefined) {
+    if (!value || !value.startsWith('/') || value.startsWith('//')) return '/account.html';
+    try {
+      const frontendUrl = new URL(this.configService.getOrThrow<string>('FRONTEND_URL'));
+      const candidate = new URL(value, frontendUrl);
+      if (candidate.origin !== frontendUrl.origin) return '/account.html';
+      return `${candidate.pathname}${candidate.search}${candidate.hash}`;
+    } catch {
+      return '/account.html';
+    }
+  }
+
+  getFrontendCallbackUrl(returnPath: string | undefined, error?: 'cancelled' | 'failed') {
+    const callbackUrl = new URL('/oauth-callback.html', this.configService.getOrThrow<string>('FRONTEND_URL'));
+    if (error) {
+      callbackUrl.searchParams.set('error', error);
+    } else {
+      callbackUrl.searchParams.set('next', this.getSafeReturnPath(returnPath));
+    }
+    return callbackUrl.toString();
   }
 
   getAuthorizationUrl(state: string) {
