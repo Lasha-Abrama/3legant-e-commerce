@@ -12,6 +12,8 @@
     "check": "npm run typecheck && npm run build",
     "test": "jest --runInBand",
     "test:api": "jest --runInBand src/api.integration.spec.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
     "test:watch": "jest --watch",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -42,6 +44,7 @@
   "devDependencies": {
     "@nestjs/cli": "^11.0.24",
     "@nestjs/testing": "^11.2.3",
+    "@playwright/test": "^1.63.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^5.0.6",
     "@types/jest": "^29.5.14",
