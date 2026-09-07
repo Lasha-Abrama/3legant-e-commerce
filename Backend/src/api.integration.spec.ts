@@ -105,16 +105,39 @@ describe('API integration boundaries', () => {
   });
 
   it('runs request validation before registration logic', async () => {
-    await request(app.getHttpServer())
-      .post('/api/auth/register')
-      .send({
+    const invalidPayloads = [
+      {
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'not-an-email',
+        password: 'password123',
+      },
+      {
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@example.com',
+        password: 'short',
+      },
+      {
+        firstName: 'Test',
+        email: 'test@example.com',
+        password: 'password123',
+      },
+      {
         firstName: 'Test',
         lastName: 'User',
         email: 'test@example.com',
         password: 'password123',
         isAdmin: true,
-      })
-      .expect(400);
+      },
+    ];
+
+    for (const payload of invalidPayloads) {
+      await request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send(payload)
+        .expect(400);
+    }
 
     expect(authService.register).not.toHaveBeenCalled();
   });
