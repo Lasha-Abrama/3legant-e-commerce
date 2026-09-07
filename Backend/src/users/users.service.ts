@@ -17,6 +17,13 @@ export interface CreateUserInput {
   passwordHash: string;
 }
 
+export interface GoogleUserInput {
+  googleId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -25,7 +32,14 @@ export class UsersService {
   ) {}
 
   findByEmail(email: string) {
-    return this.userModel.findOne({ email: email.toLowerCase().trim() }).exec();
+    return this.userModel
+      .findOne({ email: email.toLowerCase().trim() })
+      .select('+passwordHash')
+      .exec();
+  }
+
+  findByGoogleId(googleId: string) {
+    return this.userModel.findOne({ googleId }).exec();
   }
 
   async findById(id: string): Promise<UserDocument> {
@@ -45,6 +59,48 @@ export class UsersService {
     try {
       return await user.save();
     } catch (error) {
+      this.rethrowDuplicateEmail(error);
+    }
+  }
+
+  async findOrCreateGoogleUser(input: GoogleUserInput): Promise<UserDocument> {
+    const existingGoogleUser = await this.findByGoogleId(input.googleId);
+    if (existingGoogleUser) return existingGoogleUser;
+
+    const email = input.email.toLowerCase().trim();
+    const existingEmailUser = await this.findByEmail(email);
+    if (existingEmailUser) {
+      if (existingEmailUser.googleId && existingEmailUser.googleId !== input.googleId) {
+        throw new BadRequestException('This email is already linked to a different Google account.');
+      }
+      existingEmailUser.googleId = input.googleId;
+      try {
+        return await existingEmailUser.save();
+      } catch (error) {
+        this.rethrowDuplicateEmail(error);
+      }
+    }
+
+    const user = new this.userModel({
+      googleId: input.googleId,
+      email,
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+      displayName: `${input.firstName} ${input.lastName}`.trim(),
+    });
+    try {
+      return await user.save();
+    } catch (error) {
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 11000) {
+        const existingUser = await this.findByGoogleId(input.googleId) ?? await this.findByEmail(email);
+        if (existingUser && (!existingUser.googleId || existingUser.googleId === input.googleId)) {
+          if (!existingUser.googleId) {
+            existingUser.googleId = input.googleId;
+            return existingUser.save();
+          }
+          return existingUser;
+        }
+      }
       this.rethrowDuplicateEmail(error);
     }
   }
@@ -80,7 +136,13 @@ export class UsersService {
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
-    const user = await this.findById(userId);
+    const user = await this.userModel.findById(userId).select('+passwordHash').exec();
+    if (!user) {
+      throw new NotFoundException('მომხმარებელი ვერ მოიძებნა');
+    }
+    if (!user.passwordHash) {
+      throw new BadRequestException('Password sign-in is not enabled for this account. Use password reset to set a password.');
+    }
     const isMatch = await bcrypt.compare(dto.oldPassword, user.passwordHash);
     if (!isMatch) {
       throw new BadRequestException('ძველი პაროლი არასწორია');

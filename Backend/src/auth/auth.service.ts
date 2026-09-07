@@ -7,6 +7,7 @@ import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { PasswordResetEmailService } from './password-reset-email.service';
+import { GoogleProfile } from './google-oauth.service';
 
 const SALT_ROUNDS = 10;
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
@@ -37,7 +38,7 @@ export class AuthService {
 
   async validateUser(dto: LoginDto) {
     const user = await this.usersService.findByEmail(dto.email);
-    if (!user) {
+    if (!user || !user.passwordHash) {
       throw new BadRequestException('არასწორი ელფოსტა ან პაროლი');
     }
     const isMatch = await bcrypt.compare(dto.password, user.passwordHash);
@@ -54,6 +55,11 @@ export class AuthService {
       tokenVersion: user.tokenVersion ?? 0,
     });
     return { accessToken, user: this.usersService.toSafeUser(user) };
+  }
+
+  async signInWithGoogle(profile: GoogleProfile) {
+    const user = await this.usersService.findOrCreateGoogleUser(profile);
+    return this.createAuthResponse(String(user._id));
   }
 
   async getUserFromAuthorization(authorization?: string) {

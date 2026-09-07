@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, HttpCode, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -7,10 +7,15 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AuthenticatedRequest } from '../common/types/authenticated-request';
+import { Request, Response } from 'express';
+import { GoogleOAuthService } from './google-oauth.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly googleOAuthService: GoogleOAuthService,
+  ) {}
 
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60 * 60 * 1000 } })
@@ -25,6 +30,45 @@ export class AuthController {
   async login(@Body() dto: LoginDto) {
     const user = await this.authService.validateUser(dto);
     return this.authService.createAuthResponse(String(user._id));
+  }
+
+  @Get('google')
+  @Throttle({ default: { limit: 5, ttl: 60 * 60 * 1000 } })
+  googleLogin(@Res() response: Response) {
+    const state = this.googleOAuthService.createState();
+    response.cookie(
+      this.googleOAuthService.getStateCookieName(),
+      this.googleOAuthService.createStateCookieValue(state),
+      this.googleOAuthService.getStateCookieOptions(),
+    );
+    return response.redirect(this.googleOAuthService.getAuthorizationUrl(state));
+  }
+
+  @Get('google/callback')
+  @Throttle({ default: { limit: 5, ttl: 60 * 60 * 1000 } })
+  async googleCallback(
+    @Query('code') code: string | undefined,
+    @Query('state') state: string | undefined,
+    @Query('error') error: string | undefined,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.clearCookie(
+      this.googleOAuthService.getStateCookieName(),
+      this.googleOAuthService.getStateCookieClearOptions(),
+    );
+    if (error) {
+      throw new BadRequestException('Google sign-in was cancelled or denied.');
+    }
+    if (!code) {
+      throw new BadRequestException('Google sign-in did not return an authorization code.');
+    }
+    this.googleOAuthService.validateState(
+      state,
+      this.getCookieValue(request.headers.cookie, this.googleOAuthService.getStateCookieName()),
+    );
+    const profile = await this.googleOAuthService.getProfileFromAuthorizationCode(code);
+    return this.authService.signInWithGoogle(profile);
   }
 
   @Post('forgot-password')
@@ -51,5 +95,17 @@ export class AuthController {
   @Get('me')
   async me(@Headers('authorization') authorization?: string) {
     return { user: await this.authService.getUserFromAuthorization(authorization) };
+  }
+
+  private getCookieValue(cookieHeader: string | undefined, name: string) {
+    if (!cookieHeader) return undefined;
+    const prefix = `${name}=`;
+    const cookie = cookieHeader.split(';').map((value) => value.trim()).find((value) => value.startsWith(prefix));
+    if (!cookie) return undefined;
+    try {
+      return decodeURIComponent(cookie.slice(prefix.length));
+    } catch {
+      return undefined;
+    }
   }
 }

@@ -59,7 +59,9 @@ describe('UsersService', () => {
       tokenVersion: 3,
       save: jest.fn().mockResolvedValue(undefined),
     };
-    service.findById = jest.fn().mockResolvedValue(user as never);
+    (userModel as any).findById = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(user) }),
+    });
 
     await expect(
       service.changePassword('user-id', {
@@ -70,6 +72,43 @@ describe('UsersService', () => {
     expect(user.tokenVersion).toBe(4);
     await expect(bcrypt.compare('new-password', user.passwordHash)).resolves.toBe(true);
     expect(user.save).toHaveBeenCalled();
+  });
+
+  it('links a matching email account to its verified Google identity', async () => {
+    const user = {
+      _id: 'user-id',
+      email: 'google@example.com',
+      googleId: undefined,
+      save: jest.fn(),
+    };
+    user.save.mockResolvedValue(user);
+    service.findByGoogleId = jest.fn().mockResolvedValue(null);
+    service.findByEmail = jest.fn().mockResolvedValue(user as never);
+
+    await expect(service.findOrCreateGoogleUser({
+      googleId: 'google-subject',
+      email: 'GOOGLE@example.com',
+      firstName: 'Google',
+      lastName: 'User',
+    })).resolves.toBe(user);
+
+    expect(user.googleId).toBe('google-subject');
+    expect(user.save).toHaveBeenCalled();
+  });
+
+  it('returns an existing Google account without creating a duplicate', async () => {
+    const user = { _id: 'google-user-id', googleId: 'google-subject' };
+    service.findByGoogleId = jest.fn().mockResolvedValue(user as never);
+    service.findByEmail = jest.fn();
+
+    await expect(service.findOrCreateGoogleUser({
+      googleId: 'google-subject',
+      email: 'google@example.com',
+      firstName: 'Google',
+      lastName: 'User',
+    })).resolves.toBe(user);
+
+    expect(service.findByEmail).not.toHaveBeenCalled();
   });
 
   it('increments the token version when logging out', async () => {

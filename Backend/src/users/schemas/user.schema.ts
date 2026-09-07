@@ -40,8 +40,11 @@ export class User {
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
   email: string;
 
-  @Prop({ required: true })
-  passwordHash: string;
+  @Prop({ select: false })
+  passwordHash?: string;
+
+  @Prop({ unique: true, sparse: true, trim: true })
+  googleId?: string;
 
   @Prop({ trim: true, default: '' })
   displayName: string;

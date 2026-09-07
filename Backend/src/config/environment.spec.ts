@@ -84,4 +84,26 @@ describe('validateEnvironment', () => {
       EMAIL_FROM: 'Store <noreply@example.com>',
     });
   });
+
+  it('requires Google OAuth settings to be configured together', () => {
+    expect(() => validateEnvironment({
+      ...validEnvironment,
+      GOOGLE_OAUTH_CLIENT_ID: 'client-id',
+    })).toThrow(
+      'Environment validation failed: GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, and GOOGLE_OAUTH_REDIRECT_URI must be configured together',
+    );
+  });
+
+  it('accepts a complete Google OAuth configuration', () => {
+    expect(validateEnvironment({
+      ...validEnvironment,
+      GOOGLE_OAUTH_CLIENT_ID: 'client-id',
+      GOOGLE_OAUTH_CLIENT_SECRET: 'client-secret',
+      GOOGLE_OAUTH_REDIRECT_URI: 'http://localhost:5000/api/auth/google/callback',
+    })).toMatchObject({
+      GOOGLE_OAUTH_CLIENT_ID: 'client-id',
+      GOOGLE_OAUTH_CLIENT_SECRET: 'client-secret',
+      GOOGLE_OAUTH_REDIRECT_URI: 'http://localhost:5000/api/auth/google/callback',
+    });
+  });
 });

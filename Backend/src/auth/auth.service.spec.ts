@@ -15,6 +15,7 @@ describe('AuthService', () => {
     invalidateAccessTokens: jest.fn(),
     setPasswordResetToken: jest.fn(),
     resetPasswordWithToken: jest.fn(),
+    findOrCreateGoogleUser: jest.fn(),
   } as unknown as UsersService;
   const jwtService = {
     signAsync: jest.fn(),
@@ -86,6 +87,26 @@ describe('AuthService', () => {
       tokenVersion: 0,
     });
     expect(response).toEqual({ accessToken: 'access-token', user: { id: 'user-id' } });
+  });
+
+  it('issues the normal JWT response for a verified Google profile', async () => {
+    const user = { _id: 'google-user-id', tokenVersion: 0 };
+    const profile = {
+      googleId: 'google-subject',
+      email: 'google@example.com',
+      firstName: 'Google',
+      lastName: 'User',
+    };
+    usersService.findOrCreateGoogleUser = jest.fn().mockResolvedValue(user);
+    usersService.findById = jest.fn().mockResolvedValue(user);
+    usersService.toSafeUser = jest.fn().mockReturnValue({ id: 'google-user-id' });
+    jwtService.signAsync = jest.fn().mockResolvedValue('google-access-token');
+
+    await expect(service.signInWithGoogle(profile)).resolves.toEqual({
+      accessToken: 'google-access-token',
+      user: { id: 'google-user-id' },
+    });
+    expect(usersService.findOrCreateGoogleUser).toHaveBeenCalledWith(profile);
   });
 
   it('returns no user for a missing or invalid authorization header', async () => {

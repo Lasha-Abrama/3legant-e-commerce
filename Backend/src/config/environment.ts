@@ -78,6 +78,39 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
   validated.RESEND_API_KEY = resendApiKey;
   validated.EMAIL_FROM = emailFrom;
 
+  const googleClientId = typeof config.GOOGLE_OAUTH_CLIENT_ID === 'string'
+    ? config.GOOGLE_OAUTH_CLIENT_ID.trim()
+    : '';
+  const googleClientSecret = typeof config.GOOGLE_OAUTH_CLIENT_SECRET === 'string'
+    ? config.GOOGLE_OAUTH_CLIENT_SECRET.trim()
+    : '';
+  const googleRedirectUri = typeof config.GOOGLE_OAUTH_REDIRECT_URI === 'string'
+    ? config.GOOGLE_OAUTH_REDIRECT_URI.trim()
+    : '';
+  const configuredGoogleValues = [googleClientId, googleClientSecret, googleRedirectUri]
+    .filter(Boolean)
+    .length;
+  if (configuredGoogleValues > 0 && configuredGoogleValues < 3) {
+    throw new Error(
+      'Environment validation failed: GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, and GOOGLE_OAUTH_REDIRECT_URI must be configured together',
+    );
+  }
+  if (googleRedirectUri) {
+    let parsedGoogleRedirectUri: URL;
+    try {
+      parsedGoogleRedirectUri = new URL(googleRedirectUri);
+    } catch {
+      throw new Error('Environment validation failed: GOOGLE_OAUTH_REDIRECT_URI must be a valid URL');
+    }
+    const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(parsedGoogleRedirectUri.hostname);
+    if (parsedGoogleRedirectUri.protocol !== 'https:' && !isLocalhost) {
+      throw new Error('Environment validation failed: GOOGLE_OAUTH_REDIRECT_URI must use HTTPS outside localhost');
+    }
+  }
+  validated.GOOGLE_OAUTH_CLIENT_ID = googleClientId;
+  validated.GOOGLE_OAUTH_CLIENT_SECRET = googleClientSecret;
+  validated.GOOGLE_OAUTH_REDIRECT_URI = googleRedirectUri;
+
   const trustProxy = config.TRUST_PROXY;
   if (typeof trustProxy === 'string' && trustProxy.trim()) {
     const normalizedTrustProxy = trustProxy.trim();
