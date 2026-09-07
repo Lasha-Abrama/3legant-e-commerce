@@ -5,7 +5,7 @@
     { key: 'orders', label: 'Orders' },
     { key: 'wishlist', label: 'Wishlist' },
   ];
-  var state = { tab: qs('tab') || 'account', user: null };
+  var state = { tab: qs('tab') || 'account', orderId: qs('order') || null, user: null };
 
   document.getElementById('logout-link').addEventListener('click', function (e) {
     e.preventDefault();
@@ -32,6 +32,7 @@
 
   function setTab(tab) {
     state.tab = tab;
+    state.orderId = null;
     renderNav();
     renderContent();
   }
@@ -40,7 +41,7 @@
     var content = document.getElementById('account-content');
     if (state.tab === 'account') return renderAccountTab(content);
     if (state.tab === 'address') return renderAddressTab(content);
-    if (state.tab === 'orders') return renderOrdersTab(content);
+    if (state.tab === 'orders') return state.orderId ? renderOrderDetails(content) : renderOrdersTab(content);
     if (state.tab === 'wishlist') return renderWishlistTab(content);
   }
 
@@ -193,7 +194,7 @@
         return;
       }
       list.innerHTML =
-        '<div class="orders-head"><span>Number ID</span><span>Date</span><span>Status</span><span>Price</span></div>' +
+        '<div class="orders-head"><span>Number ID</span><span>Date</span><span>Status</span><span>Price</span><span></span></div>' +
         orders.map(function (o) {
           var date = new Date(o.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
           return (
@@ -202,9 +203,55 @@
               '<span data-label="Date">' + date + '</span>' +
               '<span data-label="Status" style="color:var(--green);">' + escapeHtml(o.status) + '</span>' +
               '<span data-label="Price">' + fmt(o.total) + '</span>' +
+              '<button class="btn btn--ghost btn-sm" data-order-id="' + escapeHtml(o._id) + '">View</button>' +
             '</div>'
           );
         }).join('');
+      list.querySelectorAll('[data-order-id]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          state.orderId = button.getAttribute('data-order-id');
+          renderContent();
+        });
+      });
+    });
+  }
+
+  function renderOrderDetails(content) {
+    content.innerHTML =
+      '<button class="btn btn--ghost btn-sm" id="back-to-orders">← Back to orders</button>' +
+      '<div class="account-section-title" style="margin-top:20px;">Order details</div>' +
+      '<div id="order-details" class="faint" style="font-size:13px;">Loading...</div>';
+
+    document.getElementById('back-to-orders').addEventListener('click', function () {
+      state.orderId = null;
+      renderContent();
+    });
+
+    apiGet('/orders/' + encodeURIComponent(state.orderId)).then(function (order) {
+      var details = document.getElementById('order-details');
+      if (!order || order._status >= 400) {
+        renderRetryState(details, (order && order.message) || 'Order details could not be loaded.', function () { renderOrderDetails(content); });
+        return;
+      }
+      var date = new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      var address = order.shippingAddress || {};
+      details.className = '';
+      details.innerHTML =
+        '<div class="order-detail-meta">' +
+          '<div><span>Order number</span><strong>#' + escapeHtml(order._id.slice(-8)) + '</strong></div>' +
+          '<div><span>Placed</span><strong>' + date + '</strong></div>' +
+          '<div><span>Payment</span><strong>' + escapeHtml(order.paymentStatus) + '</strong></div>' +
+          '<div><span>Status</span><strong>' + escapeHtml(order.status) + '</strong></div>' +
+        '</div>' +
+        '<div class="order-detail-block"><strong>Items</strong>' +
+          '<div class="order-detail-items">' + order.items.map(function (item) {
+            return '<div><span>' + escapeHtml(item.name) + ' <small>· ' + escapeHtml(item.color) + ' · Qty ' + item.qty + '</small></span><strong>' + fmt(item.price * item.qty) + '</strong></div>';
+          }).join('') + '</div>' +
+          '<div class="order-detail-total"><span>Total</span><strong>' + fmt(order.total) + '</strong></div>' +
+        '</div>' +
+        '<div class="order-detail-block"><strong>Shipping address</strong><p>' +
+          escapeHtml([address.street, address.city, address.state, address.zip, address.country].filter(Boolean).join(', ')) +
+        '</p></div>';
     });
   }
 
