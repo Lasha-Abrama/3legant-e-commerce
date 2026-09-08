@@ -175,6 +175,10 @@ describe('API integration boundaries', () => {
       .get('/api/health')
       .expect(200)
       .expect('Cache-Control', 'no-store')
+      .expect(
+        'Permissions-Policy',
+        'camera=(), microphone=(), geolocation=(self)',
+      )
       .expect({ status: 'ok' });
   });
 

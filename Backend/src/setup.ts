@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 
 export function configureApp(app: NestExpressApplication, configService: ConfigService): void {
@@ -20,6 +21,14 @@ export function configureApp(app: NestExpressApplication, configService: ConfigS
       },
     }),
   );
+
+  app.use((_request: Request, response: Response, next: NextFunction) => {
+    response.setHeader(
+      'Permissions-Policy',
+      'camera=(), microphone=(), geolocation=(self)',
+    );
+    next();
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
