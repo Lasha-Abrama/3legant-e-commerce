@@ -19,14 +19,19 @@
   });
 
 
+  var requestedCategory = (qs('category') || '').trim();
   var state = {
-    category: CATEGORIES.indexOf(qs('category')) !== -1 ? qs('category') : 'All Rooms',
+    category: CATEGORIES.indexOf(requestedCategory) >= 0 ? requestedCategory : 'All Rooms',
     prices: {},
     search: (qs('q') || '').trim(),
     sort: '',
     visible: PAGE_SIZE,
     allProducts: [],
   };
+
+  document.querySelectorAll('[data-store-icon]').forEach(function (element) {
+    element.innerHTML = storeIcon(element.getAttribute('data-store-icon'));
+  });
 
   function updateResultsLabel() {
     document.getElementById('active-category-label').textContent = state.search
@@ -124,6 +129,21 @@
 
   document.getElementById('mobile-filter-toggle').addEventListener('click', function () {
     document.getElementById('shop-sidebar').classList.toggle('is-open');
+  });
+
+  document.querySelectorAll('[data-view]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var view = button.getAttribute('data-view');
+      var grid = document.getElementById('product-grid');
+      grid.classList.remove('grid-2', 'product-grid--list');
+      if (view === 'grid-2') grid.classList.add('grid-2');
+      if (view === 'list') grid.classList.add('product-grid--list');
+      document.querySelectorAll('[data-view]').forEach(function (candidate) {
+        var active = candidate === button;
+        candidate.classList.toggle('is-active', active);
+        candidate.setAttribute('aria-pressed', String(active));
+      });
+    });
   });
 
   document.getElementById('newsletter-slot').innerHTML = newsletterHtml();

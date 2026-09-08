@@ -6,7 +6,6 @@
     { key: 'wishlist', label: 'Wishlist' },
   ];
   var state = { tab: qs('tab') || 'account', orderId: qs('order') || null, user: null };
-
   document.getElementById('profile-image-input').addEventListener('change', function (event) {
     var input = event.target;
     var file = input.files[0];

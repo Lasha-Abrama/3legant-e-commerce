@@ -14,7 +14,7 @@
     if (!shell) return;
     shell.innerHTML =
       '<div class="admin-sidebar">' +
-        '<div class="admin-sidebar__brand">Gita_3_Team_2<span>Admin panel</span></div>' +
+        '<div class="admin-sidebar__brand">3legant.<span>Admin panel</span></div>' +
         '<nav class="admin-nav">' +
           NAV.map(function (item) {
             return '<a href="' + item.href + '" class="' + (item.key === active ? 'is-active' : '') + '">' + item.label + '</a>';

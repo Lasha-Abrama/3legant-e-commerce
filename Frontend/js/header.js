@@ -2,9 +2,31 @@
   var NAV_LINKS = [
     { label: 'Home', href: 'index.html', key: 'Home' },
     { label: 'Shop', href: 'shop.html', key: 'Shop' },
-    { label: 'Product', href: 'shop.html?view=products', key: 'Product' },
+    { label: 'Product', href: 'shop.html#product-grid', key: 'Product' },
     { label: 'Contact Us', href: 'contact.html', key: 'Contact' },
   ];
+
+  function iconSvg(name, className) {
+    var paths = {
+      search: '<circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path>',
+      account: '<circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"></path>',
+      bag: '<path d="M6 8h12l-1 12H7L6 8Z"></path><path d="M9 8V6a3 3 0 0 1 6 0v2"></path>',
+      menu: '<path d="M4 7h16M4 12h16M4 17h16"></path>',
+      truck: '<path d="M3 6h11v10H3zM14 10h4l3 3v3h-7z"></path><circle cx="7" cy="18" r="2"></circle><circle cx="18" cy="18" r="2"></circle>',
+      money: '<rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M7 9h.01M17 15h.01"></path>',
+      lock: '<rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path>',
+      phone: '<path d="M7 3 4 5c-1 1 1 6 5 10s9 6 10 5l2-3-5-3-2 2c-2-1-5-4-6-6l2-2-3-5Z"></path>',
+      pin: '<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="2.5"></circle>',
+      mail: '<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m4 7 8 6 8-6"></path>',
+      instagram: '<rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r=".8" fill="currentColor" stroke="none"></circle>',
+      facebook: '<path d="M14 21v-8h3l.5-4H14V7c0-1 .5-2 2-2h2V2h-3c-3 0-5 2-5 5v2H7v4h3v8"></path>',
+      youtube: '<rect x="2" y="5" width="20" height="14" rx="4"></rect><path d="m10 9 5 3-5 3Z"></path>',
+      filter: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path><circle cx="16" cy="7" r="2"></circle><circle cx="8" cy="17" r="2"></circle>',
+    };
+    return '<svg class="' + (className || 'store-icon') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (paths[name] || '') + '</svg>';
+  }
+
+  window.storeIcon = iconSvg;
 
   function escapeHtml(str) {
     return String(str == null ? '' : str).replace(/[&<>"']/g, function (c) {
@@ -25,28 +47,31 @@
     root.innerHTML =
       (promoDismissed ? '' :
         '<div class="promo-bar" id="promo-bar">' +
-          '<img class="promo-ticket" src="images/icons/ticket-percent.svg" alt=""><span>30% off storewide &mdash; Limited time!</span>' +
+          '<span class="promo-bar__ticket">' + iconSvg('money') + '</span>' +
+          '<span><strong>30% off storewide</strong> &mdash; Limited time!</span>' +
           '<a href="shop.html">Shop Now &rarr;</a>' +
           '<button class="promo-bar__close" id="promo-close" aria-label="Dismiss">&times;</button>' +
         '</div>') +
       '<div class="site-header">' +
-        '<a href="index.html" class="site-header__logo">3legant<span>.</span></a>' +
-        '<nav class="site-nav">' + navHtml(active, '') + '</nav>' +
-        '<div class="header-actions">' +
+        '<div class="site-header__inner">' +
+          '<div class="site-header__start">' +
+            '<button class="icon-btn mobile-toggle" id="mobile-toggle" aria-label="Menu" aria-controls="mobile-nav" aria-expanded="false">' + iconSvg('menu') + '</button>' +
+            '<a href="index.html" class="site-header__logo">3legant<span>.</span></a>' +
+          '</div>' +
+          '<nav class="site-nav">' + navHtml(active, '') + '</nav>' +
+          '<div class="header-actions">' +
           '<button class="icon-btn search-btn" aria-label="Search" aria-controls="header-search-form">' +
-            '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>' +
+            iconSvg('search') +
           '</button>' +
           '<a href="admin/index.html" id="admin-link" class="icon-btn" aria-label="Admin" style="display:none;font-size:11px;font-weight:600;letter-spacing:.02em;">ADMIN</a>' +
-          '<a href="#" id="account-link" class="icon-btn" aria-label="Account">' +
-            '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"></path></svg>' +
+          '<a href="login.html" id="account-link" class="icon-btn account-icon" aria-label="Account">' +
+            iconSvg('account') +
           '</a>' +
           '<button class="icon-btn cart-icon-wrap" id="cart-open" aria-label="Cart">' +
-            '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 7h12l-1 13H7L6 7z"></path><path d="M9 7V5a3 3 0 016 0v2"></path></svg>' +
+            iconSvg('bag') +
             '<span class="cart-count" id="cart-count">0</span>' +
           '</button>' +
-          '<button class="icon-btn mobile-toggle" id="mobile-toggle" aria-label="Menu">' +
-            '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>' +
-          '</button>' +
+          '</div>' +
         '</div>' +
       '</div>' +
       '<form class="header-search-panel" id="header-search-form" hidden>' +
@@ -83,6 +108,7 @@
     document.getElementById('mobile-toggle').addEventListener('click', function () {
       var nav = document.getElementById('mobile-nav');
       nav.style.display = nav.style.display === 'none' ? 'flex' : 'none';
+      document.getElementById('mobile-toggle').setAttribute('aria-expanded', nav.style.display === 'flex');
     });
 
     var searchButton = root.querySelector('.search-btn');
@@ -201,10 +227,10 @@
 
   var FOOTER_VARIANTS = {
     full: ['Home', 'Shop', 'Product', 'Blog', 'Contact'],
-    cart: ['Home', 'Blog', 'Contact'],
+    cart: ['Home', 'Shop', 'Product', 'Blog', 'Contact'],
     minimal: null,
   };
-  var FOOTER_HREFS = { Home: 'index.html', Shop: 'shop.html', Product: 'shop.html?view=products', Blog: 'blog.html', Contact: 'contact.html' };
+  var FOOTER_HREFS = { Home: 'index.html', Shop: 'shop.html', Product: 'shop.html#product-grid', Blog: 'blog.html', Contact: 'contact.html' };
   var FOOTER_LABELS = { Home: 'Home', Shop: 'Shop', Product: 'Product', Blog: 'Blog', Contact: 'Contact Us' };
 
   function renderFooter(root) {
@@ -217,7 +243,7 @@
       : '';
     var topHtml = variant === 'minimal' ? '' :
       '<div class="site-footer__top">' +
-        '<div class="site-footer__identity"><div class="site-footer__brand">3legant<span>.</span></div><div class="site-footer__tag">Gift &amp; Decoration Store</div></div>' +
+        '<div class="site-footer__identity"><div class="site-footer__brand">3legant<span>.</span></div><span class="site-footer__divider"></span><div class="site-footer__tag">Gift &amp; Decoration Store</div></div>' +
         linksHtml +
       '</div>';
     root.innerHTML =
@@ -225,9 +251,8 @@
         topHtml +
         '<div class="site-footer__bottom' + (variant === 'minimal' ? '' : '') + '"' +
           (variant === 'minimal' ? ' style="text-align:center;padding-top:0;border-top:none;"' : '') + '>' +
-          '<span>Copyright © 2023 3legant. All rights reserved</span>' +
-          '<span class="site-footer__legal"><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Use</a></span>' +
-          '<div class="footer-social"><a href="https://www.instagram.com/" aria-label="Instagram"><img src="images/icons/instagram.svg" alt=""></a><a href="https://www.facebook.com/" aria-label="Facebook"><img src="images/icons/facebook.svg" alt=""></a><a href="https://www.youtube.com/" aria-label="YouTube"><img src="images/icons/youtube.svg" alt=""></a></div>' +
+          '<div class="site-footer__copyright"><span>&copy; 2026 3legant. All rights reserved.</span><span class="site-footer__legal"><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Use</a></span></div>' +
+          (variant === 'minimal' ? '' : '<div class="site-footer__socials"><a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">' + iconSvg('instagram') + '</a><a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" aria-label="Facebook">' + iconSvg('facebook') + '</a><a href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer" aria-label="YouTube">' + iconSvg('youtube') + '</a></div>') +
         '</div>' +
       '</div>';
   }

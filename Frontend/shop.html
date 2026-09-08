@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>3legant</title>
+<title>Shop — 3legant</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
@@ -25,7 +25,7 @@
   <div class="wrap">
     <div class="shop-layout">
       <div class="shop-sidebar" id="shop-sidebar">
-        <div class="filter-heading">☰ Filter</div>
+        <div class="filter-heading"><span data-store-icon="filter"></span> Filter</div>
         <div class="sidebar-label">CATEGORIES</div>
         <div class="category-list" id="category-list"></div>
         <div class="sidebar-label">PRICE</div>
@@ -35,8 +35,8 @@
       <div>
         <div class="section-head">
           <div style="font-size:20px;font-weight:600;" id="active-category-label">All Rooms</div>
-          <div style="display:flex;align-items:center;gap:16px;">
-            <button class="mobile-filter-toggle" id="mobile-filter-toggle">☰ Filter</button>
+          <div class="shop-controls">
+            <button class="mobile-filter-toggle" id="mobile-filter-toggle"><span data-store-icon="filter"></span> Filter</button>
             <select class="sort-select" id="sort-select">
               <option value="">Sort by ⌄</option>
               <option value="price_asc">Price: Low to High</option>

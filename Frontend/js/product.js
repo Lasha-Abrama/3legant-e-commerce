@@ -267,6 +267,19 @@
     });
   }
 
+  function loadRecommendations() {
+    apiGetSilent('/products?take=8&category=' + encodeURIComponent(state.product.category)).then(function (response) {
+      var products = response && Array.isArray(response.data) ? response.data : [];
+      var recommendations = products.filter(function (product) { return product._id !== productId; }).slice(0, 5);
+      if (!recommendations.length) return;
+      var section = document.getElementById('product-recommendations');
+      var grid = document.getElementById('recommended-products');
+      grid.innerHTML = recommendations.map(productCardHtml).join('');
+      wireAddToCartButtons(grid);
+      section.hidden = false;
+    });
+  }
+
   function loadProduct() {
     Promise.all([
       apiGetSilent('/products/' + productId),
@@ -291,6 +304,7 @@
         renderProduct();
         renderTabs();
         renderTabBody();
+        loadRecommendations();
       };
 
       if (state.me) {
@@ -304,5 +318,7 @@
     });
   }
 
+  document.getElementById('newsletter-slot').innerHTML = newsletterHtml();
+  wireNewsletterForm();
   loadProduct();
 })();

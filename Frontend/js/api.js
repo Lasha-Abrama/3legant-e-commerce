@@ -127,6 +127,23 @@ function apiUpload(url, file, options) {
   }).catch(apiFailure);
 }
 
+function apiProfileImage(file) {
+  var formData = new FormData();
+  formData.append('image', file);
+  return fetch(API + '/users/me/profile-image', {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: formData,
+  }).then(function (res) {
+    if (res.status === 401) {
+      clearAccessToken();
+      redirectToLogin();
+      return null;
+    }
+    return parseApiResponse(res);
+  }).catch(apiFailure);
+}
+
 function validateImageUpload(file) {
   var allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
   if (allowedTypes.indexOf(file.type) === -1) {

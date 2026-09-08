@@ -11,16 +11,15 @@
     { icon: 'call.svg', title: '24/7 Support', sub: 'Phone and email support' },
   ];
 
-  document.getElementById('category-grid').innerHTML = CATEGORIES.map(function (c) {
+  document.getElementById('category-grid').innerHTML = CATEGORIES.map(function (c, index) {
     return (
-      '<div class="category-tile">' +
-        '<img src="' + c.img + '" alt="' + c.name + '" style="width:100%;height:200px;object-fit:cover;display:block;">' +
-        '<div class="category-tile__overlay"></div>' +
+      '<article class="category-tile category-tile--' + (index === 0 ? 'large' : 'small') + '">' +
+        '<img src="' + c.img + '" alt="' + c.name + '">' +
         '<div class="category-tile__text">' +
           '<div class="category-tile__name">' + c.name + '</div>' +
           '<a class="category-tile__link" href="shop.html?category=' + encodeURIComponent(c.name) + '">Shop Now &rarr;</a>' +
         '</div>' +
-      '</div>'
+      '</article>'
     );
   }).join('');
 
