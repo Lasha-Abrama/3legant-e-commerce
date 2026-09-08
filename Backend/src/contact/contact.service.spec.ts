@@ -96,4 +96,23 @@ describe('ContactService', () => {
     expect(sendNewsletterNotification).not.toHaveBeenCalled();
     expect(sendNewsletterConfirmation).not.toHaveBeenCalled();
   });
+
+  it('handles a concurrent duplicate insert without sending emails', async () => {
+    exec.mockRejectedValue({ code: 11000 });
+    await expect(service.subscribe({ email: 'customer@gmail.com' })).resolves.toEqual({
+      message: 'You are already subscribed to our newsletter.',
+    });
+    expect(sendNewsletterNotification).not.toHaveBeenCalled();
+    expect(sendNewsletterConfirmation).not.toHaveBeenCalled();
+  });
+
+  it('returns a safe error if newsletter email delivery fails after persistence', async () => {
+    sendNewsletterConfirmation.mockRejectedValue(
+      new ServiceUnavailableException('Email could not be sent. Please try again later.'),
+    );
+    await expect(service.subscribe({ email: 'customer@gmail.com' }))
+      .rejects.toThrow('Your subscription was saved, but email delivery is temporarily unavailable.');
+    expect(sendNewsletterNotification).toHaveBeenCalledTimes(1);
+    expect(sendNewsletterConfirmation).toHaveBeenCalledTimes(1);
+  });
 });

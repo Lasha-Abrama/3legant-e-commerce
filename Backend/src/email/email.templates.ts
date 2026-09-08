@@ -53,8 +53,8 @@ export function contactNotification(name: string, email: string, message: string
 
 export function newsletterConfirmation(): EmailContent {
   return confirmation('Welcome to our newsletter', [
-    'You have successfully joined the 3legant newsletter!',
-    'We will send you news about products, sales, new arrivals, promotions, and special offers.',
+    'Thank you for subscribing to the 3legant newsletter. You have successfully joined!',
+    'Stay tuned for updates about new products, announcements, news, sales, promotions, and other important updates.',
   ]);
 }
 

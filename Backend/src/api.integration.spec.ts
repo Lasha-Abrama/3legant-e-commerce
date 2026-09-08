@@ -221,6 +221,47 @@ describe('API integration boundaries', () => {
       });
   });
 
+  it('validates newsletter subscriptions before calling the service', async () => {
+    for (const payload of [
+      {},
+      { email: 'not-an-email' },
+      { email: '   ' },
+      { email: 'customer@example.com', isAdmin: true },
+    ]) {
+      await request(app.getHttpServer()).post('/api/newsletter').send(payload).expect(400);
+    }
+    expect(contactService.subscribe).not.toHaveBeenCalled();
+  });
+
+  it('accepts and trims a valid newsletter subscription', async () => {
+    const response = {
+      message: 'You successfully joined our newsletter. Please check your email.',
+    };
+    contactService.subscribe.mockResolvedValue(response);
+    await request(app.getHttpServer())
+      .post('/api/newsletter')
+      .send({ email: '  subscriber@example.com  ' })
+      .expect(200)
+      .expect(response);
+    expect(contactService.subscribe).toHaveBeenCalledWith({ email: 'subscriber@example.com' });
+  });
+
+  it('returns a safe newsletter error when delivery is unavailable', async () => {
+    contactService.subscribe.mockRejectedValue(new ServiceUnavailableException(
+      'Your subscription was saved, but email delivery is temporarily unavailable.',
+    ));
+    await request(app.getHttpServer())
+      .post('/api/newsletter')
+      .send({ email: 'subscriber@example.com' })
+      .expect(503)
+      .expect(({ body }) => {
+        expect(body.message).toBe(
+          'Your subscription was saved, but email delivery is temporarily unavailable.',
+        );
+        expect(JSON.stringify(body)).not.toContain('SMTP');
+      });
+  });
+
   it('runs request validation before registration logic', async () => {
     const invalidPayloads = [
       {

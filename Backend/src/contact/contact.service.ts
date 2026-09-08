@@ -45,14 +45,27 @@ export class ContactService {
 
   async subscribe(dto: SubscribeDto) {
     const email = dto.email.toLowerCase().trim();
-    const result = await this.newsletterSubscriberModel
-      .updateOne({ email }, { $setOnInsert: { email } }, { upsert: true })
-      .exec();
+    let result;
+    try {
+      result = await this.newsletterSubscriberModel
+        .updateOne({ email }, { $setOnInsert: { email } }, { upsert: true })
+        .exec();
+    } catch (error) {
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 11000) {
+        return { message: 'You are already subscribed to our newsletter.' };
+      }
+      throw error;
+    }
     if (result.upsertedCount > 0) {
-      await Promise.all([
+      const deliveries = await Promise.allSettled([
         this.emailService.sendNewsletterNotification(email),
         this.emailService.sendNewsletterConfirmation(email),
       ]);
+      if (deliveries.some((delivery) => delivery.status === 'rejected')) {
+        throw new ServiceUnavailableException(
+          'Your subscription was saved, but email delivery is temporarily unavailable.',
+        );
+      }
       return { message: 'You successfully joined our newsletter. Please check your email.' };
     }
     return { message: 'You are already subscribed to our newsletter.' };
