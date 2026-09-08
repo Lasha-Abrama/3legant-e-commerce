@@ -84,7 +84,7 @@ describe('EmailService', () => {
   it('delivers contact details to the company inbox with the customer as Reply-To', async () => {
     await service.sendContactNotification(
       'Customer <Name>',
-      'customer@example.com',
+      '  customer@example.com  ',
       'Hello <script>\nPlease contact me.',
     );
     expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({
@@ -93,6 +93,16 @@ describe('EmailService', () => {
       subject: 'New Contact Us message',
       text: expect.stringContaining('Hello <script>'),
       html: expect.stringContaining('Hello &lt;script&gt;<br>Please contact me.'),
+    }));
+  });
+
+  it('notifies the company when a valid external user joins the newsletter', async () => {
+    await service.sendNewsletterNotification('  subscriber@gmail.com  ');
+    expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({
+      to: 'support@example.com',
+      subject: 'New newsletter subscriber',
+      text: expect.stringContaining('subscriber@gmail.com'),
+      html: expect.stringContaining('subscriber@gmail.com'),
     }));
   });
 

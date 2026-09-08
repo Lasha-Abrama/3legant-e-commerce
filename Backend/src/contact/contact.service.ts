@@ -39,10 +39,18 @@ export class ContactService {
   }
 
   async subscribe(dto: SubscribeDto) {
-    await this.newsletterSubscriberModel
-      .updateOne({ email: dto.email.toLowerCase().trim() }, { $setOnInsert: dto }, { upsert: true })
+    const email = dto.email.toLowerCase().trim();
+    const result = await this.newsletterSubscriberModel
+      .updateOne({ email }, { $setOnInsert: { email } }, { upsert: true })
       .exec();
-    return { message: 'გამოწერა დადასტურებულია' };
+    if (result.upsertedCount > 0) {
+      await Promise.all([
+        this.emailService.sendNewsletterNotification(email),
+        this.emailService.sendNewsletterConfirmation(email),
+      ]);
+      return { message: 'You successfully joined our newsletter. Please check your email.' };
+    }
+    return { message: 'You are already subscribed to our newsletter.' };
   }
 
   findAllMessages() {

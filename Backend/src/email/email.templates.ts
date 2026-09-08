@@ -53,7 +53,19 @@ export function contactNotification(name: string, email: string, message: string
 
 export function newsletterConfirmation(): EmailContent {
   return confirmation('Welcome to our newsletter', [
-    'Thank you for subscribing!',
-    'Your newsletter subscription is confirmed. Look out for store updates, new arrivals, and offers.',
+    'You have successfully joined the 3legant newsletter!',
+    'We will send you news about products, sales, new arrivals, promotions, and special offers.',
   ]);
+}
+
+export function newsletterNotification(email: string): EmailContent {
+  const safeEmail = email.trim();
+  return {
+    subject: 'New newsletter subscriber',
+    text: `A new user joined the 3legant newsletter.\n\nEmail: ${safeEmail}`,
+    html: '<!doctype html><html lang="en"><body>'
+      + '<h1>New newsletter subscriber</h1>'
+      + `<p><strong>Email:</strong> ${escapeHtml(safeEmail)}</p>`
+      + '</body></html>',
+  };
 }

@@ -24,7 +24,9 @@ function wireNewsletterForm() {
     var msg = document.getElementById('newsletter-msg');
     apiPost('/newsletter', { email: email }).then(function (res) {
       if (!res) return;
-      msg.textContent = res._status < 400 ? 'გამოწერა დადასტურებულია — Thanks for subscribing!' : res.message;
+      msg.textContent = res.message || (res._status < 400
+        ? 'You successfully joined our newsletter. Please check your email.'
+        : 'Newsletter signup failed. Please try again.');
       msg.style.color = res._status < 400 ? 'var(--green)' : 'var(--red)';
       if (res._status < 400) form.reset();
     });

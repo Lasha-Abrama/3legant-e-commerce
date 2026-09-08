@@ -88,6 +88,11 @@ to the company recipient, and sends a separate confirmation to the customer's va
 email address. If SMTP delivery fails, the API returns a safe availability error and
 does not expose Gmail diagnostics or credentials.
 
+The Newsletter endpoint sends confirmation only for a newly inserted subscriber,
+and sends the company inbox a separate notification containing the subscriber's
+email. Existing subscribers receive an already-subscribed response without duplicate
+emails, which prevents repeated form submissions from producing email spam.
+
 ## Safe real delivery test
 
 Contact/newsletter routes are not wired to this service yet, so submitting an existing

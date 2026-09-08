@@ -8,6 +8,7 @@ import {
   contactNotification,
   EmailContent,
   newsletterConfirmation,
+  newsletterNotification,
 } from './email.templates';
 
 @Injectable()
@@ -28,8 +29,13 @@ export class EmailService {
   }
 
   private async deliver(to: string, content: EmailContent, replyTo?: string): Promise<void> {
-    if (typeof to !== 'string' || !isEmail(to) || /[\r\n]/.test(to)
-      || (replyTo !== undefined && (typeof replyTo !== 'string' || !isEmail(replyTo) || /[\r\n]/.test(replyTo)))
+    const recipient = typeof to === 'string' ? to.trim() : '';
+    const normalizedReplyTo = typeof replyTo === 'string' ? replyTo.trim() : replyTo;
+    if (!isEmail(recipient) || /[\r\n]/.test(recipient)
+      || (normalizedReplyTo !== undefined
+        && (typeof normalizedReplyTo !== 'string'
+          || !isEmail(normalizedReplyTo)
+          || /[\r\n]/.test(normalizedReplyTo)))
       || !content || typeof content.subject !== 'string' || !content.subject.trim()
       || /[\r\n]/.test(content.subject)
       || typeof content.text !== 'string' || !content.text.trim()
@@ -43,8 +49,8 @@ export class EmailService {
           name: this.config.get<string>('SMTP_FROM_NAME') || '',
           address: this.config.getOrThrow<string>('SMTP_FROM'),
         },
-        ...(replyTo ? { replyTo } : {}),
-        to,
+        ...(normalizedReplyTo ? { replyTo: normalizedReplyTo } : {}),
+        to: recipient,
         subject: content.subject,
         text: content.text,
         html: content.html,
@@ -64,6 +70,12 @@ export class EmailService {
 
   sendNewsletterConfirmation(to: string): Promise<void> {
     return this.deliver(to, newsletterConfirmation());
+  }
+
+  sendNewsletterNotification(email: string): Promise<void> {
+    const recipient = this.config.get<string>('CONTACT_RECIPIENT_EMAIL')
+      || this.config.getOrThrow<string>('SMTP_FROM');
+    return this.deliver(recipient, newsletterNotification(email));
   }
 
   private getTransporter() {

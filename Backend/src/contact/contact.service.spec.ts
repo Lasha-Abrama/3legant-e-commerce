@@ -9,6 +9,10 @@ describe('ContactService', () => {
   const save = jest.fn();
   const sendContactNotification = jest.fn();
   const sendContactConfirmation = jest.fn();
+  const sendNewsletterNotification = jest.fn();
+  const sendNewsletterConfirmation = jest.fn();
+  const updateOne = jest.fn();
+  const exec = jest.fn();
   let savedPayload: Record<string, unknown>;
   let service: ContactService;
 
@@ -18,14 +22,20 @@ describe('ContactService', () => {
     save.mockResolvedValue(undefined);
     sendContactNotification.mockResolvedValue(undefined);
     sendContactConfirmation.mockResolvedValue(undefined);
+    sendNewsletterNotification.mockResolvedValue(undefined);
+    sendNewsletterConfirmation.mockResolvedValue(undefined);
+    exec.mockResolvedValue({ upsertedCount: 1 });
+    updateOne.mockReturnValue({ exec });
     const contactMessageModel = jest.fn().mockImplementation((payload) => {
       savedPayload = payload;
       return { save };
     }) as unknown as Model<ContactMessageDocument>;
-    const newsletterSubscriberModel = {} as Model<NewsletterSubscriberDocument>;
+    const newsletterSubscriberModel = { updateOne } as unknown as Model<NewsletterSubscriberDocument>;
     const emailService = {
       sendContactNotification,
       sendContactConfirmation,
+      sendNewsletterNotification,
+      sendNewsletterConfirmation,
     } as unknown as EmailService;
     service = new ContactService(contactMessageModel, newsletterSubscriberModel, emailService);
   });
@@ -62,5 +72,27 @@ describe('ContactService', () => {
       message: 'Please help.',
     })).rejects.toThrow('Email could not be sent. Please try again later.');
     expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('stores a new subscriber and emails both the company and subscriber', async () => {
+    await expect(service.subscribe({ email: '  CUSTOMER@GMAIL.COM  ' })).resolves.toEqual({
+      message: 'You successfully joined our newsletter. Please check your email.',
+    });
+    expect(updateOne).toHaveBeenCalledWith(
+      { email: 'customer@gmail.com' },
+      { $setOnInsert: { email: 'customer@gmail.com' } },
+      { upsert: true },
+    );
+    expect(sendNewsletterNotification).toHaveBeenCalledWith('customer@gmail.com');
+    expect(sendNewsletterConfirmation).toHaveBeenCalledWith('customer@gmail.com');
+  });
+
+  it('does not send duplicate emails for an existing subscriber', async () => {
+    exec.mockResolvedValue({ upsertedCount: 0 });
+    await expect(service.subscribe({ email: 'customer@gmail.com' })).resolves.toEqual({
+      message: 'You are already subscribed to our newsletter.',
+    });
+    expect(sendNewsletterNotification).not.toHaveBeenCalled();
+    expect(sendNewsletterConfirmation).not.toHaveBeenCalled();
   });
 });
