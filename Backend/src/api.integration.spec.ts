@@ -17,6 +17,9 @@ import { UploadsService } from './uploads/uploads.service';
 import { UsersService } from './users/users.service';
 import { configureApp } from './setup';
 import { HealthController } from './health.controller';
+import { ContactController } from './contact/contact.controller';
+import { ContactService } from './contact/contact.service';
+import { ServiceUnavailableException } from '@nestjs/common';
 
 describe('API integration boundaries', () => {
   let app: NestExpressApplication;
@@ -67,6 +70,10 @@ describe('API integration boundaries', () => {
   const uploadsService = {
     uploadBuffer: jest.fn(),
   };
+  const contactService = {
+    createMessage: jest.fn(),
+    subscribe: jest.fn(),
+  };
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -76,6 +83,7 @@ describe('API integration boundaries', () => {
         ProductsController,
         OrdersController,
         UploadsController,
+        ContactController,
       ],
       providers: [
         JwtAuthGuard,
@@ -88,6 +96,7 @@ describe('API integration boundaries', () => {
         { provide: ProductsService, useValue: productsService },
         { provide: OrdersService, useValue: ordersService },
         { provide: UploadsService, useValue: uploadsService },
+        { provide: ContactService, useValue: contactService },
       ],
     }).compile();
 
@@ -102,6 +111,8 @@ describe('API integration boundaries', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    contactService.createMessage.mockReset();
+    contactService.subscribe.mockReset();
     jwtService.verifyAsync.mockImplementation(async (token: string) => {
       if (token === 'admin-token') return { sub: 'admin-id', tokenVersion: 1 };
       if (token === 'user-token') return { sub: 'user-id', tokenVersion: 0 };
@@ -157,6 +168,57 @@ describe('API integration boundaries', () => {
       .expect(200)
       .expect('Cache-Control', 'no-store')
       .expect({ status: 'ok' });
+  });
+
+  it('validates Contact Us submissions before calling the service', async () => {
+    const invalidPayloads = [
+      {},
+      { name: 'Customer', email: 'not-an-email', message: 'Please help.' },
+      { name: '   ', email: 'customer@example.com', message: 'Please help.' },
+      { name: 'Customer', email: 'customer@example.com', message: '   ' },
+      { name: 'Customer', email: 'customer@example.com', message: 'Please help.', isAdmin: true },
+    ];
+    for (const payload of invalidPayloads) {
+      await request(app.getHttpServer()).post('/api/contact').send(payload).expect(400);
+    }
+    expect(contactService.createMessage).not.toHaveBeenCalled();
+  });
+
+  it('accepts and trims a valid Contact Us submission', async () => {
+    const response = {
+      message: 'Your message was sent successfully. We will get back to you as soon as possible.',
+    };
+    contactService.createMessage.mockResolvedValue(response);
+    await request(app.getHttpServer())
+      .post('/api/contact')
+      .send({
+        name: '  Test Customer  ',
+        email: '  customer@example.com  ',
+        message: '  Please help with my order.  ',
+      })
+      .expect(200)
+      .expect(response);
+    expect(contactService.createMessage).toHaveBeenCalledWith({
+      name: 'Test Customer',
+      email: 'customer@example.com',
+      message: 'Please help with my order.',
+    });
+  });
+
+  it('returns a safe Contact Us error when delivery is unavailable', async () => {
+    contactService.createMessage.mockRejectedValue(new ServiceUnavailableException(
+      'Your message was saved, but email delivery is temporarily unavailable.',
+    ));
+    await request(app.getHttpServer())
+      .post('/api/contact')
+      .send({ name: 'Customer', email: 'customer@example.com', message: 'Please help.' })
+      .expect(503)
+      .expect(({ body }) => {
+        expect(body.message).toBe(
+          'Your message was saved, but email delivery is temporarily unavailable.',
+        );
+        expect(JSON.stringify(body)).not.toContain('SMTP');
+      });
   });
 
   it('runs request validation before registration logic', async () => {

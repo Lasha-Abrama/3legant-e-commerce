@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ContactMessage, ContactMessageDocument } from './schemas/contact-message.schema';
@@ -27,7 +27,7 @@ export class ContactService {
       message: dto.message.trim(),
     };
     await new this.contactMessageModel(normalized).save();
-    await Promise.all([
+    const deliveries = await Promise.allSettled([
       this.emailService.sendContactNotification(
         normalized.name,
         normalized.email,
@@ -35,6 +35,11 @@ export class ContactService {
       ),
       this.emailService.sendContactConfirmation(normalized.email, normalized.name),
     ]);
+    if (deliveries.some((delivery) => delivery.status === 'rejected')) {
+      throw new ServiceUnavailableException(
+        'Your message was saved, but email delivery is temporarily unavailable.',
+      );
+    }
     return { message: 'Your message was sent successfully. We will get back to you as soon as possible.' };
   }
 

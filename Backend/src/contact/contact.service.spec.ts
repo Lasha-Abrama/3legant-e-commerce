@@ -70,8 +70,9 @@ describe('ContactService', () => {
       name: 'Sofia',
       email: 'sofia@example.com',
       message: 'Please help.',
-    })).rejects.toThrow('Email could not be sent. Please try again later.');
+    })).rejects.toThrow('Your message was saved, but email delivery is temporarily unavailable.');
     expect(save).toHaveBeenCalledTimes(1);
+    expect(sendContactConfirmation).toHaveBeenCalledTimes(1);
   });
 
   it('stores a new subscriber and emails both the company and subscriber', async () => {
