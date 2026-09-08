@@ -2,6 +2,9 @@
 
 This repository is configured for a single Vercel project: the static storefront is served from `Frontend/`, and requests under `/api/*` are handled by the NestJS serverless entry point in `Backend/api/index.ts`.
 
+See [BACKEND_AUDIT.md](BACKEND_AUDIT.md) for Google OAuth, SMTP, map requirements,
+verified backend behavior, and remaining provider acceptance checks.
+
 ## 1. Prepare provider accounts
 
 - Create a production MongoDB database and a least-privilege database user. Configure Atlas network access for the deployment while avoiding broader access than necessary.

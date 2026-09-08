@@ -60,6 +60,7 @@ describe('validateEnvironment', () => {
     expect(validateEnvironment({
       ...validEnvironment,
       NODE_ENV: 'production',
+      FRONTEND_URL: 'https://store.example',
       JWT_SECRET: 'a-production-secret-with-32-characters',
     })).toMatchObject({
       RESEND_API_KEY: '',
@@ -106,4 +107,11 @@ describe('validateEnvironment', () => {
       GOOGLE_OAUTH_REDIRECT_URI: 'http://localhost:5000/api/auth/google/callback',
     });
   });
+  it('rejects production HTTP and mismatched Google callback origins', () => {
+    expect(() => validateEnvironment({ ...validEnvironment, NODE_ENV: 'production', JWT_SECRET: 'a-production-secret-with-32-characters' })).toThrow('must use HTTPS');
+    for (const redirect of ['ftp://localhost/api/auth/google/callback', 'http://localhost:5001/api/auth/google/callback', 'http://localhost:5000/other']) {
+      expect(() => validateEnvironment({ ...validEnvironment, GOOGLE_OAUTH_CLIENT_ID: 'client', GOOGLE_OAUTH_CLIENT_SECRET: 'secret', GOOGLE_OAUTH_REDIRECT_URI: redirect })).toThrow();
+    }
+  });
+
 });

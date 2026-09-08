@@ -1,3 +1,4 @@
+import { OAuth2Client } from 'google-auth-library';
 import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleOAuthService } from './google-oauth.service';
@@ -52,4 +53,35 @@ describe('GoogleOAuthService', () => {
     expect(url.searchParams.get('scope')).toContain('email');
     expect(url.searchParams.get('scope')).toContain('profile');
   });
+  it('rejects expired signed state even if a client retains the cookie', () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(1000);
+    try {
+      const state = service.createState();
+      const cookie = service.createStateCookieValue(state, '/account.html');
+      now.mockReturnValue(601001);
+      expect(() => service.validateState(state, cookie)).toThrow(BadRequestException);
+    } finally { now.mockRestore(); }
+  });
+
+  it('handles repeated query parameters without a server error', () => {
+    expect(service.getSafeReturnPath(['bad'] as never)).toBe('/account.html');
+    expect(() => service.validateState(['bad'] as never, 'cookie')).toThrow(BadRequestException);
+  });
+
+  it('verifies Google ID tokens for the configured audience before accepting a profile', async () => {
+    const exchange = jest.spyOn(OAuth2Client.prototype, 'getToken').mockResolvedValue({ tokens: { id_token: 'identity-token' } } as never);
+    const verify = jest.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({ getPayload: () => ({ sub: 'google-sub', email: 'user@gmail.com', email_verified: true, given_name: 'Test', family_name: 'User' }) } as never);
+    try {
+      await expect(service.getProfileFromAuthorizationCode('code')).resolves.toMatchObject({ googleId: 'google-sub', email: 'user@gmail.com' });
+      expect(verify).toHaveBeenCalledWith({ idToken: 'identity-token', audience: 'google-client-id' });
+    } finally { exchange.mockRestore(); verify.mockRestore(); }
+  });
+
+  it('rejects unverified Google email claims', async () => {
+    const exchange = jest.spyOn(OAuth2Client.prototype, 'getToken').mockResolvedValue({ tokens: { id_token: 'identity-token' } } as never);
+    const verify = jest.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({ getPayload: () => ({ sub: 'google-sub', email: 'user@gmail.com', email_verified: false }) } as never);
+    try { await expect(service.getProfileFromAuthorizationCode('code')).rejects.toThrow('Google sign-in failed'); }
+    finally { exchange.mockRestore(); verify.mockRestore(); }
+  });
+
 });

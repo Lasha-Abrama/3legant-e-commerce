@@ -1,3 +1,5 @@
+import { UsersController } from './users/users.controller';
+import { ContactAdminController } from './contact/contact-admin.controller';
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -90,6 +92,8 @@ describe('API integration boundaries', () => {
         UploadsController,
         ContactController,
         ProfileImageController,
+        UsersController,
+        ContactAdminController,
       ],
       providers: [
         JwtAuthGuard,
@@ -175,6 +179,7 @@ describe('API integration boundaries', () => {
       .get('/api/health')
       .expect(200)
       .expect('Cache-Control', 'no-store')
+      .expect('Referrer-Policy', 'strict-origin-when-cross-origin')
       .expect(
         'Permissions-Policy',
         'camera=(), microphone=(), geolocation=(self)',
@@ -585,4 +590,41 @@ describe('API integration boundaries', () => {
 
     expect(uploadsService.uploadBuffer).toHaveBeenCalledWith(expect.any(Buffer), 'image/png');
   });
+  it('prevents caching token and current-user responses', async () => {
+    authService.getUserFromAuthorization.mockResolvedValue(null);
+    await request(app.getHttpServer()).get('/api/auth/me').expect('Cache-Control', 'private, no-store').expect(200);
+    await request(app.getHttpServer()).get('/api/auth/google/session').expect('Cache-Control', 'private, no-store').expect(400);
+  });
+
+  it('rejects malformed login password values before authentication', async () => {
+    for (const password of [123, {}, [], null]) {
+      await request(app.getHttpServer()).post('/api/auth/login').send({ email: 'user@example.com', password }).expect(400);
+    }
+    expect(authService.validateUser).not.toHaveBeenCalled();
+  });
+
+  it('protects contact and newsletter administration', async () => {
+    for (const route of ['/api/admin/contact-messages', '/api/admin/newsletter-subscribers']) {
+      await request(app.getHttpServer()).get(route).expect(401);
+      await request(app.getHttpServer()).get(route).set('Authorization', 'Bearer user-token').expect(403);
+      await request(app.getHttpServer()).delete(route + '/invalid-id').set('Authorization', 'Bearer admin-token').expect(400);
+    }
+  });
+
+  it('rejects null profile fields and privilege escalation', async () => {
+    for (const payload of [{ email: null }, { firstName: '   ' }, { isAdmin: true }, { profileImageUrl: 'https://attacker.example/image' }]) {
+      await request(app.getHttpServer()).patch('/api/users/me').set('Authorization', 'Bearer user-token').send(payload).expect(400);
+    }
+  });
+
+  it('rejects missing images, extra multipart fields, and disallowed profile MIME types', async () => {
+    const route = '/api/users/me/profile-image';
+    await request(app.getHttpServer()).patch(route).set('Authorization', 'Bearer user-token').expect(400);
+    await request(app.getHttpServer()).patch(route).set('Authorization', 'Bearer user-token')
+      .field('userId', 'another-user').attach('image', Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), { filename: 'avatar.png', contentType: 'image/png' }).expect(400);
+    await request(app.getHttpServer()).patch(route).set('Authorization', 'Bearer user-token')
+      .attach('image', Buffer.from('<svg></svg>'), { filename: 'avatar.svg', contentType: 'image/svg+xml' }).expect(400);
+    expect(profileImagesService.update).not.toHaveBeenCalled();
+  });
+
 });

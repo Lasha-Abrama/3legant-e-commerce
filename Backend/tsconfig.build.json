@@ -1,4 +1,17 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "dist", "api"]
+  "compilerOptions": {
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo"
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "api",
+    "e2e",
+    "**/*.spec.ts"
+  ]
 }

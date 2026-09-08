@@ -42,7 +42,7 @@ describe('UsersService', () => {
       profileImagePublicId: 'loam-co/profile-images/old-avatar',
       save: jest.fn().mockResolvedValue(undefined),
     };
-    (userModel as any).findById = jest.fn().mockReturnValue({
+    (userModel as any).findOneAndUpdate = jest.fn().mockReturnValue({
       select: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(user) }),
     });
     await expect(service.replaceProfileImage('user-id', {
@@ -54,7 +54,12 @@ describe('UsersService', () => {
     });
     expect(user.profileImageUrl).toBe('https://res.cloudinary.com/test/new.png');
     expect(user.profileImagePublicId).toBe('loam-co/profile-images/new-avatar');
-    expect(user.save).toHaveBeenCalledTimes(1);
+    expect((userModel as any).findOneAndUpdate).toHaveBeenCalledWith(
+      { _id: 'user-id' },
+      { $set: { profileImageUrl: 'https://res.cloudinary.com/test/new.png', profileImagePublicId: 'loam-co/profile-images/new-avatar' } },
+      { new: false, runValidators: true },
+    );
+    expect(user.save).not.toHaveBeenCalled();
   });
 
   it('returns the profile image URL without exposing its Cloudinary public identifier', () => {
@@ -94,18 +99,22 @@ describe('UsersService', () => {
       select: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(user) }),
     });
 
+    (userModel as any).updateOne = jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue({ matchedCount: 1 }) });
     await expect(
       service.changePassword('user-id', {
         oldPassword: 'old-password',
         newPassword: 'new-password',
       }),
     ).resolves.toEqual({ message: 'პაროლი წარმატებით შეიცვალა' });
-    expect(user.tokenVersion).toBe(4);
-    await expect(bcrypt.compare('new-password', user.passwordHash)).resolves.toBe(true);
-    expect(user.save).toHaveBeenCalled();
+    const [filter, update] = (userModel as any).updateOne.mock.calls[0];
+    expect(filter).toEqual({ _id: 'user-id', passwordHash: user.passwordHash });
+    expect(update.$inc).toEqual({ tokenVersion: 1 });
+    expect(update.$unset).toEqual({ passwordResetTokenHash: 1, passwordResetExpiresAt: 1 });
+    await expect(bcrypt.compare('new-password', update.$set.passwordHash)).resolves.toBe(true);
+    expect(user.save).not.toHaveBeenCalled();
   });
 
-  it('links a matching email account to its verified Google identity', async () => {
+  it('does not automatically link an unverified email account to a Google identity', async () => {
     const user = {
       _id: 'user-id',
       email: 'google@example.com',
@@ -121,10 +130,10 @@ describe('UsersService', () => {
       email: 'GOOGLE@example.com',
       firstName: 'Google',
       lastName: 'User',
-    })).resolves.toBe(user);
+    })).rejects.toBeInstanceOf(BadRequestException);
 
-    expect(user.googleId).toBe('google-subject');
-    expect(user.save).toHaveBeenCalled();
+    expect(user.googleId).toBeUndefined();
+    expect(user.save).not.toHaveBeenCalled();
   });
 
   it('returns an existing Google account without creating a duplicate', async () => {
@@ -142,16 +151,10 @@ describe('UsersService', () => {
     expect(service.findByEmail).not.toHaveBeenCalled();
   });
 
-  it('increments the token version when logging out', async () => {
-    const user = {
-      tokenVersion: 1,
-      save: jest.fn().mockResolvedValue(undefined),
-    };
-    service.findById = jest.fn().mockResolvedValue(user as never);
-
+  it('atomically increments the token version when logging out', async () => {
+    (userModel as any).updateOne = jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue({ matchedCount: 1 }) });
     await expect(service.invalidateAccessTokens('user-id')).resolves.toBeUndefined();
-    expect(user.tokenVersion).toBe(2);
-    expect(user.save).toHaveBeenCalled();
+    expect((userModel as any).updateOne).toHaveBeenCalledWith({ _id: 'user-id' }, { $inc: { tokenVersion: 1 } });
   });
 
   it('stores a normalized password reset token for an existing email', async () => {
@@ -169,35 +172,25 @@ describe('UsersService', () => {
     );
   });
 
-  it('resets a password once and invalidates existing access tokens', async () => {
-    const user = {
-      passwordHash: 'old-hash',
-      tokenVersion: 2,
-      passwordResetTokenHash: 'token-hash',
-      passwordResetExpiresAt: new Date(Date.now() + 60_000),
-      save: jest.fn().mockResolvedValue(undefined),
-    };
-    (userModel as any).findOne = jest.fn().mockReturnValue({
-      select: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(user) }),
-    });
-
-    await service.resetPasswordWithToken('token-hash', 'new-hash');
-
-    expect(user.passwordHash).toBe('new-hash');
-    expect(user.tokenVersion).toBe(3);
-    expect(user.passwordResetTokenHash).toBeUndefined();
-    expect(user.passwordResetExpiresAt).toBeUndefined();
-    expect(user.save).toHaveBeenCalled();
+  it('consumes a reset token atomically so it cannot reset a password twice', async () => {
+    const exec = jest.fn().mockResolvedValueOnce({ _id: 'user-id' }).mockResolvedValueOnce(null);
+    (userModel as any).findOneAndUpdate = jest.fn().mockReturnValue({ exec });
+    await expect(service.resetPasswordWithToken('valid-hash', 'new-hash')).resolves.toBeUndefined();
+    expect((userModel as any).findOneAndUpdate).toHaveBeenCalledWith(
+      { passwordResetTokenHash: 'valid-hash', passwordResetExpiresAt: { $gt: expect.any(Date) } },
+      {
+        $set: { passwordHash: 'new-hash' },
+        $inc: { tokenVersion: 1 },
+        $unset: { passwordResetTokenHash: 1, passwordResetExpiresAt: 1 },
+      },
+      { new: true, runValidators: true },
+    );
+    await expect(service.resetPasswordWithToken('valid-hash', 'other-hash')).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('rejects an invalid or expired password reset token', async () => {
-    (userModel as any).findOne = jest.fn().mockReturnValue({
-      select: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(null) }),
-    });
-
-    await expect(service.resetPasswordWithToken('expired-hash', 'new-hash')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    (userModel as any).findOneAndUpdate = jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(null) });
+    await expect(service.resetPasswordWithToken('expired-hash', 'new-hash')).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('rejects missing products before changing a wishlist', async () => {

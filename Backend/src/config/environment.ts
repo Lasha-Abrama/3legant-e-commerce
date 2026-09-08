@@ -69,6 +69,13 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     throw new Error('Environment validation failed: FRONTEND_URL must use HTTP or HTTPS');
   }
 
+  if (parsedFrontendUrl.username || parsedFrontendUrl.password || parsedFrontendUrl.search || parsedFrontendUrl.hash) {
+    throw new Error('Environment validation failed: FRONTEND_URL must not contain credentials, query, or fragment');
+  }
+  if (nodeEnv === 'production' && parsedFrontendUrl.protocol !== 'https:') {
+    throw new Error('Environment validation failed: FRONTEND_URL must use HTTPS in production');
+  }
+
   const resendApiKey = typeof config.RESEND_API_KEY === 'string' ? config.RESEND_API_KEY.trim() : '';
   const emailFrom = typeof config.EMAIL_FROM === 'string' ? config.EMAIL_FROM.trim() : '';
   if (resendApiKey && !resendApiKey.startsWith('re_')) {
@@ -106,8 +113,14 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
       throw new Error('Environment validation failed: GOOGLE_OAUTH_REDIRECT_URI must be a valid URL');
     }
     const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(parsedGoogleRedirectUri.hostname);
-    if (parsedGoogleRedirectUri.protocol !== 'https:' && !isLocalhost) {
+    if (parsedGoogleRedirectUri.protocol !== 'https:' && !(isLocalhost && parsedGoogleRedirectUri.protocol === 'http:')) {
       throw new Error('Environment validation failed: GOOGLE_OAUTH_REDIRECT_URI must use HTTPS outside localhost');
+    }
+    if (parsedGoogleRedirectUri.origin !== parsedFrontendUrl.origin
+      || parsedGoogleRedirectUri.pathname !== '/api/auth/google/callback'
+      || parsedGoogleRedirectUri.search || parsedGoogleRedirectUri.hash
+      || parsedGoogleRedirectUri.username || parsedGoogleRedirectUri.password) {
+      throw new Error('Environment validation failed: GOOGLE_OAUTH_REDIRECT_URI must be FRONTEND_URL origin + /api/auth/google/callback');
     }
   }
   validated.GOOGLE_OAUTH_CLIENT_ID = googleClientId;

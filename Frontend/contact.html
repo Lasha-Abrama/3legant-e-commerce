@@ -6,6 +6,7 @@
 <title>Contact Us — Gita_3_Team_2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -28,7 +29,7 @@
 
     <h2 class="center" style="font-size:26px;font-weight:600;margin-bottom:32px;">Contact Us</h2>
     <div class="contact-cards">
-      <div class="contact-card"><div style="font-size:22px;margin-bottom:10px;">📍</div><div class="faint" style="font-size:12px;margin-bottom:6px;">ADDRESS</div><div style="font-size:13px;font-weight:500;">234 Main Street, Your City</div></div>
+      <div class="contact-card"><div style="font-size:22px;margin-bottom:10px;">📍</div><div class="faint" style="font-size:12px;margin-bottom:6px;">ADDRESS</div><div style="font-size:13px;font-weight:500;"><span id="company-address">1 Freedom Square, Tbilisi, Georgia</span></div></div>
       <div class="contact-card"><div style="font-size:22px;margin-bottom:10px;">☎</div><div class="faint" style="font-size:12px;margin-bottom:6px;">CONTACT US</div><div style="font-size:13px;font-weight:500;">+1 234 567 890</div></div>
       <div class="contact-card"><div style="font-size:22px;margin-bottom:10px;">✉</div><div class="faint" style="font-size:12px;margin-bottom:6px;">EMAIL</div><div style="font-size:13px;font-weight:500;">hello@loamandco.com</div></div>
     </div>
@@ -41,15 +42,13 @@
         <div class="error-text" id="contact-msg"></div>
         <button class="btn btn--dark" type="submit" style="width:fit-content;padding-left:30px;padding-right:30px;">Send Message</button>
       </form>
-      <section class="contact-map" aria-labelledby="location-title">
-        <div class="contact-map__prompt" id="location-prompt">
-          <div class="contact-map__icon" aria-hidden="true">📍</div>
-          <h3 id="location-title">See your current location</h3>
-          <p id="location-status" class="contact-map__status" aria-live="polite">Location is optional and is used only to position this map.</p>
-          <button class="btn btn--outline" id="use-location" type="button">Use my current location</button>
+      <section class="contact-map" aria-label="Our company location">
+        <div id="location-map" class="contact-map__canvas" aria-label="Map of our company in Tbilisi"></div>
+        <div class="contact-map__tools">
+          <button id="use-location" type="button">Show my distance</button>
+          <a id="open-location-map" href="https://www.google.com/maps/dir/?api=1&amp;destination=41.6934,44.8015" target="_blank" rel="noopener noreferrer">Directions ↗</a>
         </div>
-        <iframe id="location-map" class="contact-map__frame" title="Map showing your current location" loading="lazy" referrerpolicy="no-referrer" hidden></iframe>
-        <a id="open-location-map" class="contact-map__link" href="#" target="_blank" rel="noopener noreferrer" hidden>Open larger map &rarr;</a>
+        <p id="location-status" class="contact-map__status" role="status" hidden></p>
       </section>
     </div>
 
@@ -67,6 +66,7 @@
 <script src="js/api.js"></script>
 <script src="js/cart.js"></script>
 <script src="js/header.js"></script>
+<script src="vendor/leaflet/leaflet.js"></script>
 <script src="js/contact.js"></script>
 </body>
 </html>

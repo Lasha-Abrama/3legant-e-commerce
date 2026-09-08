@@ -1,73 +1,87 @@
 (function () {
   var form = document.getElementById('contact-form');
+  // Demo company address. Update the address and coordinates together for a real store.
+  var company = { name: 'Loam & Co.', address: '1 Freedom Square, Tbilisi, Georgia', latitude: 41.6934, longitude: 44.8015 };
   var locationButton = document.getElementById('use-location');
   var locationStatus = document.getElementById('location-status');
-  var locationMap = document.getElementById('location-map');
-  var locationMapLink = document.getElementById('open-location-map');
+  var directions = document.getElementById('open-location-map');
+  document.getElementById('company-address').textContent = company.address;
 
-  function setLocationStatus(message, state) {
+  function setLocationStatus(message) {
     locationStatus.textContent = message;
-    locationStatus.setAttribute('data-state', state || 'neutral');
+    locationStatus.hidden = false;
   }
 
-  function restoreLocationButton() {
-    locationButton.disabled = false;
-    locationButton.textContent = 'Try location again';
-  }
-
-  function showLocation(position) {
-    var latitude = Number(position.coords.latitude);
-    var longitude = Number(position.coords.longitude);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-      showLocationError({ code: 2 });
-      return;
-    }
-
-    var offset = 0.01;
-    var bounds = [longitude - offset, latitude - offset, longitude + offset, latitude + offset];
-    var embedParams = new URLSearchParams({
-      bbox: bounds.join(','),
-      layer: 'mapnik',
-      marker: latitude + ',' + longitude,
-    });
-    var mapParams = new URLSearchParams({ mlat: String(latitude), mlon: String(longitude) });
-    mapParams.set('zoom', '15');
-
-    locationMap.src = 'https://www.openstreetmap.org/export/embed.html?' + embedParams.toString();
-    locationMap.hidden = false;
-    locationMapLink.href = 'https://www.openstreetmap.org/?' + mapParams.toString() + '#map=15/' + latitude + '/' + longitude;
-    locationMapLink.hidden = false;
-    locationButton.disabled = false;
-    locationButton.textContent = 'Update my location';
-    setLocationStatus('Location found. It is used only for this map and is not sent with your message.', 'success');
-  }
-
-  function showLocationError(error) {
-    var messages = {
-      1: 'Location access was denied. You can still send us a message.',
-      2: 'Your location is currently unavailable. You can still send us a message.',
-      3: 'Finding your location took too long. You can try again or continue without it.',
-    };
-    setLocationStatus(messages[error && error.code] || 'We could not access your location. You can still send us a message.', 'error');
-    restoreLocationButton();
-  }
-
-  locationButton.addEventListener('click', function () {
-    if (!navigator.geolocation) {
-      setLocationStatus('Location is not supported by this browser. You can still send us a message.', 'error');
+  function initializeMap() {
+    if (!window.L) {
+      setLocationStatus('The map could not load. You can still open directions.');
       locationButton.disabled = true;
       return;
     }
+    var destination = L.latLng(company.latitude, company.longitude);
+    var map = L.map('location-map', { scrollWheelZoom: false }).setView(destination, 15);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
+    var popup = document.createElement('div');
+    var title = document.createElement('strong');
+    title.textContent = company.name;
+    popup.appendChild(title);
+    popup.appendChild(document.createElement('br'));
+    popup.appendChild(document.createTextNode(company.address));
+    L.marker(destination, {
+      title: company.name + ' — ' + company.address,
+      icon: L.divIcon({ className: 'company-map-pin', html: '<span></span>', iconSize: [30, 38], iconAnchor: [15, 38], popupAnchor: [0, -34] }),
+    }).addTo(map).bindPopup(popup).openPopup();
+    var visitorMarker;
+    var connection;
 
-    locationButton.disabled = true;
-    locationButton.textContent = 'Finding your location...';
-    setLocationStatus('Your browser may ask you to allow location access.', 'neutral');
-    navigator.geolocation.getCurrentPosition(showLocation, showLocationError, {
-      enableHighAccuracy: false,
-      timeout: 10000,
-      maximumAge: 300000,
+    function showLocationError(error) {
+      var messages = {
+        1: 'Location access was denied. Our company is still marked on the map.',
+        2: 'Your location is currently unavailable. Please try again.',
+        3: 'Finding your location took too long. Please try again.',
+      };
+      setLocationStatus(messages[error && error.code] || 'Could not find your location. Please try again.');
+      locationButton.disabled = false;
+      locationButton.textContent = 'Try distance again';
+    }
+
+    locationButton.addEventListener('click', function () {
+      if (!navigator.geolocation) {
+        setLocationStatus('This browser does not support location. Use Directions to enter a starting point.');
+        return;
+      }
+      locationButton.disabled = true;
+      locationButton.textContent = 'Locating…';
+      setLocationStatus('Allow browser location access to calculate your distance.');
+      navigator.geolocation.getCurrentPosition(function (position) {
+        var latitude = position.coords.latitude;
+        var longitude = position.coords.longitude;
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+          showLocationError({ code: 2 });
+          return;
+        }
+        var visitor = L.latLng(latitude, longitude);
+        if (visitorMarker) map.removeLayer(visitorMarker);
+        if (connection) map.removeLayer(connection);
+        visitorMarker = L.circleMarker(visitor, { radius: 8, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1 }).addTo(map).bindPopup('You are here');
+        connection = L.polyline([destination, visitor], { color: '#2563eb', weight: 2, dashArray: '6 7' }).addTo(map);
+        map.fitBounds(L.latLngBounds([destination, visitor]), { paddingTopLeft: [45, 85], paddingBottomRight: [45, 90], maxZoom: 16 });
+        var meters = destination.distanceTo(visitor);
+        var distance = meters < 1000 ? Math.round(meters) + ' m' : (meters / 1000).toFixed(1) + ' km';
+        setLocationStatus('About ' + distance + ' away · straight-line distance. Open Directions for a road route.');
+        directions.href = 'https://www.google.com/maps/dir/?' + new URLSearchParams({ api: '1', origin: latitude + ',' + longitude, destination: company.latitude + ',' + company.longitude }).toString();
+        directions.title = 'Open Google Maps with your location and our company as the route endpoints';
+        locationButton.disabled = false;
+        locationButton.textContent = 'Update distance';
+      }, showLocationError, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
     });
-  });
+    if (window.ResizeObserver) new ResizeObserver(function () { map.invalidateSize(); }).observe(document.getElementById('location-map'));
+  }
+
+  initializeMap();
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();

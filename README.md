@@ -2,6 +2,9 @@
 
 Full-stack e-commerce application based on the 3legant Figma design. The current implementation uses a static vanilla JavaScript storefront and a NestJS API backed by MongoDB.
 
+Backend verification, fixes, required accounts, and frontend API contracts are in
+[BACKEND_AUDIT.md](BACKEND_AUDIT.md).
+
 ## Current architecture
 
 - `Frontend/` — static HTML, CSS, and vanilla JavaScript storefront plus admin pages.
@@ -10,6 +13,9 @@ Full-stack e-commerce application based on the 3legant Figma design. The current
 - `DEPLOYMENT.md` — production environment, provider, webhook, and smoke-test checklist.
 
 ## Local development
+
+Contact Us map preparation and future frontend connections are documented in
+[CONTACT_MAP.md](CONTACT_MAP.md).
 
 Use Node.js 20.11 or newer.
 

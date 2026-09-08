@@ -13,6 +13,8 @@ describe('ContactService', () => {
   const sendNewsletterConfirmation = jest.fn();
   const updateOne = jest.fn();
   const exec = jest.fn();
+  const claimExec = jest.fn();
+  const findOneAndUpdate = jest.fn();
   let savedPayload: Record<string, unknown>;
   let service: ContactService;
 
@@ -26,11 +28,13 @@ describe('ContactService', () => {
     sendNewsletterConfirmation.mockResolvedValue(undefined);
     exec.mockResolvedValue({ upsertedCount: 1 });
     updateOne.mockReturnValue({ exec });
+    claimExec.mockResolvedValue({ _id: 'subscriber-id', confirmationEmailSent: false, notificationEmailSent: false });
+    findOneAndUpdate.mockReturnValue({ exec: claimExec });
     const contactMessageModel = jest.fn().mockImplementation((payload) => {
       savedPayload = payload;
       return { save };
     }) as unknown as Model<ContactMessageDocument>;
-    const newsletterSubscriberModel = { updateOne } as unknown as Model<NewsletterSubscriberDocument>;
+    const newsletterSubscriberModel = { updateOne, findOneAndUpdate } as unknown as Model<NewsletterSubscriberDocument>;
     const emailService = {
       sendContactNotification,
       sendContactConfirmation,
@@ -81,7 +85,7 @@ describe('ContactService', () => {
     });
     expect(updateOne).toHaveBeenCalledWith(
       { email: 'customer@gmail.com' },
-      { $setOnInsert: { email: 'customer@gmail.com' } },
+      { $setOnInsert: { email: 'customer@gmail.com', emailDeliveryPending: true } },
       { upsert: true },
     );
     expect(sendNewsletterNotification).toHaveBeenCalledWith('customer@gmail.com');
@@ -90,6 +94,7 @@ describe('ContactService', () => {
 
   it('does not send duplicate emails for an existing subscriber', async () => {
     exec.mockResolvedValue({ upsertedCount: 0 });
+    claimExec.mockResolvedValue(null);
     await expect(service.subscribe({ email: 'customer@gmail.com' })).resolves.toEqual({
       message: 'You are already subscribed to our newsletter.',
     });
@@ -98,7 +103,8 @@ describe('ContactService', () => {
   });
 
   it('handles a concurrent duplicate insert without sending emails', async () => {
-    exec.mockRejectedValue({ code: 11000 });
+    exec.mockRejectedValueOnce({ code: 11000 });
+    claimExec.mockResolvedValue(null);
     await expect(service.subscribe({ email: 'customer@gmail.com' })).resolves.toEqual({
       message: 'You are already subscribed to our newsletter.',
     });
@@ -115,4 +121,16 @@ describe('ContactService', () => {
     expect(sendNewsletterNotification).toHaveBeenCalledTimes(1);
     expect(sendNewsletterConfirmation).toHaveBeenCalledTimes(1);
   });
+  it('retries a failed confirmation without resending the successful notification', async () => {
+    exec.mockResolvedValue({ upsertedCount: 0 });
+    claimExec.mockResolvedValue({ _id: 'subscriber-id', confirmationEmailSent: false, notificationEmailSent: true });
+    await expect(service.subscribe({ email: 'customer@gmail.com' })).resolves.toHaveProperty('message');
+    expect(sendNewsletterConfirmation).toHaveBeenCalledTimes(1);
+    expect(sendNewsletterNotification).not.toHaveBeenCalled();
+    expect(updateOne).toHaveBeenLastCalledWith({ _id: 'subscriber-id' }, {
+      $set: { confirmationEmailSent: true, notificationEmailSent: true, emailDeliveryPending: false },
+      $unset: { emailDeliveryClaimedUntil: 1 },
+    });
+  });
+
 });

@@ -22,7 +22,7 @@ export class EmailService {
     return this.deliver(to, content);
   }
 
-  sendContactNotification(name: string, email: string, message: string): Promise<void> {
+  async sendContactNotification(name: string, email: string, message: string): Promise<void> {
     const recipient = this.config.get<string>('CONTACT_RECIPIENT_EMAIL')
       || this.config.getOrThrow<string>('SMTP_FROM');
     return this.deliver(recipient, contactNotification(name, email, message), email);
@@ -72,7 +72,7 @@ export class EmailService {
     return this.deliver(to, newsletterConfirmation());
   }
 
-  sendNewsletterNotification(email: string): Promise<void> {
+  async sendNewsletterNotification(email: string): Promise<void> {
     const recipient = this.config.get<string>('CONTACT_RECIPIENT_EMAIL')
       || this.config.getOrThrow<string>('SMTP_FROM');
     return this.deliver(recipient, newsletterNotification(email));

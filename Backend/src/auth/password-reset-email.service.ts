@@ -15,6 +15,7 @@ export class PasswordResetEmailService {
     try {
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
+        signal: AbortSignal.timeout(10_000),
         headers: {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
@@ -39,8 +40,8 @@ export class PasswordResetEmailService {
         return false;
       }
       return true;
-    } catch (error) {
-      this.logger.error('Password reset email could not be sent', error);
+    } catch {
+      this.logger.error('Password reset email could not be sent');
       return false;
     }
   }

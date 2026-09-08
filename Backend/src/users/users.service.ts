@@ -75,15 +75,10 @@ export class UsersService {
     const email = input.email.toLowerCase().trim();
     const existingEmailUser = await this.findByEmail(email);
     if (existingEmailUser) {
-      if (existingEmailUser.googleId && existingEmailUser.googleId !== input.googleId) {
-        throw new BadRequestException('This email is already linked to a different Google account.');
-      }
-      existingEmailUser.googleId = input.googleId;
-      try {
-        return await existingEmailUser.save();
-      } catch (error) {
-        this.rethrowDuplicateEmail(error);
-      }
+      // Email/password registrations do not verify mailbox ownership. Never merge
+      // that account into a Google identity using only a matching email address.
+      if (existingEmailUser.googleId === input.googleId) return existingEmailUser;
+      throw new BadRequestException('This email already has an account. Sign in using its existing sign-in method.');
     }
 
     const user = new this.userModel({
@@ -97,14 +92,8 @@ export class UsersService {
       return await user.save();
     } catch (error) {
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === 11000) {
-        const existingUser = await this.findByGoogleId(input.googleId) ?? await this.findByEmail(email);
-        if (existingUser && (!existingUser.googleId || existingUser.googleId === input.googleId)) {
-          if (!existingUser.googleId) {
-            existingUser.googleId = input.googleId;
-            return existingUser.save();
-          }
-          return existingUser;
-        }
+        const existingUser = await this.findByGoogleId(input.googleId);
+        if (existingUser) return existingUser;
       }
       this.rethrowDuplicateEmail(error);
     }
@@ -141,17 +130,19 @@ export class UsersService {
   }
 
   async replaceProfileImage(userId: string, image: ProfileImageInput) {
+    // Return the actual previous image from the same atomic update that replaces it.
     const user = await this.userModel
-      .findById(userId)
+      .findOneAndUpdate(
+        { _id: userId },
+        { $set: { profileImageUrl: image.url, profileImagePublicId: image.publicId } },
+        { new: false, runValidators: true },
+      )
       .select('+profileImagePublicId')
       .exec();
-    if (!user) {
-      throw new NotFoundException('მომხმარებელი ვერ მოიძებნა');
-    }
+    if (!user) throw new NotFoundException('მომხმარებელი ვერ მოიძებნა');
     const previousPublicId = user.profileImagePublicId || '';
     user.profileImageUrl = image.url;
     user.profileImagePublicId = image.publicId;
-    await user.save();
     return { user, previousPublicId };
   }
 
@@ -167,16 +158,22 @@ export class UsersService {
     if (!isMatch) {
       throw new BadRequestException('ძველი პაროლი არასწორია');
     }
-    user.passwordHash = await bcrypt.hash(dto.newPassword, SALT_ROUNDS);
-    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
-    await user.save();
+    const passwordHash = await bcrypt.hash(dto.newPassword, SALT_ROUNDS);
+    const result = await this.userModel.updateOne(
+      { _id: userId, passwordHash: user.passwordHash },
+      {
+        $set: { passwordHash },
+        $inc: { tokenVersion: 1 },
+        $unset: { passwordResetTokenHash: 1, passwordResetExpiresAt: 1 },
+      },
+    ).exec();
+    if (result.matchedCount !== 1) throw new BadRequestException('Credentials changed. Sign in again before changing your password.');
     return { message: 'პაროლი წარმატებით შეიცვალა' };
   }
 
   async invalidateAccessTokens(userId: string) {
-    const user = await this.findById(userId);
-    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
-    await user.save();
+    const result = await this.userModel.updateOne({ _id: userId }, { $inc: { tokenVersion: 1 } }).exec();
+    if (result.matchedCount !== 1) throw new NotFoundException('მომხმარებელი ვერ მოიძებნა');
   }
 
   async setPasswordResetToken(email: string, tokenHash: string, expiresAt: Date) {
@@ -190,21 +187,21 @@ export class UsersService {
   }
 
   async resetPasswordWithToken(tokenHash: string, passwordHash: string) {
+    // Consume the unexpired reset token and rotate credentials in one atomic write.
     const user = await this.userModel
-      .findOne({
-        passwordResetTokenHash: tokenHash,
-        passwordResetExpiresAt: { $gt: new Date() },
-      })
-      .select('+passwordResetTokenHash +passwordResetExpiresAt')
+      .findOneAndUpdate(
+        { passwordResetTokenHash: tokenHash, passwordResetExpiresAt: { $gt: new Date() } },
+        {
+          $set: { passwordHash },
+          $inc: { tokenVersion: 1 },
+          $unset: { passwordResetTokenHash: 1, passwordResetExpiresAt: 1 },
+        },
+        { new: true, runValidators: true },
+      )
       .exec();
     if (!user) {
       throw new BadRequestException('The reset link is invalid or has expired.');
     }
-    user.passwordHash = passwordHash;
-    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
-    user.passwordResetTokenHash = undefined;
-    user.passwordResetExpiresAt = undefined;
-    await user.save();
   }
 
   async getWishlist(userId: string) {

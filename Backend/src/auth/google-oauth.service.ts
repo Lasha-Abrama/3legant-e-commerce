@@ -62,12 +62,12 @@ export class GoogleOAuthService {
   }
 
   createStateCookieValue(state: string, returnPath: string) {
-    const payload = Buffer.from(JSON.stringify({ state, returnPath })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({ state, returnPath, expiresAt: Date.now() + GOOGLE_STATE_TTL_MS })).toString('base64url');
     return `${payload}.${this.signState(payload)}`;
   }
 
   validateState(state: string | undefined, cookieValue: string | undefined) {
-    if (!state || !cookieValue) {
+    if (typeof state !== 'string' || !state || typeof cookieValue !== 'string' || !cookieValue) {
       throw new BadRequestException('Google sign-in session has expired. Please try again.');
     }
     const [encodedPayload, signature, ...remainder] = cookieValue.split('.');
@@ -81,13 +81,15 @@ export class GoogleOAuthService {
     if (!signaturesMatch) {
       throw new BadRequestException('Google sign-in session is invalid. Please try again.');
     }
-    let payload: { state?: unknown; returnPath?: unknown };
+    let payload: { state?: unknown; returnPath?: unknown; expiresAt?: unknown };
     try {
       payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
     } catch {
       throw new BadRequestException('Google sign-in session is invalid. Please try again.');
     }
-    if (typeof payload.state !== 'string' || typeof payload.returnPath !== 'string') {
+    if (typeof payload.state !== 'string' || typeof payload.returnPath !== 'string'
+      || typeof payload.expiresAt !== 'number' || !Number.isFinite(payload.expiresAt)
+      || payload.expiresAt <= Date.now()) {
       throw new BadRequestException('Google sign-in session is invalid. Please try again.');
     }
     const suppliedState = Buffer.from(state);
@@ -97,11 +99,11 @@ export class GoogleOAuthService {
     if (!statesMatch) {
       throw new BadRequestException('Google sign-in session is invalid. Please try again.');
     }
-    return payload.returnPath;
+    return this.getSafeReturnPath(payload.returnPath);
   }
 
   getSafeReturnPath(value: string | undefined) {
-    if (!value || !value.startsWith('/') || value.startsWith('//')) return '/account.html';
+    if (typeof value !== 'string' || !value || !value.startsWith('/') || value.startsWith('//')) return '/account.html';
     try {
       const frontendUrl = new URL(this.configService.getOrThrow<string>('FRONTEND_URL'));
       const candidate = new URL(value, frontendUrl);

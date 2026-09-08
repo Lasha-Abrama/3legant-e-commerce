@@ -46,10 +46,10 @@ send means the provider accepted the message, not that it reached the inbox.
 Provider rejection, authentication errors, and connection errors throw a generic
 503 without returning/logging credentials, recipients, content, or raw diagnostics.
 There are bounded network timeouts and no automatic retries to avoid duplicate
-messages when SMTP acceptance is uncertain. Future callers should decide how to
-handle delivery failure separately from persisting a contact/subscription record.
+messages when SMTP acceptance is uncertain. Contact submissions report saved-but-undelivered failures. Newsletter subscriptions
+track delivery flags and retry failed emails on a later explicit re-submission.
 
-No routes or frontend sends are introduced here. Existing password-reset emails
+Contact and newsletter routes call this service after persistence. Existing password-reset emails
 continue using Resend and its separate RESEND_API_KEY/EMAIL_FROM settings.
 Run `npm test -- src/email` for mocked transport/configuration/template tests.
 Actual mailbox delivery still requires configuring your provider and a live test.
@@ -88,16 +88,16 @@ to the company recipient, and sends a separate confirmation to the customer's va
 email address. If SMTP delivery fails, the API returns a safe availability error and
 does not expose Gmail diagnostics or credentials.
 
-The Newsletter endpoint sends confirmation only for a newly inserted subscriber,
+The Newsletter endpoint sends confirmation for a new subscriber or a pending failed delivery,
 and sends the company inbox a separate notification containing the subscriber's
 email. Existing subscribers receive an already-subscribed response without duplicate
 emails, which prevents repeated form submissions from producing email spam.
 
 ## Safe real delivery test
 
-Contact/newsletter routes are not wired to this service yet, so submitting an existing
-frontend form is not a delivery test. Instead, run the application's actual service
-locally from the Backend directory using the command below. Set EMAIL_TEST_TO to a
+Contact/newsletter routes are wired and send real emails when SMTP is configured.
+For an explicit delivery test, run the application's service locally from the
+Backend directory using the command below. Set EMAIL_TEST_TO to a
 mailbox you control or whose owner has agreed to receive the test (preferably a
 different mailbox from the sender). This explicitly sends two confirmation emails;
 it does not create a contact record or subscribe anyone. Do not run it in CI.

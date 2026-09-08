@@ -489,17 +489,18 @@ button, input, select, textarea { font-family: inherit; }
 .contact-card { background: var(--bg-soft); border-radius: 10px; padding: 20px; text-align: center; }
 .contact-form-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 24px; margin-bottom: 50px; }
 @media (max-width: 859px) { .contact-form-grid { grid-template-columns: 1fr; } }
-.contact-map { position: relative; display: flex; flex-direction: column; min-height: 300px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg-soft); }
-.contact-map__prompt { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; padding: 28px; text-align: center; }
-.contact-map__icon { font-size: 30px; margin-bottom: 8px; }
-.contact-map h3 { margin: 0 0 8px; font-size: 18px; }
-.contact-map__status { max-width: 360px; min-height: 42px; margin: 0 0 16px; color: var(--muted); font-size: 12px; line-height: 1.7; }
-.contact-map__status[data-state="success"] { color: var(--green); }
-.contact-map__status[data-state="error"] { color: var(--red); }
-.contact-map__frame { width: 100%; min-height: 260px; border: 0; }
-.contact-map__frame:not([hidden]) + .contact-map__link { display: block; }
-.contact-map__link { padding: 10px 14px; background: #fff; color: var(--ink); font-size: 12px; font-weight: 500; text-align: center; }
-@media (max-width: 859px) { .contact-map { min-height: 260px; } }
+.contact-map { position: relative; min-height: 360px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg-soft); }
+.contact-map__canvas { position: absolute; inset: 0; z-index: 0; }
+.contact-map__tools { position: absolute; top: 12px; right: 12px; z-index: 500; display: flex; gap: 8px; }
+.contact-map__tools button, .contact-map__tools a { border: 1px solid var(--border); border-radius: 8px; background: white; color: var(--ink); padding: 10px 12px; font-size: 12px; font-weight: 500; text-decoration: none; box-shadow: 0 2px 8px #0001; cursor: pointer; }
+.contact-map__tools button:disabled { cursor: wait; opacity: .75; }
+.contact-map__tools :focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+.contact-map__status { position: absolute; bottom: 27px; left: 12px; right: 12px; z-index: 500; margin: 0; padding: 10px 12px; border-radius: 8px; background: white; color: var(--ink); box-shadow: 0 2px 8px #0001; font-size: 12px; line-height: 1.5; }
+.company-map-pin { background: transparent; border: 0; }
+.company-map-pin span { display: block; width: 26px; height: 26px; border: 3px solid white; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #141718; box-shadow: 0 2px 6px #0005; }
+.company-map-pin span::after { content: ''; position: absolute; inset: 7px; background: white; border-radius: 50%; }
+.contact-map .leaflet-popup-content { margin: 12px 16px; font-family: Poppins, sans-serif; font-size: 12px; line-height: 1.6; }
+@media (max-width: 480px) { .contact-map__tools { gap: 5px; right: 8px; } .contact-map__tools button, .contact-map__tools a { padding: 10px 8px; } }
 .contact-feature-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 20px; padding-top: 30px; border-top: 1px solid var(--line); }
 @media (max-width: 859px) { .contact-feature-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
 .contact-feature { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 500; }

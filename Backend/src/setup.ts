@@ -12,6 +12,8 @@ export function configureApp(app: NestExpressApplication, configService: ConfigS
 
   app.use(
     helmet({
+      // Public map tiles require an origin referrer; cross-origin paths stay private.
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
       contentSecurityPolicy: {
         directives: {
           styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
@@ -23,7 +25,10 @@ export function configureApp(app: NestExpressApplication, configService: ConfigS
     }),
   );
 
-  app.use((_request: Request, response: Response, next: NextFunction) => {
+  app.use((request: Request, response: Response, next: NextFunction) => {
+    if (request.path === '/api' || request.path.startsWith('/api/')) {
+      response.setHeader('Cache-Control', 'private, no-store');
+    }
     response.setHeader(
       'Permissions-Policy',
       'camera=(), microphone=(), geolocation=(self)',
