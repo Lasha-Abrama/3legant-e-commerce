@@ -8,6 +8,7 @@ import {
 } from './schemas/newsletter-subscriber.schema';
 import { CreateContactMessageDto } from './dto/create-contact-message.dto';
 import { SubscribeDto } from './dto/subscribe.dto';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class ContactService {
@@ -16,11 +17,25 @@ export class ContactService {
     private readonly contactMessageModel: Model<ContactMessageDocument>,
     @InjectModel(NewsletterSubscriber.name)
     private readonly newsletterSubscriberModel: Model<NewsletterSubscriberDocument>,
+    private readonly emailService: EmailService,
   ) {}
 
   async createMessage(dto: CreateContactMessageDto) {
-    await new this.contactMessageModel(dto).save();
-    return { message: 'შეტყობინება წარმატებით გაიგზავნა' };
+    const normalized = {
+      name: dto.name.trim(),
+      email: dto.email.toLowerCase().trim(),
+      message: dto.message.trim(),
+    };
+    await new this.contactMessageModel(normalized).save();
+    await Promise.all([
+      this.emailService.sendContactNotification(
+        normalized.name,
+        normalized.email,
+        normalized.message,
+      ),
+      this.emailService.sendContactConfirmation(normalized.email, normalized.name),
+    ]);
+    return { message: 'Your message was sent successfully. We will get back to you as soon as possible.' };
   }
 
   async subscribe(dto: SubscribeDto) {

@@ -81,6 +81,21 @@ describe('EmailService', () => {
     }
   });
 
+  it('delivers contact details to the company inbox with the customer as Reply-To', async () => {
+    await service.sendContactNotification(
+      'Customer <Name>',
+      'customer@example.com',
+      'Hello <script>\nPlease contact me.',
+    );
+    expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({
+      to: 'support@example.com',
+      replyTo: 'customer@example.com',
+      subject: 'New Contact Us message',
+      text: expect.stringContaining('Hello <script>'),
+      html: expect.stringContaining('Hello &lt;script&gt;<br>Please contact me.'),
+    }));
+  });
+
   it('rejects malformed recipients and subject header injection without sending', async () => {
     await expect(service.sendNewsletterConfirmation('not-an-email')).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.send('customer@example.com', {

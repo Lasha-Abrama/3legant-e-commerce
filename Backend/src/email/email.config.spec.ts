@@ -28,4 +28,9 @@ describe('SMTP configuration', () => {
       expect(String(error)).not.toContain(settings.SMTP_PASSWORD);
     }
   });
+
+  it('rejects an invalid contact recipient', () => {
+    expect(() => validateSmtpEnvironment({ CONTACT_RECIPIENT_EMAIL: 'not-an-email' }))
+      .toThrow('CONTACT_RECIPIENT_EMAIL must be a single email address');
+  });
 });

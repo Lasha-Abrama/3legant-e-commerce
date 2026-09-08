@@ -3,7 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { isEmail } from 'class-validator';
 import * as nodemailer from 'nodemailer';
 import SMTPTransport = require('nodemailer/lib/smtp-transport');
-import { contactConfirmation, EmailContent, newsletterConfirmation } from './email.templates';
+import {
+  contactConfirmation,
+  contactNotification,
+  EmailContent,
+  newsletterConfirmation,
+} from './email.templates';
 
 @Injectable()
 export class EmailService {
@@ -13,7 +18,18 @@ export class EmailService {
   constructor(private readonly config: ConfigService) {}
 
   async send(to: string, content: EmailContent): Promise<void> {
+    return this.deliver(to, content);
+  }
+
+  sendContactNotification(name: string, email: string, message: string): Promise<void> {
+    const recipient = this.config.get<string>('CONTACT_RECIPIENT_EMAIL')
+      || this.config.getOrThrow<string>('SMTP_FROM');
+    return this.deliver(recipient, contactNotification(name, email, message), email);
+  }
+
+  private async deliver(to: string, content: EmailContent, replyTo?: string): Promise<void> {
     if (typeof to !== 'string' || !isEmail(to) || /[\r\n]/.test(to)
+      || (replyTo !== undefined && (typeof replyTo !== 'string' || !isEmail(replyTo) || /[\r\n]/.test(replyTo)))
       || !content || typeof content.subject !== 'string' || !content.subject.trim()
       || /[\r\n]/.test(content.subject)
       || typeof content.text !== 'string' || !content.text.trim()
@@ -27,6 +43,7 @@ export class EmailService {
           name: this.config.get<string>('SMTP_FROM_NAME') || '',
           address: this.config.getOrThrow<string>('SMTP_FROM'),
         },
+        ...(replyTo ? { replyTo } : {}),
         to,
         subject: content.subject,
         text: content.text,
@@ -42,11 +59,11 @@ export class EmailService {
   }
 
   sendContactConfirmation(to: string, name: string): Promise<void> {
-    return this.send(to, contactConfirmation(name));
+    return this.deliver(to, contactConfirmation(name));
   }
 
   sendNewsletterConfirmation(to: string): Promise<void> {
-    return this.send(to, newsletterConfirmation());
+    return this.deliver(to, newsletterConfirmation());
   }
 
   private getTransporter() {

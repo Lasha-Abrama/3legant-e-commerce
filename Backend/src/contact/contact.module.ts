@@ -9,6 +9,7 @@ import { ContactService } from './contact.service';
 import { ContactController } from './contact.controller';
 import { ContactAdminController } from './contact-admin.controller';
 import { UsersModule } from '../users/users.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { UsersModule } from '../users/users.module';
       { name: NewsletterSubscriber.name, schema: NewsletterSubscriberSchema },
     ]),
     UsersModule,
+    EmailModule,
   ],
   controllers: [ContactController, ContactAdminController],
   providers: [ContactService],

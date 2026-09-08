@@ -10,6 +10,7 @@ SMTP_USER=your-smtp-username
 SMTP_PASSWORD=your-smtp-password-or-app-password
 SMTP_FROM=support@your-business-domain.example
 SMTP_FROM_NAME=3legant
+CONTACT_RECIPIENT_EMAIL=contact@your-business-domain.example
 ```
 
 Use your email provider's actual credentials and an authorized sender address.
@@ -19,6 +20,9 @@ SMTP_FROM is a single address; the optional SMTP_FROM_NAME is its display name.
 All four host/user/password/from values must be configured together. Leaving all
 four blank disables SMTP; an attempted send then throws a safe 503 error.
 SMTP_PORT defaults to 587, SMTP_SECURE to false, and SMTP_FROM_NAME to blank.
+Contact Us notifications are delivered to CONTACT_RECIPIENT_EMAIL. When it is
+blank, the service uses SMTP_FROM, which is suitable when the sender is also the
+company inbox. The customer's address is set as Reply-To so staff can reply directly.
 
 Import `EmailModule` into a feature module and inject `EmailService` into its service:
 
@@ -63,6 +67,7 @@ SMTP_USER=your-sender@gmail.com
 SMTP_PASSWORD=your-google-app-password
 SMTP_FROM=your-sender@gmail.com
 SMTP_FROM_NAME=3legant
+CONTACT_RECIPIENT_EMAIL=your-sender@gmail.com
 ```
 
 Use the sender account's Google App Password, not its normal Google password.
@@ -77,6 +82,11 @@ Recipients are not restricted to the sender account or Gmail addresses. The serv
 accepts any valid single recipient address, subject to Gmail's sending limits,
 anti-abuse checks, and recipient-server policies. SMTP acceptance cannot guarantee
 inbox delivery. Gmail SMTP should not be treated as an unlimited bulk newsletter sender.
+
+The Contact Us endpoint now saves the submission, sends its full name/email/message
+to the company recipient, and sends a separate confirmation to the customer's valid
+email address. If SMTP delivery fails, the API returns a safe availability error and
+does not expose Gmail diagnostics or credentials.
 
 ## Safe real delivery test
 

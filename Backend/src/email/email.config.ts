@@ -24,5 +24,17 @@ export function validateSmtpEnvironment(config: Record<string, unknown>): Record
   if (/[\r\n]/.test(fromName)) {
     throw new Error('Environment validation failed: SMTP_FROM_NAME must not contain line breaks');
   }
-  return { ...values, SMTP_PORT: port, SMTP_SECURE: secure === 'true', SMTP_FROM_NAME: fromName };
+  const contactRecipient = typeof config.CONTACT_RECIPIENT_EMAIL === 'string'
+    ? config.CONTACT_RECIPIENT_EMAIL.trim()
+    : '';
+  if (contactRecipient && (!isEmail(contactRecipient) || /[\r\n]/.test(contactRecipient))) {
+    throw new Error('Environment validation failed: CONTACT_RECIPIENT_EMAIL must be a single email address');
+  }
+  return {
+    ...values,
+    SMTP_PORT: port,
+    SMTP_SECURE: secure === 'true',
+    SMTP_FROM_NAME: fromName,
+    CONTACT_RECIPIENT_EMAIL: contactRecipient,
+  };
 }
