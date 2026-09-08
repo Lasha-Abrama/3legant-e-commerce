@@ -36,6 +36,37 @@ describe('UsersService', () => {
     expect(user.email).toBe('new@example.com');
   });
 
+  it('replaces the authenticated user profile image and preserves the old identifier for cleanup', async () => {
+    const user = {
+      profileImageUrl: 'https://res.cloudinary.com/test/old.png',
+      profileImagePublicId: 'loam-co/profile-images/old-avatar',
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    (userModel as any).findById = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(user) }),
+    });
+    await expect(service.replaceProfileImage('user-id', {
+      url: 'https://res.cloudinary.com/test/new.png',
+      publicId: 'loam-co/profile-images/new-avatar',
+    })).resolves.toEqual({
+      user,
+      previousPublicId: 'loam-co/profile-images/old-avatar',
+    });
+    expect(user.profileImageUrl).toBe('https://res.cloudinary.com/test/new.png');
+    expect(user.profileImagePublicId).toBe('loam-co/profile-images/new-avatar');
+    expect(user.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns the profile image URL without exposing its Cloudinary public identifier', () => {
+    const safeUser = service.toSafeUser({
+      _id: 'user-id',
+      profileImageUrl: 'https://res.cloudinary.com/test/avatar.png',
+      profileImagePublicId: 'loam-co/profile-images/private-id',
+    } as never);
+    expect(safeUser.profileImageUrl).toBe('https://res.cloudinary.com/test/avatar.png');
+    expect(safeUser).not.toHaveProperty('profileImagePublicId');
+  });
+
   it('rejects an email already used by another account', async () => {
     const user = {
       _id: 'user-id',

@@ -52,6 +52,12 @@ export class User {
   @Prop({ trim: true, default: '' })
   phone: string;
 
+  @Prop({ trim: true, default: '' })
+  profileImageUrl: string;
+
+  @Prop({ select: false, trim: true, default: '' })
+  profileImagePublicId?: string;
+
   @Prop({ type: AddressSchema, default: () => ({}) })
   billingAddress: Address;
 

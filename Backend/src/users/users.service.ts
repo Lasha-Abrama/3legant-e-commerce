@@ -24,6 +24,11 @@ export interface GoogleUserInput {
   lastName: string;
 }
 
+export interface ProfileImageInput {
+  url: string;
+  publicId: string;
+}
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -133,6 +138,21 @@ export class UsersService {
     Object.assign(target, fields);
     user.markModified(type === 'billing' ? 'billingAddress' : 'shippingAddress');
     return user.save();
+  }
+
+  async replaceProfileImage(userId: string, image: ProfileImageInput) {
+    const user = await this.userModel
+      .findById(userId)
+      .select('+profileImagePublicId')
+      .exec();
+    if (!user) {
+      throw new NotFoundException('მომხმარებელი ვერ მოიძებნა');
+    }
+    const previousPublicId = user.profileImagePublicId || '';
+    user.profileImageUrl = image.url;
+    user.profileImagePublicId = image.publicId;
+    await user.save();
+    return { user, previousPublicId };
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
@@ -263,6 +283,7 @@ export class UsersService {
       email: user.email,
       displayName: user.displayName,
       phone: user.phone,
+      profileImageUrl: user.profileImageUrl,
       billingAddress: user.billingAddress,
       shippingAddress: user.shippingAddress,
       isAdmin: user.isAdmin,

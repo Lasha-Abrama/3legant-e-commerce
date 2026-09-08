@@ -20,6 +20,8 @@ import { HealthController } from './health.controller';
 import { ContactController } from './contact/contact.controller';
 import { ContactService } from './contact/contact.service';
 import { ServiceUnavailableException } from '@nestjs/common';
+import { ProfileImageController } from './uploads/profile-image.controller';
+import { ProfileImagesService } from './uploads/profile-images.service';
 
 describe('API integration boundaries', () => {
   let app: NestExpressApplication;
@@ -74,6 +76,9 @@ describe('API integration boundaries', () => {
     createMessage: jest.fn(),
     subscribe: jest.fn(),
   };
+  const profileImagesService = {
+    update: jest.fn(),
+  };
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -84,6 +89,7 @@ describe('API integration boundaries', () => {
         OrdersController,
         UploadsController,
         ContactController,
+        ProfileImageController,
       ],
       providers: [
         JwtAuthGuard,
@@ -97,6 +103,7 @@ describe('API integration boundaries', () => {
         { provide: OrdersService, useValue: ordersService },
         { provide: UploadsService, useValue: uploadsService },
         { provide: ContactService, useValue: contactService },
+        { provide: ProfileImagesService, useValue: profileImagesService },
       ],
     }).compile();
 
@@ -113,6 +120,7 @@ describe('API integration boundaries', () => {
     jest.clearAllMocks();
     contactService.createMessage.mockReset();
     contactService.subscribe.mockReset();
+    profileImagesService.update.mockReset();
     jwtService.verifyAsync.mockImplementation(async (token: string) => {
       if (token === 'admin-token') return { sub: 'admin-id', tokenVersion: 1 };
       if (token === 'user-token') return { sub: 'user-id', tokenVersion: 0 };
@@ -503,6 +511,58 @@ describe('API integration boundaries', () => {
     expect(response.body.message).toContain('JPEG');
 
     expect(uploadsService.uploadBuffer).not.toHaveBeenCalled();
+  });
+
+  it('rejects profile image uploads without authentication', async () => {
+    await request(app.getHttpServer())
+      .patch('/api/users/me/profile-image')
+      .attach('image', Buffer.from([0x89, 0x50, 0x4e, 0x47]), {
+        filename: 'avatar.png',
+        contentType: 'image/png',
+      })
+      .expect(401);
+    expect(profileImagesService.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects profile images with spoofed file contents', async () => {
+    await request(app.getHttpServer())
+      .patch('/api/users/me/profile-image')
+      .set('Authorization', 'Bearer user-token')
+      .attach('image', Buffer.from('<script>alert(1)</script>'), {
+        filename: 'avatar.png',
+        contentType: 'image/png',
+      })
+      .expect(400);
+    expect(profileImagesService.update).not.toHaveBeenCalled();
+  });
+
+  it('uploads a signature-verified profile image for the authenticated user only', async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    profileImagesService.update.mockResolvedValue({
+      profileImageUrl: 'https://res.cloudinary.com/test/avatar.png',
+    });
+    await request(app.getHttpServer())
+      .patch('/api/users/me/profile-image')
+      .set('Authorization', 'Bearer user-token')
+      .attach('image', png, { filename: 'avatar.png', contentType: 'image/png' })
+      .expect(200)
+      .expect({ profileImageUrl: 'https://res.cloudinary.com/test/avatar.png' });
+    expect(profileImagesService.update).toHaveBeenCalledWith(
+      'user-id',
+      expect.any(Buffer),
+      'image/png',
+    );
+  });
+
+  it('rejects profile images larger than 2 MB', async () => {
+    const oversizedPng = Buffer.alloc(2 * 1024 * 1024 + 1);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(oversizedPng);
+    await request(app.getHttpServer())
+      .patch('/api/users/me/profile-image')
+      .set('Authorization', 'Bearer user-token')
+      .attach('image', oversizedPng, { filename: 'avatar.png', contentType: 'image/png' })
+      .expect(413);
+    expect(profileImagesService.update).not.toHaveBeenCalled();
   });
 
   it('accepts a signature-verified admin image upload', async () => {
