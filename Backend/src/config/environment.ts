@@ -1,3 +1,5 @@
+import { validateSmtpEnvironment } from '../email/email.config';
+
 const REQUIRED_VARIABLES = [
   'MONGO_URL',
   'JWT_SECRET',
@@ -77,6 +79,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
   }
   validated.RESEND_API_KEY = resendApiKey;
   validated.EMAIL_FROM = emailFrom;
+  Object.assign(validated, validateSmtpEnvironment(config));
 
   const googleClientId = typeof config.GOOGLE_OAUTH_CLIENT_ID === 'string'
     ? config.GOOGLE_OAUTH_CLIENT_ID.trim()

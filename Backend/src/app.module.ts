@@ -17,6 +17,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { PaymentsModule } from './payments/payments.module';
 import { validateEnvironment } from './config/environment';
 import { HealthController } from './health.controller';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { HealthController } from './health.controller';
       exclude: ['/api/{*path}'],
     }),
     AuthModule,
+    EmailModule,
     UsersModule,
     ProductsModule,
     BlogsModule,
