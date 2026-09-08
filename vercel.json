@@ -9,7 +9,7 @@
     {
       "src": "/(.*)",
       "headers": {
-        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; font-src 'self' https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'self'; img-src 'self' data: https:; object-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; upgrade-insecure-requests",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; font-src 'self' https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'self'; frame-src 'self' https://www.openstreetmap.org; img-src 'self' data: https:; object-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; upgrade-insecure-requests",
         "Permissions-Policy": "camera=(), microphone=(), geolocation=(self)",
         "Referrer-Policy": "no-referrer",
         "Strict-Transport-Security": "max-age=31536000; includeSubDomains",

@@ -41,7 +41,16 @@
         <div class="error-text" id="contact-msg"></div>
         <button class="btn btn--dark" type="submit" style="width:fit-content;padding-left:30px;padding-right:30px;">Send Message</button>
       </form>
-      <div class="ph">Map location</div>
+      <section class="contact-map" aria-labelledby="location-title">
+        <div class="contact-map__prompt" id="location-prompt">
+          <div class="contact-map__icon" aria-hidden="true">📍</div>
+          <h3 id="location-title">See your current location</h3>
+          <p id="location-status" class="contact-map__status" aria-live="polite">Location is optional and is used only to position this map.</p>
+          <button class="btn btn--outline" id="use-location" type="button">Use my current location</button>
+        </div>
+        <iframe id="location-map" class="contact-map__frame" title="Map showing your current location" loading="lazy" referrerpolicy="no-referrer" hidden></iframe>
+        <a id="open-location-map" class="contact-map__link" href="#" target="_blank" rel="noopener noreferrer" hidden>Open larger map &rarr;</a>
+      </section>
     </div>
 
     <div class="contact-feature-grid">

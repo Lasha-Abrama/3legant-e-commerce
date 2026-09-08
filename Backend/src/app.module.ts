@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -18,6 +19,12 @@ import { PaymentsModule } from './payments/payments.module';
 import { validateEnvironment } from './config/environment';
 import { HealthController } from './health.controller';
 import { EmailModule } from './email/email.module';
+
+const frontendRootPath = [
+  join(__dirname, '..', '..', 'Frontend'),
+  join(process.cwd(), 'Frontend'),
+  join(process.cwd(), '..', 'Frontend'),
+].find(existsSync) || join(__dirname, '..', '..', 'Frontend');
 
 @Module({
   imports: [
@@ -41,7 +48,7 @@ import { EmailModule } from './email/email.module';
       }),
     }),
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', '..', 'Frontend'),
+      rootPath: frontendRootPath,
       exclude: ['/api/{*path}'],
     }),
     AuthModule,
