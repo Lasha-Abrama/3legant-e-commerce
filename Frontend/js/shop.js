@@ -9,9 +9,18 @@
     { label: '$400+', min: 400, max: Infinity },
   ];
   var PAGE_SIZE = 9;
+  document.querySelectorAll('[data-shop-view]').forEach(function(button) {
+    button.addEventListener('click', function() {
+      document.querySelector('.shop-layout').dataset.view = button.dataset.shopView;
+      document.querySelectorAll('[data-shop-view]').forEach(function(item) {
+        item.setAttribute('aria-pressed', String(item === button));
+      });
+    });
+  });
+
 
   var state = {
-    category: 'All Rooms',
+    category: CATEGORIES.indexOf(qs('category')) !== -1 ? qs('category') : 'All Rooms',
     prices: {},
     search: (qs('q') || '').trim(),
     sort: '',

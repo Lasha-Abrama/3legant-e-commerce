@@ -7,6 +7,31 @@
   ];
   var state = { tab: qs('tab') || 'account', orderId: qs('order') || null, user: null };
 
+  document.getElementById('profile-image-input').addEventListener('change', function (event) {
+    var input = event.target;
+    var file = input.files[0];
+    if (!file) return;
+    var message = document.getElementById('avatar-message');
+    var error = ['image/jpeg', 'image/png', 'image/webp'].indexOf(file.type) < 0
+      ? 'Choose a JPEG, PNG, or WebP image.'
+      : file.size > 2 * 1024 * 1024 ? 'Profile pictures must be 2 MB or smaller.' : '';
+    if (error) { message.textContent = error; input.value = ''; return; }
+    input.disabled = true;
+    message.textContent = 'Uploading…';
+    apiUpload('/users/me/profile-image', file, { method: 'PATCH', field: 'image' }).then(function (res) {
+      input.disabled = false;
+      input.value = '';
+      if (!res) return;
+      if (res._status >= 400 || !safeImageUrl(res.profileImageUrl)) {
+        message.textContent = res.message || 'Your picture could not be uploaded.';
+        return;
+      }
+      state.user.profileImageUrl = res.profileImageUrl;
+      document.getElementById('profile-avatar').src = res.profileImageUrl;
+      message.textContent = 'Profile picture updated.';
+    });
+  });
+
   document.getElementById('logout-link').addEventListener('click', function (e) {
     e.preventDefault();
     apiPost('/auth/logout', {}).then(function () {
@@ -60,8 +85,8 @@
       '<div class="error-text" id="profile-msg"></div>' +
       '<button class="btn btn--dark" id="save-profile" style="margin-bottom:28px;">Save changes</button>' +
 
-      '<div style="font-size:15px;font-weight:600;margin-bottom:16px;">Password</div>' +
-      '<div style="display:flex;flex-direction:column;gap:12px;max-width:400px;margin-bottom:12px;">' +
+      '<div class="password-heading" style="font-size:15px;font-weight:600;margin-bottom:16px;">Password</div>' +
+      '<div class="password-fields" style="display:flex;flex-direction:column;gap:12px;max-width:400px;margin-bottom:12px;">' +
         '<div class="field"><span class="field__label">OLD PASSWORD</span><input class="input" type="password" id="f-oldPassword"></div>' +
         '<div class="field"><span class="field__label">NEW PASSWORD</span><input class="input" type="password" id="f-newPassword"></div>' +
         '<div class="field"><span class="field__label">REPEAT NEW PASSWORD</span><input class="input" type="password" id="f-repeatPassword"></div>' +
@@ -272,7 +297,7 @@
         var color = (p.colors && p.colors[0] && p.colors[0].name) || 'Default';
         return (
           '<div class="wishlist-row">' +
-            '<div class="ph">' + escapeHtml(p.imageLabel) + '</div>' +
+            cartImageHtml(p) +
             '<div style="flex:1;">' +
               '<div style="font-size:13px;font-weight:500;">' + escapeHtml(p.name) + '</div>' +
               '<div class="faint" style="font-size:11px;">Color: ' + escapeHtml(color) + '</div>' +
@@ -310,6 +335,7 @@
         return;
       }
       state.user = res.user;
+      if (safeImageUrl(res.user.profileImageUrl)) document.getElementById('profile-avatar').src = res.user.profileImageUrl;
       document.getElementById('account-name').textContent = res.user.displayName || (res.user.firstName + ' ' + res.user.lastName);
       renderNav();
       renderContent();

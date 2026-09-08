@@ -1,5 +1,5 @@
 (function () {
-  var PAGE_SIZE = 6;
+  var PAGE_SIZE = 9;
   var state = { filter: 'all', sort: 'newest', page: 1, posts: [], total: 0, loading: false };
 
   function formatDate(iso) {
@@ -10,9 +10,9 @@
     return (
       '<a class="article-card" href="blog-post.html?id=' + encodeURIComponent(post._id) + '">' +
         '<div class="ph" style="width:100%;height:180px;border-radius:10px;padding:0;">' +
-          '<img src="' + safeImageUrl(post.image) + '" alt="' + escapeHtml(post.title) + '" style="width:100%;height:100%;object-fit:cover;">' +
+          '<img src="' + safeImageUrl(articleImageUrl(post)) + '" alt="' + escapeHtml(post.title) + '" style="width:100%;height:100%;object-fit:cover;">' +
         '</div>' +
-        '<div class="article-card__title" style="font-size:15px;">' + escapeHtml(post.title) + '</div>' +
+        '<div class="article-card__title">' + escapeHtml(post.title) + '</div>' +
         '<div class="article-card__date">' + formatDate(post.createdAt) + '</div>' +
       '</a>'
     );

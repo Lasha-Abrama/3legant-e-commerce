@@ -11,7 +11,7 @@
     var p = state.product;
     var stock = Math.max(0, Number(p.stock) || 0);
     document.getElementById('crumb').textContent = 'Home / Shop / ' + p.category + ' / ' + p.name;
-    document.title = p.name + ' — Gita_3_Team_2';
+    document.title = p.name + ' — 3legant';
 
     document.getElementById('product-content').innerHTML =
       '<div class="product-detail-grid">' +
@@ -49,7 +49,7 @@
     renderColors();
     wireQty();
     document.getElementById('add-to-cart-btn').addEventListener('click', function () {
-      window.CartStore.addItem({ id: p._id, name: p.name, color: state.color, price: p.price, stock: stock, qty: state.qty });
+      window.CartStore.addItem({ id: p._id, name: p.name, image: productImageUrl(p), color: state.color, price: p.price, stock: stock, qty: state.qty });
       var btn = document.getElementById('add-to-cart-btn');
       var original = btn.textContent;
       btn.textContent = 'Added to cart ✓';
@@ -62,6 +62,7 @@
   function renderGallery() {
     var p = state.product;
     var images = (p.images || []).filter(function (image) { return safeImageUrl(image); });
+    if (!images.length && productImageUrl(p)) images.push(productImageUrl(p));
     if (state.imageIndex >= images.length) state.imageIndex = 0;
     document.getElementById('product-main-image').innerHTML =
       imageBoxHtml(images[state.imageIndex], p.imageLabel, '');

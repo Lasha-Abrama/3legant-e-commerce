@@ -36,6 +36,7 @@
     if (incomingStock === 0) return false;
     var existing = items.find(function (it) { return it.id === item.id && it.color === item.color; });
     if (existing) {
+      if (item.image) existing.image = item.image;
       if (incomingStock !== null) existing.stock = incomingStock;
       existing.qty = clampQty(existing, existing.qty + (item.qty || 1));
       setCart(items);
@@ -57,6 +58,7 @@
         if (!product) return Object.assign({}, item, { stock: 0, unavailable: true });
         var nextItem = Object.assign({}, item, {
           name: product.name,
+          image: productImageUrl(product),
           price: product.price,
           stock: Math.max(0, Math.floor(Number(product.stock) || 0)),
           unavailable: Number(product.stock) <= 0,

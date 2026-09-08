@@ -3,35 +3,34 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Contact Us — Gita_3_Team_2</title>
+<title>Contact Us — 3legant</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/design.css">
 </head>
-<body>
-<div id="site-header" data-active="Contact"></div>
+<body class="page-contact">
+<div id="site-header" data-promo="false" data-active="Contact"></div>
 
 <main>
   <div class="wrap wrap--narrow">
     <div class="breadcrumb">Home / Contact Us</div>
-    <h1 style="font-size:38px;font-weight:600;max-width:640px;line-height:1.25;margin:0 0 16px;">We believe in sustainable decor. We're passionate about life at home.</h1>
-    <p class="muted" style="font-size:14px;max-width:640px;line-height:1.8;margin-bottom:40px;">Loam &amp; Co. features furniture with natural fabrics, curved lines, plenty of mirrors and classic design, which can be incorporated into any decor project. The pieces enchant for their subtlety, to last for generations, faithful to the shapes of each period, with a touch of the present.</p>
-
-    <div class="about-grid">
-      <div class="ph">Cozy living room photo</div>
-      <div>
-        <div style="font-size:20px;font-weight:600;margin-bottom:10px;">About Us</div>
-        <p class="muted" style="font-size:13px;line-height:1.8;margin-bottom:12px;">Gita_3_Team_2 is a gift and decoration store. Our customer service is always prepared to support you 24/7.</p>
-        <a href="shop.html" style="color:var(--ink);font-size:13px;text-decoration:underline;">Shop Now &rarr;</a>
+    <h1 class="contact-heading">We believe in sustainable<br class="desktop-break"> decor. We’re passionate about<br class="desktop-break"> life at home.</h1>
+    <p class="contact-intro">Our features timeless furniture, with natural fabrics, curved lines, plenty of mirrors and classic design, which can be incorporated into any decor project. The pieces enchant for their sobriety, to last for generations, faithful to the shapes of each period, with a touch of the present</p>
+    <section class="about-grid">
+      <img src="images/slides/slide_2.jpg" alt="Mustard sofa, round coffee table and plants in a sunlit living room">
+      <div class="about-copy">
+        <h2>About Us</h2>
+        <p>3legant is a gift &amp; decorations store based in HCMC, Vietnam. Est since 2019.<br>Our customer service is always prepared to support you 24/7</p>
+        <a class="text-link" href="shop.html">Shop Now <span>→</span></a>
       </div>
-    </div>
-
-    <h2 class="center" style="font-size:26px;font-weight:600;margin-bottom:32px;">Contact Us</h2>
+    </section>
+    <h2 class="contact-section-heading">Contact Us</h2>
     <div class="contact-cards">
-      <div class="contact-card"><div style="font-size:22px;margin-bottom:10px;">📍</div><div class="faint" style="font-size:12px;margin-bottom:6px;">ADDRESS</div><div style="font-size:13px;font-weight:500;"><span id="company-address">1 Freedom Square, Tbilisi, Georgia</span></div></div>
-      <div class="contact-card"><div style="font-size:22px;margin-bottom:10px;">☎</div><div class="faint" style="font-size:12px;margin-bottom:6px;">CONTACT US</div><div style="font-size:13px;font-weight:500;">+1 234 567 890</div></div>
-      <div class="contact-card"><div style="font-size:22px;margin-bottom:10px;">✉</div><div class="faint" style="font-size:12px;margin-bottom:6px;">EMAIL</div><div style="font-size:13px;font-weight:500;">hello@loamandco.com</div></div>
+      <div class="contact-card"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 13v15h22V13M3 6h26l-2 8c-2 3-5 2-6 0-2 3-6 3-8 0-1 2-4 3-6 0L3 6Z"/><path d="M12 28v-9h8v9"/></svg><h3>ADDRESS</h3><p id="company-address">1 Freedom Square, Tbilisi, Georgia</p></div>
+      <div class="contact-card"><img src="images/icons/call.svg" alt=""><h3>CONTACT US</h3><p>+84 234 567 890</p></div>
+      <div class="contact-card"><img src="images/icons/email.svg" alt=""><h3>EMAIL</h3><p>hello@3legant.com</p></div>
     </div>
 
     <div class="contact-form-grid">
@@ -52,16 +51,16 @@
       </section>
     </div>
 
-    <div class="contact-feature-grid">
-      <div class="contact-feature"><span>🚚</span><span>Free Shipping<br><span class="faint" style="font-weight:400;">Order above $200</span></span></div>
-      <div class="contact-feature"><span>↩</span><span>Money-back<br><span class="faint" style="font-weight:400;">30 days guarantee</span></span></div>
-      <div class="contact-feature"><span>🔒</span><span>Secure Payments<br><span class="faint" style="font-weight:400;">Secured by Stripe</span></span></div>
-      <div class="contact-feature"><span>☎</span><span>24/7 Support<br><span class="faint" style="font-weight:400;">Phone and email support</span></span></div>
-    </div>
   </div>
+  <section class="contact-benefits"><div class="contact-feature-grid">
+    <div class="feature-box"><img src="images/icons/fast delivery.svg" alt=""><h3>Free Shipping</h3><p>Order above $200</p></div>
+    <div class="feature-box"><img src="images/icons/money.svg" alt=""><h3>Money-back</h3><p>30 days guarantee</p></div>
+    <div class="feature-box"><img src="images/icons/lock.svg" alt=""><h3>Secure Payments</h3><p>Secured by Stripe</p></div>
+    <div class="feature-box"><img src="images/icons/call.svg" alt=""><h3>24/7 Support</h3><p>Phone and email support</p></div>
+  </div></section>
 </main>
 
-<div id="site-footer" data-variant="cart"></div>
+<div id="site-footer" data-variant="full"></div>
 
 <script src="js/api.js"></script>
 <script src="js/cart.js"></script>

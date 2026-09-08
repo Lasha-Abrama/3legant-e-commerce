@@ -1,18 +1,9 @@
 function newsletterHtml() {
-  return (
-    '<div class="newsletter"><div class="newsletter__inner">' +
-      '<img src="images/cozy-home-corner.jpg" alt="Cozy home corner" style="width:100%;height:160px;border-radius:12px;object-fit:cover;display:block;">' +
-      '<div>' +
-        '<h3 style="font-size:26px;font-weight:500;margin:0 0 8px;">Join Our Newsletter</h3>' +
-        '<p class="muted" style="font-size:13px;margin:0 0 16px;">Sign up for deals, new products and promotions.</p>' +
-        '<form class="newsletter__form" id="newsletter-form">' +
-          '<input class="input" type="email" placeholder="Email address" id="newsletter-email" required>' +
-          '<button class="btn btn--dark" type="submit">Sign up</button>' +
-        '</form>' +
-        '<div class="faint" style="font-size:12px;margin-top:8px;" id="newsletter-msg"></div>' +
-      '</div>' +
-    '</div></div>'
-  );
+  return '<section class="newsletter"><div class="newsletter__inner">' +
+    '<h2>Join Our Newsletter</h2><p>Sign up for deals, new products and promotions</p>' +
+    '<form class="newsletter__form" id="newsletter-form">' +
+    '<img src="images/icons/email.svg" alt=""><input type="email" placeholder="Email address" aria-label="Email address" id="newsletter-email" required>' +
+    '<button type="submit">Signup</button></form><div id="newsletter-msg" role="status"></div></div></section>';
 }
 
 function wireNewsletterForm() {

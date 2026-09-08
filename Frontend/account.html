@@ -3,21 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Account — Gita_3_Team_2</title>
+<title>My Account — 3legant</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/design.css">
 </head>
-<body>
-<div id="site-header" data-active="Account"></div>
+<body class="page-account">
+<div id="site-header" data-promo="false" data-active="Account"></div>
 
 <main>
   <div class="wrap wrap--narrow">
-    <h1 class="center" style="font-size:32px;font-weight:600;margin:0 0 32px;">My Account</h1>
+    <h1 class="page-title center">My Account</h1>
 
     <div class="account-layout">
       <div class="account-sidebar">
-        <div class="ph">Photo</div>
+        <label class="profile-avatar">
+          <img id="profile-avatar" src="images/icons/user-circle.svg" alt="Your profile picture">
+          <span class="avatar-edit" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7h5l2-3h4l2 3h5v14H3z"/><circle cx="12" cy="13" r="4"/></svg></span>
+          <input type="file" id="profile-image-input" accept="image/jpeg,image/png,image/webp" aria-label="Change profile picture">
+        </label>
+        <div id="avatar-message" class="error-text" role="status"></div>
         <div style="font-size:15px;font-weight:600;" id="account-name">&nbsp;</div>
         <nav class="account-nav" id="account-nav"></nav>
         <select class="input account-mobile-select" id="account-mobile-select"></select>
@@ -29,7 +35,7 @@
   </div>
 </main>
 
-<div id="site-footer" data-variant="minimal"></div>
+<div id="site-footer" data-variant="full"></div>
 
 <script src="js/api.js"></script>
 <script src="js/cart.js"></script>

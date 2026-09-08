@@ -2,7 +2,7 @@
   var NAV_LINKS = [
     { label: 'Home', href: 'index.html', key: 'Home' },
     { label: 'Shop', href: 'shop.html', key: 'Shop' },
-    { label: 'Blog', href: 'blog.html', key: 'Blog' },
+    { label: 'Product', href: 'shop.html?view=products', key: 'Product' },
     { label: 'Contact Us', href: 'contact.html', key: 'Contact' },
   ];
 
@@ -20,28 +20,28 @@
 
   function renderHeader(root) {
     var active = root.getAttribute('data-active') || '';
-    var promoDismissed = sessionStorage.getItem('lc_promo_dismissed') === '1';
+    var promoDismissed = root.getAttribute('data-promo') === 'false' || sessionStorage.getItem('lc_promo_dismissed') === '1';
 
     root.innerHTML =
       (promoDismissed ? '' :
         '<div class="promo-bar" id="promo-bar">' +
-          '<span>30% off storewide &mdash; Limited time!</span>' +
+          '<img class="promo-ticket" src="images/icons/ticket-percent.svg" alt=""><span>30% off storewide &mdash; Limited time!</span>' +
           '<a href="shop.html">Shop Now &rarr;</a>' +
           '<button class="promo-bar__close" id="promo-close" aria-label="Dismiss">&times;</button>' +
         '</div>') +
       '<div class="site-header">' +
-        '<a href="index.html" class="site-header__logo">Gita_3_Team_2</a>' +
+        '<a href="index.html" class="site-header__logo">3legant<span>.</span></a>' +
         '<nav class="site-nav">' + navHtml(active, '') + '</nav>' +
         '<div class="header-actions">' +
           '<button class="icon-btn search-btn" aria-label="Search" aria-controls="header-search-form">' +
-            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>' +
+            '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>' +
           '</button>' +
           '<a href="admin/index.html" id="admin-link" class="icon-btn" aria-label="Admin" style="display:none;font-size:11px;font-weight:600;letter-spacing:.02em;">ADMIN</a>' +
           '<a href="#" id="account-link" class="icon-btn" aria-label="Account">' +
-            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"></path></svg>' +
+            '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"></path></svg>' +
           '</a>' +
           '<button class="icon-btn cart-icon-wrap" id="cart-open" aria-label="Cart">' +
-            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 7h12l-1 13H7L6 7z"></path><path d="M9 7V5a3 3 0 016 0v2"></path></svg>' +
+            '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 7h12l-1 13H7L6 7z"></path><path d="M9 7V5a3 3 0 016 0v2"></path></svg>' +
             '<span class="cart-count" id="cart-count">0</span>' +
           '</button>' +
           '<button class="icon-btn mobile-toggle" id="mobile-toggle" aria-label="Menu">' +
@@ -159,7 +159,7 @@
       body.innerHTML = items.map(function (item, idx) {
         return (
           '<div class="cart-row">' +
-            '<div class="ph" style="width:64px;height:64px;flex-shrink:0;border-radius:8px;">' + escapeHtml(item.name || '') + '</div>' +
+            cartImageHtml(item) +
             '<div class="cart-row__info">' +
               '<div class="cart-row__top"><span class="cart-row__name">' + escapeHtml(item.name || '') + '</span><span class="cart-row__name">' + fmt(item.price * item.qty) + '</span></div>' +
               '<div class="cart-row__color">Color: ' + escapeHtml(item.color || '') + '</div>' +
@@ -200,12 +200,12 @@
   }
 
   var FOOTER_VARIANTS = {
-    full: ['Home', 'Shop', 'Blog', 'Contact'],
+    full: ['Home', 'Shop', 'Product', 'Blog', 'Contact'],
     cart: ['Home', 'Blog', 'Contact'],
     minimal: null,
   };
-  var FOOTER_HREFS = { Home: 'index.html', Shop: 'shop.html', Blog: 'blog.html', Contact: 'contact.html' };
-  var FOOTER_LABELS = { Home: 'Home', Shop: 'Shop', Blog: 'Blog', Contact: 'Contact Us' };
+  var FOOTER_HREFS = { Home: 'index.html', Shop: 'shop.html', Product: 'shop.html?view=products', Blog: 'blog.html', Contact: 'contact.html' };
+  var FOOTER_LABELS = { Home: 'Home', Shop: 'Shop', Product: 'Product', Blog: 'Blog', Contact: 'Contact Us' };
 
   function renderFooter(root) {
     var variant = root.getAttribute('data-variant') || 'full';
@@ -217,7 +217,7 @@
       : '';
     var topHtml = variant === 'minimal' ? '' :
       '<div class="site-footer__top">' +
-        '<div><div class="site-footer__brand">Gita_3_Team_2</div><div class="site-footer__tag">Gift &amp; Decoration Store</div></div>' +
+        '<div class="site-footer__identity"><div class="site-footer__brand">3legant<span>.</span></div><div class="site-footer__tag">Gift &amp; Decoration Store</div></div>' +
         linksHtml +
       '</div>';
     root.innerHTML =
@@ -225,8 +225,9 @@
         topHtml +
         '<div class="site-footer__bottom' + (variant === 'minimal' ? '' : '') + '"' +
           (variant === 'minimal' ? ' style="text-align:center;padding-top:0;border-top:none;"' : '') + '>' +
-          '<span>&copy; 2026 Gita_3_Team_2. All rights reserved.</span>' +
+          '<span>Copyright © 2023 3legant. All rights reserved</span>' +
           '<span class="site-footer__legal"><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Use</a></span>' +
+          '<div class="footer-social"><a href="https://www.instagram.com/" aria-label="Instagram"><img src="images/icons/instagram.svg" alt=""></a><a href="https://www.facebook.com/" aria-label="Facebook"><img src="images/icons/facebook.svg" alt=""></a><a href="https://www.youtube.com/" aria-label="YouTube"><img src="images/icons/youtube.svg" alt=""></a></div>' +
         '</div>' +
       '</div>';
   }

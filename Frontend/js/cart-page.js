@@ -20,7 +20,7 @@
         return (
           '<div class="cart-table-row">' +
             '<div style="display:flex;gap:14px;align-items:center;">' +
-              '<div class="ph">' + escapeHtml(item.name) + '</div>' +
+              cartImageHtml(item) +
               '<div>' +
                 '<div style="font-size:14px;font-weight:500;">' + escapeHtml(item.name) + '</div>' +
                 '<div class="faint" style="font-size:12px;margin-top:2px;">Color: ' + escapeHtml(item.color) + '</div>' +

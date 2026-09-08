@@ -28,7 +28,7 @@
   function field(label, name, opts) {
     opts = opts || {};
     return (
-      '<input class="input" placeholder="' + escapeHtml(label) + '" data-field="' + escapeHtml(name) + '" value="' + escapeHtml(form[name] || '') + '"' + (opts.type ? ' type="' + escapeHtml(opts.type) + '"' : '') + '>'
+      '<label class="field"><span class="field__label">' + escapeHtml(label) + '</span><input class="input" placeholder="' + escapeHtml(label) + '" data-field="' + escapeHtml(name) + '" value="' + escapeHtml(form[name] || '') + '"' + (opts.type ? ' type="' + escapeHtml(opts.type) + '"' : '') + ' required></label>'
     );
   }
 
@@ -53,11 +53,11 @@
           '<div>' +
             '<div class="form-section-title">Shipping Address</div>' +
             '<div style="margin-bottom:12px;">' + field('Street Address', 'street') + '</div>' +
-            '<select class="input" data-field="country" style="margin-bottom:12px;">' +
+            '<label class="field" style="margin-bottom:12px;"><span class="field__label">Country</span><select class="input" data-field="country" required>' +
               ['', 'United States', 'Georgia', 'Germany', 'France', 'United Kingdom', 'Canada'].map(function (c) {
                 return '<option value="' + c + '"' + (form.country === c ? ' selected' : '') + '>' + (c || 'Country') + '</option>';
               }).join('') +
-            '</select>' +
+            '</select></label>' +
             '<div style="margin-bottom:12px;">' + field('Town / City', 'city') + '</div>' +
             '<div class="row-2">' + field('State', 'state') + field('Zip Code', 'zip') + '</div>' +
           '</div>' +
@@ -76,7 +76,7 @@
             cart.map(function (item) {
               return (
                 '<div class="order-line">' +
-                  '<div class="ph">' + escapeHtml(item.name) + '</div>' +
+                  cartImageHtml(item) +
                   '<div style="flex:1;">' +
                     '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:500;"><span>' + escapeHtml(item.name) + '</span><span>' + fmt(item.price * item.qty) + '</span></div>' +
                     '<div class="faint" style="font-size:11px;">Color: ' + escapeHtml(item.color) + '</div>' +

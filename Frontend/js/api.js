@@ -2,6 +2,30 @@ var API = '/api';
 var ACCESS_TOKEN_KEY = 'threelegant_access_token';
 var API_UNAVAILABLE_MESSAGE = 'The service is currently unavailable. Please try again.';
 
+function productImageUrl(product) {
+  var image = product.image || (product.images && product.images[0]);
+  if (image && safeImageUrl(image)) return image;
+  return product.name === 'Tray Table' ? 'images/products/tray-table.jpg' : '';
+}
+
+function cartImageHtml(item) {
+  var url = safeImageUrl(productImageUrl(item));
+  return '<div class="ph cart-product-image">' + (url
+    ? '<img class="product-img" src="' + url + '" alt="' + escapeHtml(item.name) + '">'
+    : escapeHtml(item.name)) + '</div>';
+}
+
+// Replace only legacy seed artwork; custom article uploads retain their own images.
+function articleImageUrl(article) {
+  var artwork = {
+    '/images/hero-living-room.webp': 'images/slides/slide_3.jpg',
+    '/images/category-kitchen.jpg': 'images/slides/slide_4.jpg',
+    '/images/category-bedroom.jpg': 'images/slides/slide_5.jpg',
+    '/images/category-living-room.jpg': 'images/slides/slide_3.jpg',
+  };
+  return artwork[article.image] || article.image;
+}
+
 function apiFailure() {
   return { _status: 503, _networkError: true, message: API_UNAVAILABLE_MESSAGE };
 }
@@ -85,11 +109,12 @@ function apiSend(method, url, data) {
   }).catch(apiFailure);
 }
 
-function apiUpload(url, file) {
+function apiUpload(url, file, options) {
+  options = options || {};
   var formData = new FormData();
-  formData.append('file', file);
+  formData.append(options.field || 'file', file);
   return fetch(API + url, {
-    method: 'POST',
+    method: options.method || 'POST',
     headers: getAuthHeaders(),
     body: formData,
   }).then(function (res) {

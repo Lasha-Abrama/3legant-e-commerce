@@ -1,14 +1,14 @@
 (function () {
   var CATEGORIES = [
-    { name: 'Living Room', img: 'images/category-living-room.jpg' },
-    { name: 'Bedroom', img: 'images/category-bedroom.jpg' },
-    { name: 'Kitchen', img: 'images/category-kitchen.jpg' },
+    { name: 'Living Room', img: 'images/products/luxury-sofa.jpg' },
+    { name: 'Bedroom', img: 'images/products/drawer.jpg' },
+    { name: 'Kitchen', img: 'images/products/toaster.jpg' },
   ];
   var FEATURES = [
-    { icon: '🚚', title: 'Free Shipping', sub: 'Order above $200' },
-    { icon: '↩', title: 'Money-back', sub: '30 days guarantee' },
-    { icon: '🔒', title: 'Secure Payments', sub: 'Secured by Stripe' },
-    { icon: '☎', title: '24/7 Support', sub: 'Phone and email support' },
+    { icon: 'fast delivery.svg', title: 'Free Shipping', sub: 'Order above $200' },
+    { icon: 'money.svg', title: 'Money-back', sub: '30 days guarantee' },
+    { icon: 'lock.svg', title: 'Secure Payments', sub: 'Secured by Stripe' },
+    { icon: 'call.svg', title: '24/7 Support', sub: 'Phone and email support' },
   ];
 
   document.getElementById('category-grid').innerHTML = CATEGORIES.map(function (c) {
@@ -18,7 +18,7 @@
         '<div class="category-tile__overlay"></div>' +
         '<div class="category-tile__text">' +
           '<div class="category-tile__name">' + c.name + '</div>' +
-          '<a class="category-tile__link" href="shop.html">Shop Now &rarr;</a>' +
+          '<a class="category-tile__link" href="shop.html?category=' + encodeURIComponent(c.name) + '">Shop Now &rarr;</a>' +
         '</div>' +
       '</div>'
     );
@@ -27,27 +27,27 @@
   document.getElementById('feature-grid').innerHTML = FEATURES.map(function (f) {
     return (
       '<div class="feature-box">' +
-        '<span class="feature-box__icon">' + f.icon + '</span>' +
+        '<img class="feature-box__icon" src="images/icons/' + f.icon + '" alt="">' +
         '<div><div class="feature-box__title">' + f.title + '</div><div class="feature-box__sub">' + f.sub + '</div></div>' +
       '</div>'
     );
   }).join('');
 
   function loadArticles() {
-    apiGetSilent('/blogs?take=3').then(function (res) {
+    apiGetSilent('/blogs?take=20').then(function (res) {
       var grid = document.getElementById('article-grid');
       if (!res || res._status >= 400 || !Array.isArray(res.data)) {
         renderRetryState(grid, res && res.message, loadArticles);
         return;
       }
-      grid.innerHTML = res.data.length ? res.data.map(function (a) {
+      grid.innerHTML = res.data.length ? res.data.slice().sort(function(a,b) { var order = ['7 ways to decor your home like a professional', 'Inside a beautiful kitchen organization', 'Decor your bedroom for your children']; var x = order.indexOf(a.title), y = order.indexOf(b.title); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y); }).slice(0,3).map(function (a) {
         return (
           '<a class="article-card" href="blog-post.html?id=' + encodeURIComponent(a._id) + '">' +
             '<div class="ph" style="width:100%;height:160px;border-radius:10px;padding:0;">' +
-              '<img src="' + safeImageUrl(a.image) + '" alt="' + escapeHtml(a.title) + '" style="width:100%;height:100%;object-fit:cover;">' +
+              '<img src="' + safeImageUrl(articleImageUrl(a)) + '" alt="' + escapeHtml(a.title) + '" style="width:100%;height:100%;object-fit:cover;">' +
             '</div>' +
             '<div class="article-card__title">' + escapeHtml(a.title) + '</div>' +
-            '<div class="article-card__date">' + new Date(a.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + '</div>' +
+            '<span class="text-link">Read More <span>→</span></span>' +
           '</a>'
         );
       }).join('') : '<div class="shop-empty">No articles published yet.</div>';
@@ -58,19 +58,32 @@
   wireNewsletterForm();
 
   function loadNewArrivals() {
-    apiGetSilent('/products?sort=newest&take=4').then(function (res) {
+    apiGetSilent('/products?take=100').then(function (res) {
       var grid = document.getElementById('new-arrivals');
       if (!res || res._status >= 400 || !Array.isArray(res.data)) {
         renderRetryState(grid, res && res.message, loadNewArrivals);
         return;
       }
       grid.innerHTML = res.data.length
-        ? res.data.map(productCardHtml).join('')
+        ? res.data.filter(function(p) { return p.newArrival; }).sort(function(a,b) { var order = ['Loveseat Sofa', 'Amber Table Lamp', 'Table Lamp Gold', 'Bamboo Basket']; var x = order.indexOf(a.name), y = order.indexOf(b.name); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y); }).slice(0,8).map(productCardHtml).join('')
         : '<div class="shop-empty">No new arrivals yet.</div>';
       wireAddToCartButtons(grid);
     });
   }
 
+  var slides = ['slide_1.jpg', 'slide_2.jpg', 'slide_3.jpg', 'slide_4.jpg', 'slide_5.jpg'];
+  var slideIndex = 0;
+  var dots = document.querySelector('.hero-dots');
+  dots.innerHTML = slides.map(function (_, index) { return '<button type="button" aria-label="Slide ' + (index + 1) + '" data-slide="' + index + '"></button>'; }).join('');
+  function showSlide(index) {
+    slideIndex = (index + slides.length) % slides.length;
+    document.getElementById('hero-img').src = 'images/slides/' + slides[slideIndex];
+    dots.querySelectorAll('button').forEach(function (dot, i) { dot.setAttribute('aria-pressed', String(i === slideIndex)); });
+  }
+  document.querySelector('.hero-arrow--prev').addEventListener('click', function () { showSlide(slideIndex - 1); });
+  document.querySelector('.hero-arrow--next').addEventListener('click', function () { showSlide(slideIndex + 1); });
+  dots.addEventListener('click', function (event) { if (event.target.dataset.slide !== undefined) showSlide(Number(event.target.dataset.slide)); });
+  showSlide(0);
   loadArticles();
   loadNewArrivals();
 })();

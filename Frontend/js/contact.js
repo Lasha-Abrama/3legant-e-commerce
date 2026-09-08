@@ -1,7 +1,7 @@
 (function () {
   var form = document.getElementById('contact-form');
   // Demo company address. Update the address and coordinates together for a real store.
-  var company = { name: 'Loam & Co.', address: '1 Freedom Square, Tbilisi, Georgia', latitude: 41.6934, longitude: 44.8015 };
+  var company = { name: '3legant', address: '1 Freedom Square, Tbilisi, Georgia', latitude: 41.6934, longitude: 44.8015 };
   var locationButton = document.getElementById('use-location');
   var locationStatus = document.getElementById('location-status');
   var directions = document.getElementById('open-location-map');
