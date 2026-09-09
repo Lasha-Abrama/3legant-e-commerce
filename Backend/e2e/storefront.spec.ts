@@ -16,7 +16,7 @@ const account = {
 const product = {
   name: `E2E Product ${runId}`,
   sku: `E2E-${runId}`,
-  price: '24.00',
+  price: '100.00',
   stock: '6',
 };
 
@@ -68,6 +68,7 @@ test.describe.serial('storefront critical customer and admin journeys', () => {
   );
 
   test.beforeAll(async () => {
+    if (!stripeSecretKey?.startsWith('sk_test_') || !/e2e/i.test(new URL(mongoUrl!).pathname)) throw new Error('Only a dedicated E2E database and Stripe test key are allowed.');
     database = await mongoose.createConnection(mongoUrl as string).asPromise();
     stripe = new Stripe(stripeSecretKey as string);
   });
@@ -157,9 +158,13 @@ test.describe.serial('storefront critical customer and admin journeys', () => {
 
     await page.goto('/cart.html');
     await expect(page.locator('.cart-table-row').filter({ hasText: product.name })).toBeVisible();
+    await page.getByRole('textbox', { name: 'Coupon code' }).fill('HOME20');
+    await page.getByRole('button', { name: 'Apply', exact: true }).click();
+    await expect(page.locator('#total-label')).toHaveText('$80.00');
     await page.locator('#cart-checkout-link').click();
     await expect(page.getByRole('heading', { name: 'Check Out' })).toBeVisible();
 
+    await expect(page.locator('.summary-total')).toContainText('$80.00');
     const fields = {
       firstName: account.firstName,
       lastName: account.lastName,
@@ -177,7 +182,8 @@ test.describe.serial('storefront critical customer and admin journeys', () => {
     await page.getByRole('button', { name: 'Place Order' }).click();
     await page.waitForURL(/checkout\.stripe\.com/, { timeout: 30_000 });
 
-    await page.locator('input[name="email"]').fill(account.email);
+    const stripeEmail = page.locator('input[name="email"]');
+    if (await stripeEmail.isEditable()) await stripeEmail.fill(account.email);
     await page.locator('input[name="cardNumber"]').fill('4242 4242 4242 4242');
     await page.locator('input[name="cardExpiry"]').fill('12/34');
     await page.locator('input[name="cardCvc"]').fill('123');
@@ -193,6 +199,10 @@ test.describe.serial('storefront critical customer and admin journeys', () => {
     orderId = String(pendingOrder?._id);
     const checkoutSession = await stripe.checkout.sessions.retrieve(pendingOrder?.stripeCheckoutSessionId as string);
     expect(checkoutSession.payment_status).toBe('paid');
+    expect(checkoutSession.amount_total).toBe(8000);
+    expect(pendingOrder?.total).toBe(80);
+    expect(pendingOrder?.discount).toBe(20);
+    expect(pendingOrder?.couponCode).toBe('HOME20');
 
     await sendWebhook(baseURL as string, {
       id: `evt_e2e_paid_${runId}`,
@@ -201,11 +211,15 @@ test.describe.serial('storefront critical customer and admin journeys', () => {
       data: { object: checkoutSession },
     });
     await expect.poll(async () => (await getOrder())?.paymentStatus).toBe('paid');
-    await expect(page.getByText('Thank you, your order is placed!')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('Your order has been received')).toBeVisible({ timeout: 20_000 });
 
-    await page.getByRole('link', { name: 'View my orders' }).click();
-    await expect(page.getByText(`#${orderId.slice(-8)}`)).toBeVisible();
-    await page.getByRole('button', { name: 'View' }).click();
+    await expect(page.locator('.complete-meta')).toContainText('$80.00');
+    await page.reload();
+    await expect(page.getByText('Your order has been received')).toBeVisible();
+    expect(await database.collection('orders').countDocuments(orderFilter())).toBe(1);
+    await page.getByRole('link', { name: 'Purchase history' }).click();
+    await expect(page.locator('.order-row')).toContainText('$80.00');
+    await page.getByRole('button', { name: pendingOrder?.orderCode as string }).click();
     await expect(page.getByText('Order details')).toBeVisible();
     await expect(page.locator('.order-detail-items')).toContainText(product.name);
   });

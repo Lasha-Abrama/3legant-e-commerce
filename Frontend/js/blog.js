@@ -1,85 +1,49 @@
 (function () {
-  var PAGE_SIZE = 9;
-  var state = { filter: 'all', sort: 'newest', page: 1, posts: [], total: 0, loading: false };
-
-  function formatDate(iso) {
-    return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  var sizes = { three: 9, four: 12, two: 6, list: 6 };
+  var state = { filter: 'all', sort: 'newest', view: 'three', page: 0, posts: [], total: 0, request: 0, loading: false };
+  var grid = document.getElementById('post-grid');
+  var more = document.getElementById('blog-show-more');
+  document.getElementById('blog-layouts').innerHTML = layoutSelectorHtml();
+  function render() {
+    grid.dataset.view = state.view;
+    grid.innerHTML = state.posts.length ? state.posts.map(articleCardHtml).join('') : '<p>No blog posts found.</p>';
+    more.hidden = state.posts.length >= state.total;
   }
-
-  function articleCardHtml(post) {
-    return (
-      '<a class="article-card" href="blog-post.html?id=' + encodeURIComponent(post._id) + '">' +
-        '<div class="ph" style="width:100%;height:180px;border-radius:10px;padding:0;">' +
-          '<img src="' + safeImageUrl(articleImageUrl(post)) + '" alt="' + escapeHtml(post.title) + '" style="width:100%;height:100%;object-fit:cover;">' +
-        '</div>' +
-        '<div class="article-card__title">' + escapeHtml(post.title) + '</div>' +
-        '<div class="article-card__date">' + formatDate(post.createdAt) + '</div>' +
-      '</a>'
-    );
+  async function load(append) {
+    var request = ++state.request;
+    var page = append ? state.page + 1 : 1;
+    state.loading = true; more.disabled = true; grid.setAttribute('aria-busy', 'true');
+    if (!append) { state.posts = []; grid.innerHTML = '<p role="status">Loading articles…</p>'; more.hidden = true; }
+    try {
+      var result = await apiGetSilent('/blogs?take=' + sizes[state.view] + '&page=' + page +
+        '&sort=' + state.sort + (state.filter === 'featured' ? '&featured=true' : ''));
+      if (request !== state.request) return;
+      if (!result || result._status >= 400 || !Array.isArray(result.data)) throw new Error('Articles could not be loaded.');
+      var posts = append ? state.posts.concat(result.data) : result.data;
+      state.posts = posts.filter(function (post, index) { return posts.findIndex(function (item) { return item._id === post._id; }) === index; });
+      state.total = result.total; state.page = page; render();
+    } catch (error) {
+      if (request === state.request) renderRetryState(grid, 'Articles could not be loaded.', function () { load(append); });
+    } finally {
+      if (request === state.request) { state.loading = false; more.disabled = false; grid.setAttribute('aria-busy', 'false'); }
+    }
   }
-
-  function renderPosts() {
-    var grid = document.getElementById('post-grid');
-    grid.innerHTML = state.posts.length
-      ? state.posts.map(articleCardHtml).join('')
-      : '<div class="shop-empty">No blog posts found.</div>';
-    document.getElementById('blog-show-more').style.display =
-      state.posts.length < state.total ? 'inline-flex' : 'none';
-  }
-
-  function loadPosts(append) {
-    if (state.loading) return;
-    state.loading = true;
-    var showMore = document.getElementById('blog-show-more');
-    showMore.disabled = true;
-    showMore.textContent = 'Loading...';
-    var url = '/blogs?take=' + PAGE_SIZE + '&page=' + state.page + '&sort=' + state.sort;
-    if (state.filter === 'featured') url += '&featured=true';
-
-    apiGetSilent(url).then(function (res) {
-      if (!res || res._status >= 400) throw new Error('Blog posts could not be loaded');
-      state.posts = append ? state.posts.concat(res.data || []) : (res.data || []);
-      state.total = res.total || 0;
-      renderPosts();
-    }).catch(function (error) {
-      renderRetryState(
-        document.getElementById('post-grid'),
-        error.message || 'Blog posts could not be loaded. Please try again.',
-        function () { loadPosts(append); }
-      );
-      showMore.style.display = 'none';
-    }).finally(function () {
-      state.loading = false;
-      showMore.disabled = false;
-      showMore.textContent = 'Show more';
-    });
-  }
-
   document.querySelectorAll('[data-filter]').forEach(function (button) {
     button.addEventListener('click', function () {
-      state.filter = button.getAttribute('data-filter');
-      state.page = 1;
-      state.posts = [];
+      state.filter = button.dataset.filter;
       document.querySelectorAll('[data-filter]').forEach(function (item) {
-        item.classList.toggle('is-active', item === button);
-      });
-      loadPosts(false);
+        item.classList.toggle('is-active', item === button); item.setAttribute('aria-pressed', String(item === button));
+      }); load(false);
     });
   });
-
-  document.getElementById('blog-sort-select').addEventListener('change', function (event) {
-    state.sort = event.target.value;
-    state.page = 1;
-    state.posts = [];
-    loadPosts(false);
+  document.getElementById('blog-sort-select').addEventListener('change', function () { state.sort = this.value; load(false); });
+  document.querySelectorAll('[data-blog-view]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      state.view = button.dataset.blogView;
+      document.querySelectorAll('[data-blog-view]').forEach(function (item) { item.setAttribute('aria-pressed', String(item === button)); });
+      load(false);
+    });
   });
-
-  document.getElementById('blog-show-more').addEventListener('click', function () {
-    state.page += 1;
-    loadPosts(true);
-  });
-
-  document.getElementById('newsletter-slot').innerHTML = newsletterHtml();
-  wireNewsletterForm();
-  loadPosts(false);
+  more.addEventListener('click', function () { if (!state.loading) load(true); });
+  document.getElementById('newsletter-slot').innerHTML = newsletterHtml(); wireNewsletterForm(); load(false);
 })();

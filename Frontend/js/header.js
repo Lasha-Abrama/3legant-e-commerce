@@ -145,6 +145,7 @@
 
     refreshCart();
     window.addEventListener('cart-updated', refreshCart);
+    window.addEventListener('pricing-updated', refreshCart);
   }
 
   function wireSearchForm(form, input) {
@@ -204,12 +205,16 @@
     }
 
     var subtotal = window.CartStore ? window.CartStore.subtotal(items) : 0;
-    var canCheckout = items.length > 0 && items.every(function (item) {
+    var pricing = window.CartStore.pricing();
+    window.CartStore.refreshPricing();
+    var canCheckout = pricing && !pricing.error && items.length > 0 && items.every(function (item) {
       return window.CartStore.stockLimit(item) !== 0 && !item.unavailable;
     });
     foot.innerHTML =
-      '<div class="summary-line"><span>Subtotal</span><span>' + fmt(subtotal) + '</span></div>' +
-      '<div class="summary-total"><span>Total</span><span>' + fmt(subtotal) + '</span></div>' +
+      '<div class="summary-line"><span>Subtotal</span><span>' + (pricing && !pricing.error ? fmt(pricing.subtotal) : '—') + '</span></div>' +
+      '<div class="summary-total"><span>Total</span><span>' + (pricing && !pricing.error ? fmt(pricing.total) : '—') + '</span></div>' +
+      (pricing && pricing.discount ? '<div class="summary-line"><span>Discount</span><span>−' + fmt(pricing.discount) + '</span></div>' : '') +
+      (pricing && pricing.shippingCost ? '<div class="summary-line"><span>Shipping / pickup</span><span>' + fmt(pricing.shippingCost) + '</span></div>' : '') +
       '<a' + (canCheckout ? ' href="checkout.html"' : '') + ' class="btn btn--dark btn--block' + (canCheckout ? '' : ' is-disabled') + '"' + (canCheckout ? '' : ' aria-disabled="true"') + '>Checkout</a>' +
       '<a href="cart.html" class="btn" style="display:block;text-align:center;margin-top:10px;color:var(--ink);text-decoration:underline;">View Cart</a>';
 

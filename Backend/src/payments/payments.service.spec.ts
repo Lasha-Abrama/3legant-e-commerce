@@ -153,12 +153,15 @@ describe('PaymentsService', () => {
   });
 
   it('marks an order paid only after a verified Stripe webhook', async () => {
+    ordersService.findById = jest.fn().mockResolvedValue({ total: 80, user: 'user-id', stripeCheckoutSessionId: 'checkout-session-id' });
     stripeClient.webhooks.constructEvent = jest.fn().mockReturnValue({
       type: 'checkout.session.completed',
       data: {
         object: {
           id: 'checkout-session-id',
-          metadata: { orderId: 'order-id' },
+          metadata: { orderId: 'order-id', userId: 'user-id' },
+          amount_total: 8000,
+          currency: 'usd',
           payment_status: 'paid',
           payment_intent: 'payment-intent-id',
         },

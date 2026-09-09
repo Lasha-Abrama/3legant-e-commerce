@@ -12,7 +12,7 @@
   }
   function renderBreadcrumb() {
     var p = state.product;
-    document.getElementById('crumb').innerHTML = '<a href="index.html">Home</a><span>/</span><a href="shop.html">Shop</a><span>/</span><a href="shop.html?category=' + encodeURIComponent(p.category) + '">' + escapeHtml(p.category) + '</a><span>/</span><span aria-current="page">' + escapeHtml(p.name) + '</span>';
+    setBreadcrumb(document.getElementById('crumb'), [{ label: 'Home', href: '/' }, { label: 'Shop', href: 'shop.html' }, { label: p.category, href: 'shop.html?category=' + encodeURIComponent(p.category) }, { label: p.name }]);
   }
   function offerHtml(p) { return p.originalPrice || p.discountLabel ? '<div class="offer-countdown" id="offer-countdown"><span class="offer-countdown__label">Offer expires in:</span><div class="offer-countdown__units" id="offer-units"></div></div>' : ''; }
 

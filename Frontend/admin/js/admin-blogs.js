@@ -85,6 +85,9 @@
       '<div style="font-size:16px;font-weight:600;margin-bottom:16px;">' + (blog ? 'Edit blog post' : 'Add blog post') + '</div>' +
       '<div id="blog-form-alert"></div>' +
       '<div class="field"><span class="field__label">TITLE *</span><input class="input" id="f-title" value="' + escapeHtml(b.title || '') + '"></div>' +
+      '<label class="field"><span class="field__label">CATEGORY</span><input class="input" id="f-category" maxlength="80" value="' + escapeHtml(b.category || 'Design') + '"></label>' +
+      '<label class="field"><span class="field__label">SUPPORTING IMAGE URLS (one per line, optional)</span><textarea class="input" id="f-supporting">' + escapeHtml((b.supportingImages || []).join('\n')) + '</textarea></label>' +
+      '<p class="faint">Use blank lines for paragraphs and ## for section headings. HTML is displayed as text.</p>' +
       '<div class="field"><span class="field__label">EXCERPT</span><textarea class="input" id="f-excerpt" rows="2">' + escapeHtml(b.excerpt || '') + '</textarea></div>' +
       '<div class="field"><span class="field__label">CONTENT *</span><textarea class="input" id="f-content" rows="8">' + escapeHtml(b.content || '') + '</textarea></div>' +
       '<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:8px 0 16px;">' +
@@ -157,6 +160,8 @@
 
     var payload = {
       title: title,
+      category: document.getElementById('f-category').value.trim(),
+      supportingImages: document.getElementById('f-supporting').value.split('\n').map(function (url) { return url.trim(); }).filter(Boolean),
       excerpt: document.getElementById('f-excerpt').value.trim(),
       content: document.getElementById('f-content').value.trim(),
       featured: document.getElementById('f-featured').checked,

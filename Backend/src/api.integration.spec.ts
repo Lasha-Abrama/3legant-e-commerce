@@ -24,6 +24,8 @@ import { ContactService } from './contact/contact.service';
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { ProfileImageController } from './uploads/profile-image.controller';
 import { ProfileImagesService } from './uploads/profile-images.service';
+import { BlogsController } from './blogs/blogs.controller';
+import { BlogsService } from './blogs/blogs.service';
 
 describe('API integration boundaries', () => {
   let app: NestExpressApplication;
@@ -67,10 +69,12 @@ describe('API integration boundaries', () => {
     remove: jest.fn(),
   };
   const ordersService = {
+    quote: jest.fn(),
     create: jest.fn(),
     findByUser: jest.fn(),
     findByIdForUser: jest.fn(),
   };
+  const blogsService = { create: jest.fn(), update: jest.fn(), findOne: jest.fn(), findAll: jest.fn() };
   const uploadsService = {
     uploadBuffer: jest.fn(),
   };
@@ -93,6 +97,7 @@ describe('API integration boundaries', () => {
         ContactController,
         ProfileImageController,
         UsersController,
+        BlogsController,
         ContactAdminController,
       ],
       providers: [
@@ -105,6 +110,7 @@ describe('API integration boundaries', () => {
         { provide: ConfigService, useValue: { get: jest.fn() } },
         { provide: ProductsService, useValue: productsService },
         { provide: OrdersService, useValue: ordersService },
+        { provide: BlogsService, useValue: blogsService },
         { provide: UploadsService, useValue: uploadsService },
         { provide: ContactService, useValue: contactService },
         { provide: ProfileImagesService, useValue: profileImagesService },
@@ -657,4 +663,22 @@ describe('API integration boundaries', () => {
     expect(profileImagesService.update).not.toHaveBeenCalled();
   });
 
+
+  it('quotes without login but rejects empty carts and unexpected totals', async () => {
+    const body = { items: [{ productId: '507f1f77bcf86cd799439011', color: 'Black', qty: 1 }], shippingOption: 'free', couponCode: ' home20 ' };
+    ordersService.quote.mockResolvedValue({ subtotal: 100, discount: 20, total: 80 });
+    await request(app.getHttpServer()).post('/api/orders/quote').send(body).expect(201);
+    expect(ordersService.quote).toHaveBeenCalledWith(expect.objectContaining({ couponCode: 'HOME20' }));
+    await request(app.getHttpServer()).post('/api/orders/quote').send({ ...body, total: 1 }).expect(400);
+    await request(app.getHttpServer()).post('/api/orders/quote').send({ ...body, items: [] }).expect(400);
+  });
+  it('records the authenticated admin and rejects author impersonation and non-admin blog creation', async () => {
+    const body = { title: 'Interior guide', content: 'Useful content', image: '/images/blog-hero.png', category: 'Design', featured: true };
+    blogsService.create.mockResolvedValue({ ...body, author: 'admin-id' });
+    await request(app.getHttpServer()).post('/api/blogs').set('Authorization', 'Bearer admin-token').send(body).expect(201);
+    expect(blogsService.create).toHaveBeenCalledWith(expect.objectContaining(body), 'admin-id');
+    await request(app.getHttpServer()).post('/api/blogs').set('Authorization', 'Bearer admin-token').send({ ...body, author: 'other-admin' }).expect(400);
+    await request(app.getHttpServer()).post('/api/blogs').set('Authorization', 'Bearer user-token').send(body).expect(403);
+    await request(app.getHttpServer()).post('/api/blogs').send(body).expect(401);
+  });
 });

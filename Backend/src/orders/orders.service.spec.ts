@@ -104,6 +104,21 @@ describe('OrdersService', () => {
     expect(order).not.toHaveProperty('cardNumber');
   });
 
+  it('persists a canonical $80 discounted order despite forged client prices', async () => {
+    productsService.findOne = jest.fn().mockResolvedValue({
+      _id: '507f1f77bcf86cd799439011', name: 'Real product', price: 100,
+      stock: 10, colors: [{ name: 'Black' }], images: ['/images/products/tray-table.jpg'],
+    });
+    const order = await service.create('507f1f77bcf86cd799439012', {
+      items: [{ productId: '507f1f77bcf86cd799439011', name: 'Forged', color: 'Black', price: 1, qty: 1 }],
+      contact: { firstName: 'Test', lastName: 'Customer', phone: '123', email: 'test@example.test' },
+      shippingAddress: { street: 'Main', city: 'Tbilisi', state: 'Tbilisi', zip: '0100', country: 'Georgia' },
+      paymentMethod: 'card', shippingOption: 'free', couponCode: 'HOME20',
+    });
+    expect(order).toMatchObject({ subtotal: 100, discount: 20, total: 80, couponCode: 'HOME20', paymentStatus: 'pending' });
+    expect(order.items[0]).toMatchObject({ name: 'Real product', price: 100, image: '/images/products/tray-table.jpg' });
+  });
+
   it('rejects unavailable colors and insufficient stock', async () => {
     productsService.findOne = jest.fn().mockResolvedValue({
       _id: 'product-id',

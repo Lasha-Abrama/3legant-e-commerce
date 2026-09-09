@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
@@ -11,6 +11,8 @@ import {
   IsString,
   Min,
   MinLength,
+  MaxLength,
+  ArrayMaxSize,
   ValidateNested,
 } from 'class-validator';
 import { PAYMENT_METHODS, SHIPPING_OPTIONS } from '../schemas/order.schema';
@@ -77,12 +79,25 @@ export class OrderShippingAddressDto {
   country: string;
 }
 
-export class CreateOrderDto {
+export class QuoteOrderDto {
   @IsArray()
+  @ArrayMaxSize(100)
   @ArrayMinSize(1, { message: 'კალათა ცარიელია' })
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   items: OrderItemDto[];
+
+  @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
+  @IsString()
+  @MaxLength(32)
+  couponCode?: string;
+
+  @IsIn(SHIPPING_OPTIONS)
+  shippingOption: (typeof SHIPPING_OPTIONS)[number];
+}
+
+export class CreateOrderDto extends QuoteOrderDto {
 
   @ValidateNested()
   @Type(() => OrderContactDto)
@@ -95,6 +110,4 @@ export class CreateOrderDto {
   @IsIn(PAYMENT_METHODS)
   paymentMethod: (typeof PAYMENT_METHODS)[number];
 
-  @IsIn(SHIPPING_OPTIONS)
-  shippingOption: (typeof SHIPPING_OPTIONS)[number];
 }

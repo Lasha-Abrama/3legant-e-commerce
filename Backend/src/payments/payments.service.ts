@@ -59,11 +59,12 @@ export class PaymentsService {
       session = await stripe.checkout.sessions.create(
         {
           mode: 'payment',
+          customer_email: order.contact?.email,
           line_items: [
             {
               price_data: {
                 currency: 'usd',
-                product_data: { name: `3legant order ${order._id}` },
+                product_data: { name: `3legant order ${order.orderCode || order._id}` },
                 unit_amount: Math.round(order.total * 100),
               },
               quantity: 1,
@@ -149,6 +150,15 @@ export class PaymentsService {
       const session = event.data.object as Stripe.Checkout.Session;
       const orderId = session.metadata?.orderId;
       if (orderId && session.payment_status === 'paid') {
+        const order = await this.ordersService.findById(orderId);
+        if (
+          session.amount_total !== Math.round(order.total * 100) ||
+          session.currency !== 'usd' ||
+          session.metadata?.userId !== String(order.user) ||
+          (order.stripeCheckoutSessionId && order.stripeCheckoutSessionId !== session.id)
+        ) {
+          throw new BadRequestException('Stripe payment does not match the saved order');
+        }
         await this.ordersService.updateStripePayment(
           orderId,
           'paid',

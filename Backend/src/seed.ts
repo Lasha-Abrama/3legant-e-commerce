@@ -4,6 +4,7 @@ import * as bcrypt from 'bcryptjs';
 import { Product, ProductSchema } from './products/schemas/product.schema';
 import { Blog, BlogSchema } from './blogs/schemas/blog.schema';
 import { User, UserSchema } from './users/schemas/user.schema';
+import { EDITORIAL_EXPANSIONS } from './blogs/editorial-expansions';
 
 const BLACK = { name: 'Black', hex: '#2a2a28' };
 const GRAY = { name: 'Gray', hex: '#8f8b83' };
@@ -303,7 +304,11 @@ async function seed() {
 
   await BlogModel.deleteMany({});
   await BlogModel.insertMany(
-    blogPosts.map((b) => ({ ...b, slug: buildSlug(b.title) })),
+    blogPosts.map((b) => ({
+      ...b, slug: buildSlug(b.title),
+      category: EDITORIAL_EXPANSIONS[b.title].category,
+      content: b.content + '\n\n' + EDITORIAL_EXPANSIONS[b.title].content,
+    })),
   );
   console.log(`${blogPosts.length} ბლოგპოსტი დაემატა`);
 

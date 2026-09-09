@@ -36,9 +36,11 @@
     var cart = window.CartStore.getCart();
     var subtotal = window.CartStore.subtotal(cart);
     var shippingKey = localStorage.getItem(SHIPPING_KEY) || 'free';
-    var shipping = SHIPPING_OPTIONS[shippingKey];
-    var shippingCost = shipping.cost(subtotal);
-    var total = Math.max(0, subtotal + shippingCost);
+    var shipping = SHIPPING_OPTIONS[shippingKey] || SHIPPING_OPTIONS.free;
+    var pricing = window.CartStore.pricing();
+    if (pricing && !pricing.error) subtotal = pricing.subtotal;
+    var shippingCost = pricing && !pricing.error ? pricing.shippingCost : shipping.cost(subtotal);
+    var total = pricing && !pricing.error ? pricing.total : null;
     var hasUnavailableItems = cart.some(function (item) { return item.unavailable; });
 
     document.getElementById('checkout-body').innerHTML =
@@ -67,11 +69,12 @@
             '<label class="pay-option is-disabled"><input type="radio" name="pay" value="paypal" disabled> PayPal <span class="faint">(coming soon)</span></label>' +
           '<p class="faint" style="margin:16px 0 0;">Card details are entered securely on Stripe Checkout.</p>' +
           '</div>' +
-          '<div id="checkout-error" class="error-text"></div>' +
+          '<div id="checkout-error" class="error-text" role="status">' + escapeHtml(pricing && pricing.error || '') + '</div>' +
         '</div>' +
 
         '<div class="cart-summary">' +
           '<div class="cart-summary__title">Order summary</div>' +
+          window.CartStore.couponHtml() +
           '<div id="order-lines">' +
             cart.map(function (item) {
               return (
@@ -88,12 +91,14 @@
           '</div>' +
           '<div class="summary-line"><span>Shipping</span><span>' + shipping.label + (shippingCost ? ' (' + fmt(shippingCost) + ')' : '') + '</span></div>' +
           '<div class="summary-line" style="padding-bottom:12px;border-bottom:1px solid var(--border);"><span>Subtotal</span><span>' + fmt(subtotal) + '</span></div>' +
-          '<div class="summary-total"><span>Total</span><span>' + fmt(total) + '</span></div>' +
+          '<div class="summary-line"><span>Discount</span><span>' + (pricing && pricing.discount ? '−' + fmt(pricing.discount) : fmt(0)) + '</span></div>' +
+          '<div class="summary-total"><span>Total</span><span>' + (total === null ? '—' : fmt(total)) + '</span></div>' +
           (hasUnavailableItems ? '<div class="error-text" style="margin-bottom:12px;">Remove unavailable products before checkout.</div>' : '') +
-          '<button class="btn btn--dark btn--block" id="place-order-btn"' + (hasUnavailableItems ? ' disabled' : '') + '>Place Order</button>' +
+          '<button class="btn btn--dark btn--block" id="place-order-btn"' + (hasUnavailableItems || total === null ? ' disabled' : '') + '>Place Order</button>' +
         '</div>' +
       '</div>';
 
+    window.CartStore.wireCoupon(document.getElementById('checkout-body'));
     document.querySelectorAll('[data-field]').forEach(function (el) {
       el.addEventListener('input', function () { form[el.getAttribute('data-field')] = el.value; });
       el.addEventListener('change', function () { form[el.getAttribute('data-field')] = el.value; });
@@ -113,7 +118,9 @@
     var errorEl = document.getElementById('checkout-error');
     errorEl.textContent = '';
     var required = ['firstName', 'lastName', 'phone', 'email', 'street', 'city', 'state', 'zip', 'country'];
-    var missing = required.filter(function (k) { return !form[k]; });
+    var missing = required.filter(function (k) { return !form[k].trim(); });
+    var invalid = Array.from(document.querySelectorAll('[data-field]')).find(function (input) { return !input.checkValidity(); });
+    if (invalid) { invalid.reportValidity(); return; }
     if (missing.length) {
       errorEl.textContent = 'გთხოვთ შეავსოთ ყველა სავალდებულო ველი';
       return;
@@ -131,6 +138,7 @@
       shippingAddress: { street: form.street, city: form.city, state: form.state, zip: form.zip, country: form.country },
       paymentMethod: form.paymentMethod,
       shippingOption: shippingKey,
+      couponCode: localStorage.getItem('lc_coupon') || '',
     };
 
     var btn = document.getElementById('place-order-btn');
@@ -228,16 +236,23 @@
 
   function renderComplete(order) {
     renderSteps(3);
+    document.querySelector('.page-title').textContent = 'Complete!';
+    var date = new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('checkout-body').innerHTML =
-      '<div class="order-complete">' +
-        '<div class="order-complete__icon">&#10003;</div>' +
-        '<h2 style="font-size:26px;font-weight:600;margin-bottom:12px;">Thank you, your order is placed!</h2>' +
-        '<p class="muted" style="font-size:14px;margin-bottom:24px;">Order total <strong>' + fmt(order.total) + '</strong> &middot; payment confirmed</p>' +
-        '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
-          '<a class="btn btn--dark" href="account.html?tab=orders">View my orders</a>' +
-          '<a class="btn btn--outline" href="index.html">Continue shopping</a>' +
-        '</div>' +
-      '</div>';
+      '<section class="order-complete"><p class="order-thanks">Thank you! 🎉</p>' +
+      '<h2>Your order has been received</h2><div class="complete-products">' +
+      order.items.map(function (item) {
+        return '<a href="product.html?id=' + encodeURIComponent(item.productId) + '" class="complete-product">' +
+          cartImageHtml(item) + '<span class="complete-qty">' + item.qty + '</span><span class="complete-name">' +
+          escapeHtml(item.name) + '</span></a>';
+      }).join('') + '</div><dl class="complete-meta">' +
+      '<dt>Order code:</dt><dd>' + escapeHtml(order.orderCode || order._id) + '</dd>' +
+      '<dt>Date:</dt><dd>' + date + '</dd>' +
+      (order.discount ? '<dt>Discount (' + escapeHtml(order.couponCode) + '):</dt><dd>−' + fmt(order.discount) + '</dd>' : '') +
+      '<dt>Total:</dt><dd>' + fmt(order.total) + '</dd>' +
+      '<dt>Payment method:</dt><dd>Stripe Checkout</dd></dl>' +
+      '<a class="btn btn--dark" href="account.html?tab=orders">Purchase history</a>' +
+      '<a class="complete-shopping" href="shop.html">Continue shopping</a></section>';
   }
 
   function renderPaymentVerification() {
@@ -266,9 +281,8 @@
         return;
       }
       if (order.paymentStatus === 'paid') {
-        window.CartStore.clear();
+        window.CartStore.removePurchased(order);
         clearPendingOrder();
-        window.history.replaceState({}, '', 'checkout.html');
         renderComplete(order);
         return;
       }
@@ -293,10 +307,13 @@
     });
   }
 
-  Promise.all([apiGetSilent('/auth/me'), window.CartStore.sync()]).then(function (results) {
+  window.addEventListener('pricing-updated', function () {
+    if (document.getElementById('place-order-btn')) renderForm();
+  });
+  Promise.all([apiGetSilent('/auth/me'), qs('payment') === 'success' ? Promise.resolve() : window.CartStore.sync().then(function () { return window.CartStore.refreshPricing(); })]).then(function (results) {
     var res = results[0];
     if (!res || !res.user) {
-      window.location.href = 'login.html?next=' + encodeURIComponent('checkout.html');
+      window.location.href = 'login.html?next=' + encodeURIComponent('checkout.html' + window.location.search);
       return;
     }
     form.firstName = res.user.firstName || '';

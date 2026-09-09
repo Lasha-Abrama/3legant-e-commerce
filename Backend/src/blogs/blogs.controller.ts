@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { AuthenticatedRequest } from '../common/types/authenticated-request';
 import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
@@ -22,8 +23,8 @@ export class BlogsController {
 
   @Post()
   @UseGuards(AdminGuard)
-  create(@Body() dto: CreateBlogDto) {
-    return this.blogsService.create(dto);
+  create(@Req() request: AuthenticatedRequest, @Body() dto: CreateBlogDto) {
+    return this.blogsService.create(dto, String(request.user._id));
   }
 
   @Patch(':id')

@@ -76,5 +76,105 @@
   function subtotal(items) { return (items || getCart()).reduce(function (s, it) { return s + it.price * it.qty; }, 0); }
   function count(items) { return (items || getCart()).reduce(function (s, it) { return s + it.qty; }, 0); }
 
-  window.CartStore = { getCart: getCart, setCart: setCart, updateQty: updateQty, removeItem: removeItem, addItem: addItem, sync: sync, clear: clear, subtotal: subtotal, count: count, canIncrement: canIncrement, stockLimit: stockLimit, KEY: KEY };
+
+  var pricingState = null;
+  var pricingKey = '';
+  var pricingRequest = null;
+  function quotePayload(code) {
+    var shipping = localStorage.getItem('lc_shipping') || 'free';
+    if (!['free', 'express', 'pickup'].includes(shipping)) shipping = 'free';
+    return { items: getCart().map(function (item) { return { productId: item.id, color: item.color, qty: item.qty }; }),
+      shippingOption: shipping, couponCode: code === undefined ? (localStorage.getItem('lc_coupon') || '') : code };
+  }
+  function pricing() {
+    return pricingKey === JSON.stringify(quotePayload()) ? pricingState : null;
+  }
+  function refreshPricing() {
+    var payload = quotePayload();
+    var key = JSON.stringify(payload);
+    if (pricingKey === key && pricingState) return Promise.resolve(pricingState);
+    if (pricingRequest && pricingRequest.key === key) return pricingRequest.promise;
+    var request = payload.items.length ? apiPost('/orders/quote', payload) :
+      Promise.resolve({ subtotal: 0, discount: 0, shippingCost: 0, total: 0 });
+    var promise = request.then(function (result) {
+      if (key !== JSON.stringify(quotePayload())) return result;
+      pricingKey = key;
+      pricingState = result && !result._networkError && (!result._status || result._status < 400)
+        ? result : { error: (result && result.message) || 'Unable to calculate your total. Please try again.' };
+      if (!pricingState.error && Array.isArray(pricingState.items)) {
+        var canonical = pricingState.items;
+        localStorage.setItem(KEY, JSON.stringify(getCart().map(function (item) {
+          var matched = canonical.find(function (line) { return String(line.productId) === item.id && line.color === item.color; });
+          return matched ? Object.assign({}, item, { name: matched.name, price: matched.price, image: matched.image || item.image }) : item;
+        })));
+      }
+      window.dispatchEvent(new CustomEvent('pricing-updated'));
+      return pricingState;
+    }).finally(function () {
+      if (pricingRequest && pricingRequest.key === key) pricingRequest = null;
+    });
+    pricingRequest = { key: key, promise: promise };
+    return promise;
+  }
+  function applyCoupon(code) {
+    code = code.trim().toUpperCase();
+    var payload = quotePayload(code);
+    if (!payload.items.length) return Promise.resolve({ error: 'Add a product before applying a coupon.' });
+    return apiPost('/orders/quote', payload).then(function (result) {
+      if (!result || result._status >= 400 || result._networkError) {
+        return { error: (result && result.message) || 'Coupon could not be applied.' };
+      }
+      localStorage.setItem('lc_coupon', code);
+      pricingKey = JSON.stringify(payload);
+      pricingState = result;
+      window.dispatchEvent(new CustomEvent('pricing-updated'));
+      return result;
+    });
+  }
+  function removePurchased(order) {
+    var key = 'lc_cleared_order_' + order._id;
+    if (order.paymentStatus !== 'paid' || localStorage.getItem(key)) return;
+    var purchased = new Map();
+    order.items.forEach(function (item) {
+      var itemKey = String(item.productId) + ':' + item.color;
+      purchased.set(itemKey, (purchased.get(itemKey) || 0) + item.qty);
+    });
+    var remaining = getCart().map(function (item) {
+      var quantity = purchased.get(item.id + ':' + item.color) || 0;
+      return Object.assign({}, item, { qty: Math.max(0, item.qty - quantity) });
+    }).filter(function (item) { return item.qty > 0; });
+    localStorage.setItem(key, 'true');
+    localStorage.removeItem('lc_coupon');
+    setCart(remaining);
+  }
+  function couponHtml() {
+    return '<section class="coupon-section"><h3>Have a coupon?</h3><p>Add your code for an instant cart discount.</p>' +
+      '<form class="coupon-form"><img src="images/icons/ticket-percent.svg" alt="">' +
+      '<input name="coupon" aria-label="Coupon code" placeholder="Coupon Code" maxlength="32" value="' +
+      escapeHtml(localStorage.getItem('lc_coupon') || '') + '"><button type="submit">Apply</button></form>' +
+      '<button class="coupon-remove" type="button"' + (localStorage.getItem('lc_coupon') ? '' : ' hidden') +
+      '>Remove coupon</button><p class="coupon-message" role="status"></p></section>';
+  }
+  function wireCoupon(root) {
+    var section = root.querySelector('.coupon-section');
+    if (!section) return;
+    function submit(code) {
+      var button = section.querySelector('[type=submit]');
+      button.disabled = true;
+      applyCoupon(code).then(function (result) {
+        var current = root.querySelector('.coupon-section') || section;
+        current.querySelector('.coupon-message').textContent = result.error || (code ? 'Coupon applied.' : 'Coupon removed.');
+        current.querySelector('.coupon-remove').hidden = !localStorage.getItem('lc_coupon');
+        if (!result.error) current.querySelector('input').value = code;
+        button.disabled = false;
+      });
+    }
+    section.querySelector('form').addEventListener('submit', function (event) {
+      event.preventDefault(); submit(section.querySelector('input').value);
+    });
+    section.querySelector('.coupon-remove').addEventListener('click', function () { submit(''); });
+
+  }
+
+  window.CartStore = { getCart: getCart, setCart: setCart, updateQty: updateQty, removeItem: removeItem, addItem: addItem, sync: sync, clear: clear, subtotal: subtotal, count: count, canIncrement: canIncrement, stockLimit: stockLimit, KEY: KEY, pricing: pricing, refreshPricing: refreshPricing, applyCoupon: applyCoupon, removePurchased: removePurchased, couponHtml: couponHtml, wireCoupon: wireCoupon };
 })();

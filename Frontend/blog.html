@@ -11,14 +11,15 @@
     />
     <link rel="stylesheet" href="css/styles.css" />
     <link rel="stylesheet" href="css/design.css" />
+    <link rel="stylesheet" href="css/polish.css" />
   </head>
   <body class="page-blog">
     <div id="site-header" data-promo="false" data-active="Blog"></div>
 
     <main>
-      <div class="page-hero" style="height: 340px">
+      <div class="page-hero" >
         <img
-          src="images/shop-hero.jpg"
+          src="images/blog-hero.png"
           alt="Neutral interior with soft natural light"
           style="
             width: 100%;
@@ -30,7 +31,7 @@
         />
         <div class="page-hero__overlay">
           <div class="page-hero__crumb">Home / Blog</div>
-          <div class="page-hero__title" style="font-size: 46px">Our Blog</div>
+          <div class="page-hero__title" >Our Blog</div>
           <div class="page-hero__sub">Home ideas and design inspiration</div>
         </div>
       </div>
@@ -51,7 +52,7 @@
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
             </select>
-          </label>
+          </label><div class="layout-selector" id="blog-layouts" aria-label="Blog layout"></div>
         </div>
 
         <div class="grid-3" id="post-grid"></div>
@@ -71,6 +72,7 @@
     <script src="js/api.js"></script>
     <script src="js/cart.js"></script>
     <script src="js/newsletter.js"></script>
+    <script src="js/ui.js"></script>
     <script src="js/header.js"></script>
     <script src="js/blog.js"></script>
   </body>

@@ -6,7 +6,7 @@
     { key: 'pickup', label: 'Pick up (5% off)', cost: function (subtotal) { return -Math.round(subtotal * 0.05 * 100) / 100; }, priceLabel: null },
   ];
 
-  function getShipping() { return localStorage.getItem(SHIPPING_KEY) || 'free'; }
+  function getShipping() { var key = localStorage.getItem(SHIPPING_KEY); return ['free', 'express', 'pickup'].includes(key) ? key : 'free'; }
   function setShipping(key) { localStorage.setItem(SHIPPING_KEY, key); }
 
   function render() {
@@ -40,7 +40,7 @@
 
       container.querySelectorAll('[data-act]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          var idx = Number(btn.getAttribute('data-idx'));
+          var idx = Number(btn.closest('[data-idx]').getAttribute('data-idx'));
           var item = items[idx];
           var act = btn.getAttribute('data-act');
           if (act === 'inc') window.CartStore.updateQty(item.id, item.color, item.qty + 1);
@@ -70,18 +70,23 @@
       });
     });
 
-    var shipping = SHIPPING_OPTIONS.filter(function (o) { return o.key === shippingKey; })[0];
-    var total = Math.max(0, subtotal + shipping.cost(subtotal));
-    document.getElementById('subtotal-label').textContent = fmt(subtotal);
-    document.getElementById('total-label').textContent = fmt(total);
+    var pricing = window.CartStore.pricing();
+    window.CartStore.refreshPricing();
+    document.getElementById('subtotal-label').textContent = pricing && !pricing.error ? fmt(pricing.subtotal) : '—';
+    document.getElementById('total-label').textContent = pricing && !pricing.error ? fmt(pricing.total) : '—';
+    document.getElementById('discount-label').textContent = pricing && pricing.discount ? '−' + fmt(pricing.discount) : fmt(0);
+    document.getElementById('pricing-error').textContent = pricing && pricing.error || '';
     var checkoutLink = document.getElementById('cart-checkout-link');
-    var canCheckout = items.length > 0 && items.every(function (item) { return !item.unavailable; });
+    var canCheckout = pricing && !pricing.error && items.length > 0 && items.every(function (item) { return !item.unavailable; });
     checkoutLink.classList.toggle('is-disabled', !canCheckout);
     checkoutLink.setAttribute('aria-disabled', String(!canCheckout));
     if (canCheckout) checkoutLink.setAttribute('href', 'checkout.html');
     else checkoutLink.removeAttribute('href');
   }
 
+  document.getElementById('cart-coupon').innerHTML = window.CartStore.couponHtml();
+  window.CartStore.wireCoupon(document.getElementById('cart-coupon'));
+  window.addEventListener('pricing-updated', render);
   render();
   window.CartStore.sync().then(render);
   window.addEventListener('cart-updated', render);

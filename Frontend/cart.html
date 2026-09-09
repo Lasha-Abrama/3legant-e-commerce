@@ -11,6 +11,7 @@
     />
     <link rel="stylesheet" href="css/styles.css" />
     <link rel="stylesheet" href="css/design.css" />
+    <link rel="stylesheet" href="css/polish.css" />
   </head>
   <body class="page-cart">
     <div id="site-header" data-promo="false" data-active="Cart"></div>
@@ -42,7 +43,7 @@
               <span>Product</span><span>Quantity</span><span>Price</span
               ><span>Subtotal</span>
             </div>
-            <div id="cart-items"></div>
+            <div id="cart-items"></div><div id="cart-coupon"></div>
           </div>
 
           <div class="cart-summary">
@@ -54,6 +55,7 @@
             >
               <span>Subtotal</span><span id="subtotal-label"></span>
             </div>
+            <div class="summary-line"><span>Discount</span><span id="discount-label"></span></div><div id="pricing-error" class="error-text" role="status"></div>
             <div class="summary-total">
               <span>Total</span><span id="total-label"></span>
             </div>
@@ -72,6 +74,7 @@
 
     <script src="js/api.js"></script>
     <script src="js/cart.js"></script>
+    <script src="js/ui.js"></script>
     <script src="js/header.js"></script>
     <script src="js/cart-page.js"></script>
   </body>

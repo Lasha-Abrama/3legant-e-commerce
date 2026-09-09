@@ -8,14 +8,9 @@ import {
   OrderStatus,
   PaymentStatus,
 } from './schemas/order.schema';
-import { CreateOrderDto } from './dto/create-order.dto';
+import { CreateOrderDto, QuoteOrderDto } from './dto/create-order.dto';
+import { calculatePricing } from './pricing';
 import { ProductsService } from '../products/products.service';
-
-const SHIPPING_COST: Record<string, (subtotal: number) => number> = {
-  free: () => 0,
-  express: () => 15,
-  pickup: (subtotal) => -Math.round(subtotal * 0.05 * 100) / 100,
-};
 
 const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   Processing: ['Shipped', 'Cancelled'],
@@ -32,10 +27,7 @@ export class OrdersService {
     @InjectConnection() private readonly connection: Connection,
   ) {}
 
-  async create(userId: string, dto: CreateOrderDto) {
-    if (dto.paymentMethod !== 'card') {
-      throw new BadRequestException('ამ ეტაპზე მხოლოდ ბარათით გადახდაა ხელმისაწვდომი');
-    }
+  async quote(dto: QuoteOrderDto) {
     const products = await Promise.all(
       dto.items.map((item) => this.productsService.findOne(item.productId)),
     );
@@ -59,15 +51,20 @@ export class OrdersService {
         color: color.name,
         price: product.price,
         qty: item.qty,
+        ...(product.images?.[0] ? { image: product.images[0] } : {}),
       };
     });
-    const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.qty, 0);
-    const shippingCost = SHIPPING_COST[dto.shippingOption](subtotal);
-    const total = Math.max(0, Math.round((subtotal + shippingCost) * 100) / 100);
+    return { items: orderItems, ...calculatePricing(orderItems, dto.shippingOption, dto.couponCode) };
+  }
 
+  async create(userId: string, dto: CreateOrderDto) {
+    if (dto.paymentMethod !== 'card') {
+      throw new BadRequestException('ამ ეტაპზე მხოლოდ ბარათით გადახდაა ხელმისაწვდომი');
+    }
+    const pricing = await this.quote(dto);
     const order = new this.orderModel({
       user: new Types.ObjectId(userId),
-      items: orderItems,
+      ...pricing,
       contact: dto.contact,
       shippingAddress: dto.shippingAddress,
       paymentMethod: dto.paymentMethod,
@@ -75,8 +72,6 @@ export class OrdersService {
       paymentStatus: 'pending',
       checkoutSessionStatus: 'none',
       inventoryStatus: 'pending',
-      subtotal: Math.round(subtotal * 100) / 100,
-      total,
     });
     return order.save();
   }

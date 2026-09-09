@@ -1,10 +1,18 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 
 export type BlogDocument = HydratedDocument<Blog>;
 
 @Schema({ timestamps: true })
 export class Blog {
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
+  author?: Types.ObjectId;
+
+  @Prop({ trim: true, default: 'Design' })
+  category: string;
+
+  @Prop({ type: [String], default: [] })
+  supportingImages: string[];
   @Prop({ required: true, trim: true })
   title: string;
 

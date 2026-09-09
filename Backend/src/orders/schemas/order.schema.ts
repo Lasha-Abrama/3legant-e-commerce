@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
+import { randomUUID } from 'crypto';
 
 export type OrderDocument = HydratedDocument<Order>;
 
@@ -32,6 +33,8 @@ export type InventoryStatus = (typeof INVENTORY_STATUSES)[number];
 
 @Schema({ _id: false })
 export class OrderItem {
+  @Prop({ trim: true })
+  image?: string;
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Product', required: true })
   productId: Types.ObjectId;
 
@@ -89,6 +92,20 @@ export const OrderShippingAddressSchema = SchemaFactory.createForClass(OrderShip
 
 @Schema({ timestamps: true })
 export class Order {
+  @Prop({ unique: true, sparse: true, default: () => '3L-' + randomUUID().replace(/-/g, '').slice(0, 16).toUpperCase() })
+  orderCode: string;
+
+  @Prop({ default: '' })
+  couponCode: string;
+
+  @Prop({ default: 0, min: 0, max: 100 })
+  discountPercent: number;
+
+  @Prop({ default: 0, min: 0 })
+  discount: number;
+
+  @Prop({ default: 0 })
+  shippingCost: number;
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   user: Types.ObjectId;
 

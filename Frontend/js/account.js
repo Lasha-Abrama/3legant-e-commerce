@@ -137,7 +137,7 @@
     var has = addr && (addr.street || addr.fullName);
     return (
       '<div class="address-card" data-type="' + type + '">' +
-        '<div class="address-card__head"><span style="font-size:13px;font-weight:600;">' + label + '</span><span style="font-size:12px;text-decoration:underline;cursor:pointer;" class="edit-address" data-type="' + type + '">&#9998; Edit</span></div>' +
+        '<div class="address-card__head"><span style="font-size:13px;font-weight:600;">' + label + '</span><button type="button" class="edit-address" data-type="' + type + '">&#9998; Edit</button></div>' +
         '<div class="address-view" style="font-size:13px;color:#4a4843;line-height:1.7;">' +
           (has
             ? escapeHtml(addr.fullName || '') + '<br>' + escapeHtml(addr.phone || '') + '<br>' + escapeHtml([addr.street, addr.city, addr.state, addr.zip, addr.country].filter(Boolean).join(', '))
@@ -165,6 +165,7 @@
   }
 
   function openAddressForm(type) {
+    renderAddressTab(document.getElementById('account-content'));
     var addr = (type === 'billing' ? state.user.billingAddress : state.user.shippingAddress) || {};
     var card = document.querySelector('.address-card[data-type="' + type + '"]');
     card.innerHTML =
@@ -183,7 +184,11 @@
       '<div class="error-text" id="address-msg"></div>' +
       '<button class="btn btn--dark" id="save-address">Save</button>';
 
+    card.querySelectorAll('input').forEach(function (input) { input.setAttribute('aria-label', input.placeholder); input.required = true; input.maxLength = 200; });
     document.getElementById('save-address').addEventListener('click', function () {
+      var invalid = Array.from(card.querySelectorAll('input')).find(function (input) { return !input.value.trim() || !input.checkValidity(); });
+      if (invalid) { invalid.reportValidity(); invalid.focus(); return; }
+      this.disabled = true;
       apiPatch('/users/me/address', {
         type: type,
         fullName: document.getElementById('addr-fullName').value,
@@ -195,6 +200,7 @@
         country: document.getElementById('addr-country').value,
       }).then(function (res) {
         if (!res || res._status >= 400) {
+          document.getElementById('save-address').disabled = false;
           document.getElementById('address-msg').textContent = (res && res.message) || 'Address could not be saved.';
           return;
         }
@@ -218,16 +224,15 @@
         return;
       }
       list.innerHTML =
-        '<div class="orders-head"><span>Number ID</span><span>Date</span><span>Status</span><span>Price</span><span></span></div>' +
+        '<div class="orders-head"><span>Number ID</span><span>Date</span><span>Status</span><span>Price</span></div>' +
         orders.map(function (o) {
           var date = new Date(o.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
           return (
             '<div class="order-row">' +
-              '<span data-label="Number ID">#' + escapeHtml(o._id.slice(-8)) + '</span>' +
+              '<span data-label="Number ID"><button class="order-code-link" data-order-id="' + escapeHtml(o._id) + '">' + escapeHtml(o.orderCode || o._id) + '</button></span>' +
               '<span data-label="Date">' + date + '</span>' +
-              '<span data-label="Status" style="color:var(--green);">' + escapeHtml(o.status) + '</span>' +
+              '<span data-label="Status">' + escapeHtml(o.paymentStatus === 'paid' ? o.status : o.paymentStatus) + '</span>' +
               '<span data-label="Price">' + fmt(o.total) + '</span>' +
-              '<button class="btn btn--ghost btn-sm" data-order-id="' + escapeHtml(o._id) + '">View</button>' +
             '</div>'
           );
         }).join('');
@@ -262,7 +267,7 @@
       details.className = '';
       details.innerHTML =
         '<div class="order-detail-meta">' +
-          '<div><span>Order number</span><strong>#' + escapeHtml(order._id.slice(-8)) + '</strong></div>' +
+          '<div><span>Order number</span><strong>#' + escapeHtml(order.orderCode || order._id) + '</strong></div>' +
           '<div><span>Placed</span><strong>' + date + '</strong></div>' +
           '<div><span>Payment</span><strong>' + escapeHtml(order.paymentStatus) + '</strong></div>' +
           '<div><span>Status</span><strong>' + escapeHtml(order.status) + '</strong></div>' +
@@ -271,6 +276,7 @@
           '<div class="order-detail-items">' + order.items.map(function (item) {
             return '<div><span>' + escapeHtml(item.name) + ' <small>· ' + escapeHtml(item.color) + ' · Qty ' + item.qty + '</small></span><strong>' + fmt(item.price * item.qty) + '</strong></div>';
           }).join('') + '</div>' +
+          (order.discount ? '<div class="summary-line"><span>Discount (' + escapeHtml(order.couponCode) + ')</span><strong>−' + fmt(order.discount) + '</strong></div>' : '') +
           '<div class="order-detail-total"><span>Total</span><strong>' + fmt(order.total) + '</strong></div>' +
         '</div>' +
         '<div class="order-detail-block"><strong>Shipping address</strong><p>' +
@@ -292,24 +298,23 @@
         list.innerHTML = '<div class="faint" style="font-size:13px;">Your wishlist is empty. <a href="shop.html" style="color:var(--ink);">Browse products &rarr;</a></div>';
         return;
       }
-      list.innerHTML = items.map(function (p) {
+      list.innerHTML = '<div class="wishlist-head"><span>Product</span><span>Price</span><span>Action</span></div>' + items.map(function (p) {
         var color = (p.colors && p.colors[0] && p.colors[0].name) || 'Default';
         return (
           '<div class="wishlist-row">' +
             cartImageHtml(p) +
-            '<div style="flex:1;">' +
-              '<div style="font-size:13px;font-weight:500;">' + escapeHtml(p.name) + '</div>' +
+            '<div class="wishlist-product">' +
+              '<div style="font-size:13px;font-weight:500;"><a href="product.html?id=' + encodeURIComponent(p._id) + '">' + escapeHtml(p.name) + '</a></div>' +
               '<div class="faint" style="font-size:11px;">Color: ' + escapeHtml(color) + '</div>' +
-              '<div style="font-size:13px;font-weight:600;margin-top:2px;">' + fmt(p.price) + '</div>' +
-            '</div>' +
+              '</div><div class="wishlist-price">' + fmt(p.price) + '</div>' +
             '<button class="btn btn--dark" data-add="' + escapeHtml(p._id) + '" data-name="' + escapeHtml(p.name) + '" data-color="' + escapeHtml(color) + '" data-price="' + escapeHtml(p.price) + '" data-stock="' + escapeHtml(p.stock) + '" style="padding:10px 18px;font-size:12px;"' + (Number(p.stock) > 0 ? '' : ' disabled') + '>' + (Number(p.stock) > 0 ? 'Add to cart' : 'Out of stock') + '</button>' +
-            '<button class="remove-btn" data-remove="' + escapeHtml(p._id) + '" style="margin-left:8px;">&#10005;</button>' +
+            '<button class="remove-btn" data-remove="' + escapeHtml(p._id) + '" aria-label="Remove from wishlist">&#10005;</button>' +
           '</div>'
         );
       }).join('');
       list.querySelectorAll('[data-add]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          window.CartStore.addItem({ id: btn.getAttribute('data-add'), name: btn.getAttribute('data-name'), color: btn.getAttribute('data-color'), price: parseFloat(btn.getAttribute('data-price')), stock: parseInt(btn.getAttribute('data-stock'), 10), qty: 1 });
+          window.CartStore.addItem({ id: btn.getAttribute('data-add'), name: btn.getAttribute('data-name'), color: btn.getAttribute('data-color'), price: parseFloat(btn.getAttribute('data-price')), stock: parseInt(btn.getAttribute('data-stock'), 10), image: productImageUrl(items.find(function (item) { return item._id === btn.getAttribute('data-add'); })), qty: 1 });
           btn.textContent = 'Added ✓';
         });
       });

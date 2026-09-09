@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, QueryFilter } from 'mongoose';
+import { Model, QueryFilter, Types } from 'mongoose';
 import { Blog, BlogDocument } from './schemas/blog.schema';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
@@ -17,6 +17,8 @@ export class BlogsService {
   async findAll(query: FindBlogsQueryDto): Promise<PaginatedResult<Blog>> {
     const filter: QueryFilter<BlogDocument> = {};
     if (typeof query.featured === 'boolean') filter.featured = query.featured;
+    if (query.category) filter.category = query.category;
+    if (query.exclude) filter._id = { $ne: new Types.ObjectId(query.exclude) };
     if (query.search) {
       filter.title = { $regex: escapeRegularExpression(query.search), $options: 'i' };
     }
@@ -38,16 +40,16 @@ export class BlogsService {
   }
 
   async findOne(id: string): Promise<BlogDocument> {
-    const blog = await this.blogModel.findById(id).exec();
+    const blog = await this.blogModel.findById(id).populate('author', 'firstName lastName displayName').exec();
     if (!blog) {
       throw new NotFoundException('ბლოგპოსტი ვერ მოიძებნა');
     }
     return blog;
   }
 
-  async create(dto: CreateBlogDto): Promise<Blog> {
+  async create(dto: CreateBlogDto, authorId: string): Promise<Blog> {
     const slug = await this.buildUniqueSlug(dto.title);
-    const blog = new this.blogModel({ ...dto, slug });
+    const blog = new this.blogModel({ ...dto, slug, author: new Types.ObjectId(authorId) });
     return blog.save();
   }
 
