@@ -19,6 +19,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { validateEnvironment } from './config/environment';
 import { HealthController } from './health.controller';
 import { EmailModule } from './email/email.module';
+import { QuestionsModule } from './questions/questions.module';
 
 const frontendRootPath = [
   join(__dirname, '..', '..', 'Frontend'),
@@ -57,6 +58,7 @@ const frontendRootPath = [
     ProductsModule,
     BlogsModule,
     ReviewsModule,
+    QuestionsModule,
     OrdersModule,
     ContactModule,
     UploadsModule,
