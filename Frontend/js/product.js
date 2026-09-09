@@ -14,7 +14,7 @@
     var p = state.product;
     setBreadcrumb(document.getElementById('crumb'), [{ label: 'Home', href: '/' }, { label: 'Shop', href: 'shop.html' }, { label: p.category, href: 'shop.html?category=' + encodeURIComponent(p.category) }, { label: p.name }]);
   }
-  function offerHtml(p) { return (p.originalPrice > p.price || p.discountLabel) && Date.parse(p.offerExpiresAt) > Date.now() ? '<div class="offer-countdown" id="offer-countdown"><span class="offer-countdown__label">Offer expires in:</span><div class="offer-countdown__units" id="offer-units"></div></div>' : ''; }
+  function offerHtml(p) { return (p.originalPrice > p.price || p.discountLabel) && Date.parse(p.offerExpiresAt) > Date.now() ? '<div class="offer-countdown" id="offer-countdown"><span class="offer-countdown__label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6M12 2v3"/></svg>Offer expires in:</span><div class="offer-countdown__units" id="offer-units"></div></div>' : ''; }
 
   function renderProduct() {
     expireDisplayedOffer();
