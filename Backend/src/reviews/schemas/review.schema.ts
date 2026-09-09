@@ -3,6 +3,20 @@ import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 
 export type ReviewDocument = HydratedDocument<Review>;
 
+@Schema({ _id: true, timestamps: true })
+export class ReviewReply {
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
+  user: Types.ObjectId;
+
+  @Prop({ required: true, trim: true })
+  authorName: string;
+
+  @Prop({ required: true, trim: true })
+  text: string;
+}
+
+export const ReviewReplySchema = SchemaFactory.createForClass(ReviewReply);
+
 @Schema({ timestamps: true })
 export class Review {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Product', required: true })
@@ -19,6 +33,12 @@ export class Review {
 
   @Prop({ required: true, trim: true })
   text: string;
+
+  @Prop({ type: [MongooseSchema.Types.ObjectId], ref: 'User', default: [] })
+  likedBy: Types.ObjectId[];
+
+  @Prop({ type: [ReviewReplySchema], default: [] })
+  replies: ReviewReply[];
 }
 
 export const ReviewSchema = SchemaFactory.createForClass(Review);

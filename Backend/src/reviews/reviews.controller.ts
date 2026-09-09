@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { AuthenticatedRequest } from '../common/types/authenticated-request';
+import { UpdateReviewDto } from './dto/update-review.dto';
+import { CreateReviewReplyDto } from './dto/create-review-reply.dto';
 
 @Controller('products/:productId/reviews')
 export class ReviewsController {
@@ -23,5 +25,38 @@ export class ReviewsController {
   ) {
     const authorName = request.user.displayName || `${request.user.firstName} ${request.user.lastName}`;
     return this.reviewsService.create(productId, String(request.user._id), authorName, dto);
+  }
+
+  @Patch(':reviewId')
+  @UseGuards(JwtAuthGuard)
+  update(
+    @Param('productId', ParseObjectIdPipe) productId: string,
+    @Param('reviewId', ParseObjectIdPipe) reviewId: string,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateReviewDto,
+  ) {
+    return this.reviewsService.update(productId, reviewId, String(request.user._id), dto);
+  }
+
+  @Post(':reviewId/like')
+  @UseGuards(JwtAuthGuard)
+  toggleLike(
+    @Param('productId', ParseObjectIdPipe) productId: string,
+    @Param('reviewId', ParseObjectIdPipe) reviewId: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.reviewsService.toggleLike(productId, reviewId, String(request.user._id));
+  }
+
+  @Post(':reviewId/replies')
+  @UseGuards(JwtAuthGuard)
+  reply(
+    @Param('productId', ParseObjectIdPipe) productId: string,
+    @Param('reviewId', ParseObjectIdPipe) reviewId: string,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreateReviewReplyDto,
+  ) {
+    const authorName = request.user.displayName || `${request.user.firstName} ${request.user.lastName}`;
+    return this.reviewsService.addReply(productId, reviewId, String(request.user._id), authorName, dto.text);
   }
 }

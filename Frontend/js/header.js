@@ -185,9 +185,9 @@
       body.innerHTML = items.map(function (item, idx) {
         return (
           '<div class="cart-row">' +
-            cartImageHtml(item) +
+            '<a class="cart-row__product-link" href="product.html?id=' + encodeURIComponent(item.id) + '" aria-label="View ' + escapeHtml(item.name || 'product') + '">' + cartImageHtml(item) + '</a>' +
             '<div class="cart-row__info">' +
-              '<div class="cart-row__top"><span class="cart-row__name">' + escapeHtml(item.name || '') + '</span><span class="cart-row__name">' + fmt(item.price * item.qty) + '</span></div>' +
+              '<div class="cart-row__top"><a class="cart-row__name" href="product.html?id=' + encodeURIComponent(item.id) + '">' + escapeHtml(item.name || '') + '</a><span class="cart-row__name">' + fmt(item.price * item.qty) + '</span></div>' +
               '<div class="cart-row__color">Color: ' + escapeHtml(item.color || '') + '</div>' +
               (window.CartStore.stockLimit(item) === null ? '' : '<div class="cart-row__color">' + window.CartStore.stockLimit(item) + ' available</div>') +
               (item.unavailable ? '<div class="error-text">Currently unavailable</div>' : '') +
