@@ -10,6 +10,21 @@
     { icon: 'lock.svg', title: 'Secure Payments', sub: 'Secured by Stripe' },
     { icon: 'call.svg', title: '24/7 Support', sub: 'Phone and email support' },
   ];
+  var HOME_PRODUCT_IMAGES = {
+    'Loveseat Sofa': 'images/home/loveseat-sofa.png',
+    'Amber Table Lamp': 'images/home/table-lamp.png',
+    'Table Lamp Gold': 'images/home/beige-table-lamp.png',
+    'Bamboo Basket': 'images/home/bamboo-basket.png',
+    'Toaster': 'images/home/toaster.png',
+    'Toasted': 'images/home/toaster.png',
+  };
+  var HOME_PRODUCT_ORDER = ['Loveseat Sofa', 'Amber Table Lamp', 'Table Lamp Gold', 'Bamboo Basket', 'Toaster', 'Toasted'];
+
+  function homeProductCardHtml(product) {
+    var image = HOME_PRODUCT_IMAGES[product.name];
+    if (!image) return productCardHtml(product);
+    return productCardHtml(Object.assign({}, product, { images: [image] }));
+  }
 
   document.getElementById('category-grid').innerHTML = CATEGORIES.map(function (c, index) {
     return (
@@ -64,7 +79,7 @@
         return;
       }
       grid.innerHTML = res.data.length
-        ? res.data.filter(function(p) { return p.newArrival; }).sort(function(a,b) { var order = ['Loveseat Sofa', 'Amber Table Lamp', 'Table Lamp Gold', 'Bamboo Basket']; var x = order.indexOf(a.name), y = order.indexOf(b.name); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y); }).slice(0,8).map(productCardHtml).join('')
+        ? res.data.filter(function(p) { return p.newArrival; }).sort(function(a,b) { var x = HOME_PRODUCT_ORDER.indexOf(a.name), y = HOME_PRODUCT_ORDER.indexOf(b.name); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y); }).slice(0,8).map(homeProductCardHtml).join('')
         : '<div class="shop-empty">No new arrivals yet.</div>';
       wireAddToCartButtons(grid);
     });

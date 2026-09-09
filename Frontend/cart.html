@@ -1,51 +1,78 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cart — 3legant</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css">
-<link rel="stylesheet" href="css/design.css">
-</head>
-<body class="page-cart">
-<div id="site-header" data-promo="false" data-active="Cart"></div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cart — 3legant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/design.css" />
+  </head>
+  <body class="page-cart">
+    <div id="site-header" data-promo="false" data-active="Cart"></div>
 
-<main>
-  <div class="wrap wrap--narrow">
-    <h1 class="page-title center">Cart</h1>
+    <main>
+      <div class="wrap wrap--narrow">
+        <h1 class="page-title center">Cart</h1>
 
-    <div class="step-indicator">
-      <div class="step"><span class="step__dot step__dot--active">1</span><span class="step__label step__label--active">Shopping cart</span></div>
-      <div class="step__line"></div>
-      <div class="step"><span class="step__dot">2</span><span class="step__label">Checkout details</span></div>
-      <div class="step__line"></div>
-      <div class="step"><span class="step__dot">3</span><span class="step__label">Order complete</span></div>
-    </div>
+        <div class="step-indicator">
+          <div class="step">
+            <span class="step__dot step__dot--active">1</span
+            ><span class="step__label step__label--active">Shopping cart</span>
+          </div>
+          <div class="step__line"></div>
+          <div class="step">
+            <span class="step__dot">2</span
+            ><span class="step__label">Checkout details</span>
+          </div>
+          <div class="step__line"></div>
+          <div class="step">
+            <span class="step__dot">3</span
+            ><span class="step__label">Order complete</span>
+          </div>
+        </div>
 
-    <div class="cart-layout">
-      <div>
-        <div class="cart-table-head"><span>Product</span><span>Quantity</span><span>Price</span><span>Subtotal</span></div>
-        <div id="cart-items"></div>
+        <div class="cart-layout">
+          <div>
+            <div class="cart-table-head">
+              <span>Product</span><span>Quantity</span><span>Price</span
+              ><span>Subtotal</span>
+            </div>
+            <div id="cart-items"></div>
+          </div>
+
+          <div class="cart-summary">
+            <div class="cart-summary__title">Cart summary</div>
+            <div id="shipping-options"></div>
+            <div
+              class="summary-line"
+              style="padding-top: 12px; border-top: 1px solid var(--border)"
+            >
+              <span>Subtotal</span><span id="subtotal-label"></span>
+            </div>
+            <div class="summary-total">
+              <span>Total</span><span id="total-label"></span>
+            </div>
+            <a
+              href="checkout.html"
+              class="btn btn--dark btn--block"
+              id="cart-checkout-link"
+              >Checkout</a
+            >
+          </div>
+        </div>
       </div>
+    </main>
 
-      <div class="cart-summary">
-        <div class="cart-summary__title">Cart summary</div>
-        <div id="shipping-options"></div>
-        <div class="summary-line" style="padding-top:12px;border-top:1px solid var(--border);"><span>Subtotal</span><span id="subtotal-label"></span></div>
-        <div class="summary-total"><span>Total</span><span id="total-label"></span></div>
-        <a href="checkout.html" class="btn btn--dark btn--block" id="cart-checkout-link">Checkout</a>
-      </div>
-    </div>
-  </div>
-</main>
+    <div id="site-footer" data-variant="full"></div>
 
-<div id="site-footer" data-variant="full"></div>
-
-<script src="js/api.js"></script>
-<script src="js/cart.js"></script>
-<script src="js/header.js"></script>
-<script src="js/cart-page.js"></script>
-</body>
+    <script src="js/api.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/header.js"></script>
+    <script src="js/cart-page.js"></script>
+  </body>
 </html>

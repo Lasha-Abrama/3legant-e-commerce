@@ -10,7 +10,7 @@
     var paths = {
       search: '<circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path>',
       account: '<circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"></path>',
-      bag: '<path d="M6 8h12l-1 12H7L6 8Z"></path><path d="M9 8V6a3 3 0 0 1 6 0v2"></path>',
+      bag: '<path d="M9 6v1c0 1.657 1.343 3 3 3s3-1.343 3-3V6"></path><path d="M15.612 3H8.389a4 4 0 0 0-3.946 3.342l-1.667 10A4 4 0 0 0 6.722 21h10.556a4 4 0 0 0 3.946-4.658l-1.667-10A4 4 0 0 0 15.612 3Z"></path>',
       menu: '<path d="M4 7h16M4 12h16M4 17h16"></path>',
       truck: '<path d="M3 6h11v10H3zM14 10h4l3 3v3h-7z"></path><circle cx="7" cy="18" r="2"></circle><circle cx="18" cy="18" r="2"></circle>',
       money: '<rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M7 9h.01M17 15h.01"></path>',

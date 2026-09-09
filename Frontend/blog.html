@@ -1,57 +1,77 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Our Blog — 3legant</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css">
-<link rel="stylesheet" href="css/design.css">
-</head>
-<body class="page-blog">
-<div id="site-header" data-promo="false" data-active="Blog"></div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Our Blog — 3legant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/design.css" />
+  </head>
+  <body class="page-blog">
+    <div id="site-header" data-promo="false" data-active="Blog"></div>
 
-<main>
-  <div class="page-hero" style="height:340px;">
-    <img src="images/shop-hero.jpg" alt="Neutral interior with soft natural light" style="width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(1);">
-    <div class="page-hero__overlay">
-      <div class="page-hero__crumb">Home / Blog</div>
-      <div class="page-hero__title" style="font-size:46px;">Our Blog</div>
-      <div class="page-hero__sub">Home ideas and design inspiration</div>
-    </div>
-  </div>
-
-  <div class="wrap">
-    <div class="section-head" style="margin-bottom:28px;">
-      <div class="blog-tabs" aria-label="Blog filters">
-        <button class="blog-tab is-active" type="button" data-filter="all">All Blog</button>
-        <button class="blog-tab" type="button" data-filter="featured">Featured</button>
+    <main>
+      <div class="page-hero" style="height: 340px">
+        <img
+          src="images/shop-hero.jpg"
+          alt="Neutral interior with soft natural light"
+          style="
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            filter: grayscale(1);
+          "
+        />
+        <div class="page-hero__overlay">
+          <div class="page-hero__crumb">Home / Blog</div>
+          <div class="page-hero__title" style="font-size: 46px">Our Blog</div>
+          <div class="page-hero__sub">Home ideas and design inspiration</div>
+        </div>
       </div>
-      <label class="blog-sort">Sort by
-        <select id="blog-sort-select">
-          <option value="newest">Newest</option>
-          <option value="oldest">Oldest</option>
-        </select>
-      </label>
-    </div>
 
-    <div class="grid-3" id="post-grid"></div>
+      <div class="wrap">
+        <div class="section-head" style="margin-bottom: 28px">
+          <div class="blog-tabs" aria-label="Blog filters">
+            <button class="blog-tab is-active" type="button" data-filter="all">
+              All Blog
+            </button>
+            <button class="blog-tab" type="button" data-filter="featured">
+              Featured
+            </button>
+          </div>
+          <label class="blog-sort"
+            >Sort by
+            <select id="blog-sort-select">
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+            </select>
+          </label>
+        </div>
 
-    <div class="center" style="margin-top:40px;">
-      <button class="btn btn--outline" id="blog-show-more" type="button">Show more</button>
-    </div>
-  </div>
+        <div class="grid-3" id="post-grid"></div>
 
-  <div id="newsletter-slot"></div>
-</main>
+        <div class="center" style="margin-top: 40px">
+          <button class="btn btn--outline" id="blog-show-more" type="button">
+            Show more
+          </button>
+        </div>
+      </div>
 
-<div id="site-footer" data-variant="full"></div>
+      <div id="newsletter-slot"></div>
+    </main>
 
-<script src="js/api.js"></script>
-<script src="js/cart.js"></script>
-<script src="js/newsletter.js"></script>
-<script src="js/header.js"></script>
-<script src="js/blog.js"></script>
-</body>
+    <div id="site-footer" data-variant="full"></div>
+
+    <script src="js/api.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/newsletter.js"></script>
+    <script src="js/header.js"></script>
+    <script src="js/blog.js"></script>
+  </body>
 </html>
