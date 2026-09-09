@@ -14,9 +14,10 @@
     var p = state.product;
     setBreadcrumb(document.getElementById('crumb'), [{ label: 'Home', href: '/' }, { label: 'Shop', href: 'shop.html' }, { label: p.category, href: 'shop.html?category=' + encodeURIComponent(p.category) }, { label: p.name }]);
   }
-  function offerHtml(p) { return p.originalPrice || p.discountLabel ? '<div class="offer-countdown" id="offer-countdown"><span class="offer-countdown__label">Offer expires in:</span><div class="offer-countdown__units" id="offer-units"></div></div>' : ''; }
+  function offerHtml(p) { return (p.originalPrice > p.price || p.discountLabel) && Date.parse(p.offerExpiresAt) > Date.now() ? '<div class="offer-countdown" id="offer-countdown"><span class="offer-countdown__label">Offer expires in:</span><div class="offer-countdown__units" id="offer-units"></div></div>' : ''; }
 
   function renderProduct() {
+    expireDisplayedOffer();
     var p = state.product, stock = Math.max(0, Number(p.stock) || 0);
     renderBreadcrumb(); document.title = p.name + ' — 3legant';
     document.getElementById('product-content').innerHTML = '<div class="product-detail-grid"><div><div class="product-main-media"><div id="product-main-image"></div>' +
@@ -39,8 +40,28 @@
     thumbs.querySelectorAll('[data-image-index]').forEach(function (button) { button.addEventListener('click', function () { state.imageIndex = Number(button.getAttribute('data-image-index')); renderGallery(); }); });
   }
   function wireGalleryArrows() { function change(step) { var images = galleryImages(); if (images.length < 2) return; state.imageIndex = (state.imageIndex + step + images.length) % images.length; renderGallery(); } document.getElementById('gallery-prev').addEventListener('click', function () { change(-1); }); document.getElementById('gallery-next').addEventListener('click', function () { change(1); }); }
-  function offerDeadline() { var key = 'threelegant_offer_end_' + productId, stored = Number(localStorage.getItem(key)); if (stored && stored > Date.now()) return stored; var fallback = Date.now() + 218705000; localStorage.setItem(key, String(fallback)); return fallback; }
-  function startOfferTimer() { if (state.offerTimer) window.clearInterval(state.offerTimer); var root = document.getElementById('offer-units'); if (!root) return; var deadline = offerDeadline(); function update() { var remaining = Math.max(0, deadline - Date.now()), values = [Math.floor(remaining / 86400000), Math.floor(remaining / 3600000) % 24, Math.floor(remaining / 60000) % 60, Math.floor(remaining / 1000) % 60], labels = ['Days', 'Hours', 'Minutes', 'Seconds']; root.innerHTML = values.map(function (value, index) { return '<span><b>' + String(value).padStart(2, '0') + '</b><small>' + labels[index] + '</small></span>'; }).join(''); if (!remaining) window.clearInterval(state.offerTimer); } update(); state.offerTimer = window.setInterval(update, 1000); }
+  function expireDisplayedOffer() {
+    var p = state.product;
+    if (!(Date.parse(p.offerExpiresAt) <= Date.now())) return;
+    if (p.originalPrice > p.price) p.price = p.originalPrice;
+    p.originalPrice = null; p.discountLabel = null;
+  }
+  function startOfferTimer() {
+    window.clearInterval(state.offerTimer); state.offerTimer = null;
+    var root = document.getElementById('offer-units');
+    if (!root) return;
+    var deadline = Date.parse(state.product.offerExpiresAt);
+    function update() {
+      var remaining = Math.max(0, deadline - Date.now());
+      if (!remaining) { expireDisplayedOffer(); renderProduct(); return; }
+      var values = [Math.floor(remaining / 86400000), Math.floor(remaining / 3600000) % 24, Math.floor(remaining / 60000) % 60, Math.floor(remaining / 1000) % 60];
+      root.innerHTML = values.map(function (value, index) { return '<span><b>' + String(value).padStart(2, '0') + '</b><small>' + ['Days', 'Hours', 'Minutes', 'Seconds'][index] + '</small></span>'; }).join('');
+    }
+    state.offerTimer = window.setInterval(update, 1000); update();
+  }
+  window.addEventListener('pagehide', function () { window.clearInterval(state.offerTimer); });
+  window.addEventListener('pageshow', function (event) { if (event.persisted && state.product) { expireDisplayedOffer(); renderProduct(); } });
+
   function renderColors() { var colors = state.product.colors && state.product.colors.length ? state.product.colors : [{ name: 'Default', hex: '#c9c4b8' }]; if (!state.color) state.color = colors[0].name; document.getElementById('color-label').textContent = state.color; document.getElementById('color-row').innerHTML = colors.map(function (color) { return '<button class="color-swatch' + (color.name === state.color ? ' is-active' : '') + '" style="background:' + safeCssColor(color.hex) + ';" data-color="' + escapeHtml(color.name) + '" title="' + escapeHtml(color.name) + '"></button>'; }).join(''); document.querySelectorAll('.color-swatch').forEach(function (button) { button.addEventListener('click', function () { state.color = button.getAttribute('data-color'); renderColors(); }); }); }
   function wireQty() { var stock = Math.max(0, Number(state.product.stock) || 0); function updateControls() { document.getElementById('qty-val').textContent = state.qty; document.getElementById('qty-dec').disabled = state.qty <= 1; document.getElementById('qty-inc').disabled = !stock || state.qty >= stock; } document.getElementById('qty-dec').addEventListener('click', function () { state.qty = Math.max(1, state.qty - 1); updateControls(); }); document.getElementById('qty-inc').addEventListener('click', function () { state.qty = Math.min(stock, state.qty + 1); updateControls(); }); updateControls(); }
   function updateWishlistButton() { var button = document.getElementById('wishlist-btn'); if (!button) return; button.innerHTML = (state.wishlisted ? '♥' : '♡') + ' Wishlist'; button.style.color = state.wishlisted ? 'var(--red)' : 'var(--ink)'; }
@@ -138,10 +159,9 @@
     if (kind === 'questions' && state.questions === null) { body.innerHTML = '<p role="status">Loading questions…</p>'; loadQuestions(); return; }
     var reviews = kind === 'reviews', items = state[kind], count = items.length;
     body.innerHTML = '<section class="reviews-panel"><h2>' + (reviews ? 'Customer Reviews' : 'Product Questions') + '</h2>' +
-      (reviews ? '<div class="review-summary">' + stars(p.ratingAvg) + '<span>' + countLabel(count, kind) + '</span></div>' : '<p class="faint">Ask about this product. Share what you know.</p>') +
-      '<div class="review-product-name">' + escapeHtml(p.name) + '</div>' +
-      '<form class="community-create" data-kind="' + kind + '">' + '<div class="community-emoji" role="toolbar" aria-label="Insert emoji">' + ['❤️', '🙌', '👍', '😊', '🤣', '😡'].map(function (emoji) { return '<button type="button" data-emoji="' + emoji + '" aria-label="Insert ' + emoji + '">' + emoji + '</button>'; }).join('') + '</div>' + (reviews ? '<div class="compose-rating">' + ratingInput(5) + '</div>' : '') +
-      '<div class="community-create__field"><textarea name="text" maxlength="1000" rows="1" required aria-label="' + (reviews ? 'Write your review' : 'Ask a product question') + '" placeholder="' + (reviews ? 'Share your experience' : 'What would you like to know?') + '"></textarea><button type="submit" class="btn btn--dark">' + (reviews ? 'Write Review' : 'Ask question') + '</button></div><div class="error-text" role="alert"></div></form>' +
+      (reviews ? '<div class="review-summary">' + stars(p.ratingAvg) + '<span>' + countLabel(count, kind) + '</span></div>' : '') +
+      '<form class="community-create" data-kind="' + kind + '">' + '<div class="community-emoji" role="toolbar" aria-label="Insert emoji">' + ['❤️', '🙌', '👍', '😊', '🤣', '😡'].map(function (emoji) { return '<button type="button" data-emoji="' + emoji + '" aria-label="Insert ' + emoji + '">' + emoji + '</button>'; }).join('') + '</div>' +
+      '<div class="community-create__field"><textarea name="text" maxlength="1000" rows="1" required aria-label="' + (reviews ? 'Write your review' : 'Ask a product question') + '" placeholder="' + (reviews ? 'Share your experience' : 'What would you like to know?') + '"></textarea><button type="submit" class="btn btn--dark">' + (reviews ? 'Write Review' : 'Ask question') + '</button></div>' + (reviews ? '<div class="compose-rating"><span>Select your rating:</span>' + ratingInput(0) + '</div>' : '<p class="community-help">Ask about this product. Share what you know.</p>') + '<div class="error-text" role="alert"></div></form>' +
       (!state.me ? '<p class="community-signin"><a href="login.html?next=' + encodeURIComponent('product.html?id=' + productId) + '">Sign in</a> to join the conversation.' + (reviews ? ' Reviews are available to customers who purchased this product.' : '') + '</p>' : '') +
       '<div class="review-list-head"><h3>' + countLabel(count, kind) + '</h3><label class="community-sort"><span class="sr-only">Sort ' + kind + '</span><select id="community-sort" class="input"><option value="newest">Newest</option><option value="oldest">Oldest</option>' +
       (reviews ? '<option value="highest">Highest rating</option><option value="lowest">Lowest rating</option>' : '<option value="helpful">Most helpful</option>') + '</select>' + icon('chevron') + '</label></div><div id="community-list"></div><button id="community-more" class="btn btn--outline" type="button">Load more</button></section>';
@@ -213,13 +233,19 @@
     var text = form.elements.text.value.trim();
     if (!text) { form.querySelector('.error-text').textContent = 'Please enter some text.'; form.elements.text.focus(); return; }
     var data = { text: text }, row = form.closest('[data-path]'), path = row && row.dataset.path;
-    if (form.elements.rating) data.rating = Number(form.elements.rating.value);
+    if (form.elements.rating) {
+      data.rating = Number(form.elements.rating.value);
+      if (!Number.isInteger(data.rating) || data.rating < 1 || data.rating > 5) {
+        form.querySelector('.error-text').textContent = 'Please select a rating from 1 to 5 stars.';
+        form.querySelector('[name="rating"]').focus(); return;
+      }
+    }
     if (form.matches('.community-create')) {
       var kind = form.dataset.kind;
       var created = await requestCommunity(form, function () { return apiPost('/products/' + productId + '/' + kind, data); });
       if (!created) return;
       created.user = state.me; state[kind].unshift(created); form.reset();
-      form.querySelectorAll('.community-rating label').forEach(function (label) { label.classList.add('is-filled'); });
+      form.querySelectorAll('.community-rating label').forEach(function (label) { label.classList.remove('is-filled'); });
       updateSummary(kind); renderList(kind); return;
     }
     var edit = form.matches('.community-edit'), parts = path.split('/'), endpoint = path;

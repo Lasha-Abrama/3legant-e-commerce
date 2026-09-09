@@ -5,6 +5,8 @@ import {
   IsBoolean,
   IsIn,
   IsNumber,
+  IsInt,
+  Max,
   IsOptional,
   IsString,
   Min,
@@ -29,7 +31,13 @@ export class CreateProductDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  originalPrice?: number;
+  originalPrice?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  offerDurationDays?: number | null;
 
   @IsOptional()
   @IsArray()

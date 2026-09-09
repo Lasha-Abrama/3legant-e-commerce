@@ -5,7 +5,9 @@
     { key: 'orders', label: 'Orders' },
     { key: 'wishlist', label: 'Wishlist' },
   ];
-  var state = { tab: qs('tab') || 'account', orderId: qs('order') || null, user: null };
+  var initialTab = qs('tab');
+  var state = { tab: TABS.some(function (tab) { return tab.key === initialTab; }) ? initialTab : 'account', orderId: qs('order') || null, user: null };
+  var loggingOut = false;
   document.getElementById('profile-image-input').addEventListener('change', function (event) {
     var input = event.target;
     var file = input.files[0];
@@ -33,8 +35,19 @@
 
   document.getElementById('logout-link').addEventListener('click', function (e) {
     e.preventDefault();
-    apiPost('/auth/logout', {}).then(function () {
+    if (loggingOut) return;
+    loggingOut = true;
+    var link = this, message = document.getElementById('logout-message');
+    link.setAttribute('aria-disabled', 'true');
+    message.textContent = 'Signing out…';
+    apiPost('/auth/logout', {}).then(function (response) {
+      if (response && response._status >= 400) {
+        loggingOut = false; link.removeAttribute('aria-disabled');
+        message.textContent = 'Could not sign out securely. Please try again.';
+        return;
+      }
       clearAccessToken();
+      sessionStorage.removeItem('lc_pending_checkout_order');
       window.location.href = 'index.html';
     });
   });
@@ -57,6 +70,8 @@
   function setTab(tab) {
     state.tab = tab;
     state.orderId = null;
+    var url = new URL(window.location.href); url.searchParams.set('tab', tab); url.searchParams.delete('order');
+    window.history.replaceState({}, '', url);
     renderNav();
     renderContent();
   }
@@ -137,7 +152,7 @@
     var has = addr && (addr.street || addr.fullName);
     return (
       '<div class="address-card" data-type="' + type + '">' +
-        '<div class="address-card__head"><span style="font-size:13px;font-weight:600;">' + label + '</span><button type="button" class="edit-address" data-type="' + type + '">&#9998; Edit</button></div>' +
+        '<div class="address-card__head"><span style="font-size:13px;font-weight:600;">' + label + '</span><button type="button" class="edit-address" data-type="' + type + '"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15v5Z"/></svg> Edit</button></div>' +
         '<div class="address-view" style="font-size:13px;color:#4a4843;line-height:1.7;">' +
           (has
             ? escapeHtml(addr.fullName || '') + '<br>' + escapeHtml(addr.phone || '') + '<br>' + escapeHtml([addr.street, addr.city, addr.state, addr.zip, addr.country].filter(Boolean).join(', '))
@@ -154,7 +169,7 @@
       '<div class="address-grid" id="address-grid">' +
         addressCard('billing', 'Billing Address', u.billingAddress) +
         addressCard('shipping', 'Shipping Address', u.shippingAddress) +
-      '</div>';
+      '</div><p id="address-status" role="status"></p>';
 
     content.querySelectorAll('.edit-address').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -168,53 +183,53 @@
     renderAddressTab(document.getElementById('account-content'));
     var addr = (type === 'billing' ? state.user.billingAddress : state.user.shippingAddress) || {};
     var card = document.querySelector('.address-card[data-type="' + type + '"]');
-    card.innerHTML =
-      '<div class="address-card__head"><span style="font-size:13px;font-weight:600;">' + (type === 'billing' ? 'Billing Address' : 'Shipping Address') + '</span></div>' +
-      '<div class="field"><input class="input" placeholder="Full name" id="addr-fullName" value="' + escapeHtml(addr.fullName || '') + '"></div>' +
-      '<div class="field"><input class="input" placeholder="Phone" id="addr-phone" value="' + escapeHtml(addr.phone || '') + '"></div>' +
-      '<div class="field"><input class="input" placeholder="Street" id="addr-street" value="' + escapeHtml(addr.street || '') + '"></div>' +
-      '<div class="row-2" style="margin-bottom:12px;">' +
-        '<input class="input" placeholder="City" id="addr-city" value="' + escapeHtml(addr.city || '') + '">' +
-        '<input class="input" placeholder="State" id="addr-state" value="' + escapeHtml(addr.state || '') + '">' +
-      '</div>' +
-      '<div class="row-2" style="margin-bottom:12px;">' +
-        '<input class="input" placeholder="Zip" id="addr-zip" value="' + escapeHtml(addr.zip || '') + '">' +
-        '<input class="input" placeholder="Country" id="addr-country" value="' + escapeHtml(addr.country || '') + '">' +
-      '</div>' +
-      '<div class="error-text" id="address-msg"></div>' +
-      '<button class="btn btn--dark" id="save-address">Save</button>';
-
-    card.querySelectorAll('input').forEach(function (input) { input.setAttribute('aria-label', input.placeholder); input.required = true; input.maxLength = 200; });
-    document.getElementById('save-address').addEventListener('click', function () {
-      var invalid = Array.from(card.querySelectorAll('input')).find(function (input) { return !input.value.trim() || !input.checkValidity(); });
-      if (invalid) { invalid.reportValidity(); invalid.focus(); return; }
-      this.disabled = true;
-      apiPatch('/users/me/address', {
-        type: type,
-        fullName: document.getElementById('addr-fullName').value,
-        phone: document.getElementById('addr-phone').value,
-        street: document.getElementById('addr-street').value,
-        city: document.getElementById('addr-city').value,
-        state: document.getElementById('addr-state').value,
-        zip: document.getElementById('addr-zip').value,
-        country: document.getElementById('addr-country').value,
-      }).then(function (res) {
+    var fields = [
+      ['fullName', 'Full name', 'name'], ['phone', 'Phone', 'tel'],
+      ['street', 'Street address', 'address-line1'], ['city', 'City', 'address-level2'],
+      ['state', 'State / region', 'address-level1'], ['zip', 'Postal code', 'postal-code'],
+      ['country', 'Country', 'country-name'],
+    ];
+    card.innerHTML = '<h3 class="address-card__title">' + (type === 'billing' ? 'Billing Address' : 'Shipping Address') + '</h3>' +
+      '<form class="address-form">' + fields.map(function (field) {
+        return '<label class="field"><span class="field__label">' + field[1] + '</span><input class="input" name="' + field[0] + '" autocomplete="' + type + ' ' + field[2] + '" type="' + (field[0] === 'phone' ? 'tel' : 'text') + '" maxlength="200" required value="' + escapeHtml(addr[field[0]] || '') + '"></label>';
+      }).join('') + '<div class="error-text" role="alert"></div><div class="address-form__actions"><button class="btn btn--dark" type="submit">Save address</button><button class="btn btn--outline" type="button" data-cancel-address>Cancel</button></div></form>';
+    var form = card.querySelector('form'), message = form.querySelector('[role="alert"]');
+    form.elements.fullName.focus();
+    form.querySelector('[data-cancel-address]').onclick = function () {
+      renderAddressTab(document.getElementById('account-content'));
+      document.querySelector('.edit-address[data-type="' + type + '"]').focus();
+    };
+    form.onsubmit = function (event) {
+      event.preventDefault();
+      var payload = { type: type };
+      fields.forEach(function (field) { payload[field[0]] = form.elements[field[0]].value.trim(); });
+      var missing = fields.find(function (field) { return !payload[field[0]]; });
+      if (missing) { message.textContent = 'Please enter ' + missing[1].toLowerCase() + '.'; form.elements[missing[0]].focus(); return; }
+      message.textContent = '';
+      form.querySelectorAll('button, input').forEach(function (control) { control.disabled = true; });
+      form.setAttribute('aria-busy', 'true');
+      apiPatch('/users/me/address', payload).then(function (res) {
         if (!res || res._status >= 400) {
-          document.getElementById('save-address').disabled = false;
-          document.getElementById('address-msg').textContent = (res && res.message) || 'Address could not be saved.';
+          form.querySelectorAll('button, input').forEach(function (control) { control.disabled = false; });
+          form.removeAttribute('aria-busy');
+          message.textContent = (res && res.message) || 'Address could not be saved.';
           return;
         }
         state.user = res;
-        renderAddressTab(document.getElementById('account-content'));
+        if (card.isConnected && state.tab === 'address') {
+          renderAddressTab(document.getElementById('account-content'));
+          document.getElementById('address-status').textContent = 'Address saved.';
+          document.querySelector('.edit-address[data-type="' + type + '"]').focus();
+        }
       });
-    });
+    };
   }
 
   function renderOrdersTab(content) {
     content.innerHTML = '<div class="account-section-title">Orders History</div><div id="orders-list" class="faint" style="font-size:13px;">Loading...</div>';
+    var list = document.getElementById('orders-list');
     apiGet('/orders/me').then(function (orders) {
-      if (!orders) return;
-      var list = document.getElementById('orders-list');
+      if (!orders || !list.isConnected) return;
       if (!Array.isArray(orders)) {
         renderRetryState(list, orders.message || 'Orders could not be loaded.', function () { renderOrdersTab(content); });
         return;
@@ -224,18 +239,18 @@
         return;
       }
       list.innerHTML =
-        '<div class="orders-head"><span>Number ID</span><span>Date</span><span>Status</span><span>Price</span></div>' +
+        '<div role="table" aria-label="Order history"><div class="orders-head" role="row"><span role="columnheader">Number ID</span><span role="columnheader">Date</span><span role="columnheader">Status</span><span role="columnheader">Price</span></div>' +
         orders.map(function (o) {
           var date = new Date(o.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
           return (
-            '<div class="order-row">' +
-              '<span data-label="Number ID"><button class="order-code-link" data-order-id="' + escapeHtml(o._id) + '">' + escapeHtml(o.orderCode || o._id) + '</button></span>' +
-              '<span data-label="Date">' + date + '</span>' +
-              '<span data-label="Status">' + escapeHtml(o.paymentStatus === 'paid' ? o.status : o.paymentStatus) + '</span>' +
-              '<span data-label="Price">' + fmt(o.total) + '</span>' +
+            '<div class="order-row" role="row">' +
+              '<span role="cell" data-label="Number ID"><button class="order-code-link" data-order-id="' + escapeHtml(o._id) + '">' + escapeHtml(o.orderCode || o._id) + '</button></span>' +
+              '<span role="cell" data-label="Date">' + date + '</span>' +
+              '<span role="cell" data-label="Status">' + escapeHtml(o.paymentStatus && o.paymentStatus !== 'paid' ? o.paymentStatus : o.status) + '</span>' +
+              '<span role="cell" data-label="Price">' + fmt(o.total) + '</span>' +
             '</div>'
           );
-        }).join('');
+        }).join('') + '</div>';
       list.querySelectorAll('[data-order-id]').forEach(function (button) {
         button.addEventListener('click', function () {
           state.orderId = button.getAttribute('data-order-id');
@@ -256,8 +271,9 @@
       renderContent();
     });
 
+    var details = document.getElementById('order-details');
     apiGet('/orders/' + encodeURIComponent(state.orderId)).then(function (order) {
-      var details = document.getElementById('order-details');
+      if (!details.isConnected) return;
       if (!order || order._status >= 400) {
         renderRetryState(details, (order && order.message) || 'Order details could not be loaded.', function () { renderOrderDetails(content); });
         return;
@@ -287,9 +303,9 @@
 
   function renderWishlistTab(content) {
     content.innerHTML = '<div class="account-section-title">Your Wishlist</div><div id="wishlist-list" class="faint" style="font-size:13px;">Loading...</div>';
+    var list = document.getElementById('wishlist-list');
     apiGet('/users/me/wishlist').then(function (items) {
-      if (!items) return;
-      var list = document.getElementById('wishlist-list');
+      if (!items || !list.isConnected) return;
       if (!Array.isArray(items)) {
         renderRetryState(list, items.message || 'Wishlist could not be loaded.', function () { renderWishlistTab(content); });
         return;
@@ -321,7 +337,7 @@
       list.querySelectorAll('[data-remove]').forEach(function (btn) {
         btn.addEventListener('click', function () {
           apiDelete('/users/me/wishlist/' + btn.getAttribute('data-remove')).then(function (res) {
-            if (res && res._status < 400) renderWishlistTab(content);
+            if (res && res._status < 400 && list.isConnected) renderWishlistTab(content);
           });
         });
       });

@@ -1,15 +1,15 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Storefront design regressions', () => {
-  test('Product navigation reaches the product catalog', async ({ page }) => {
+  test('Blog navigation reaches the blog listing', async ({ page }) => {
     await page.goto('/index.html');
 
-    const productLink = page.locator('.site-nav').getByRole('link', { name: 'Product' });
-    await expect(productLink).toHaveAttribute('href', 'shop.html#product-grid');
+    const productLink = page.locator('.site-nav').getByRole('link', { name: 'Blog' });
+    await expect(productLink).toHaveAttribute('href', 'blog.html');
     await productLink.click();
 
-    await expect(page).toHaveURL(/shop\.html#product-grid$/);
-    await expect(page.locator('#product-grid')).toBeVisible();
+    await expect(page).toHaveURL(/blog\.html$/);
+    await expect(page.locator('#post-grid')).toBeVisible();
   });
 
   test('homepage service icons share one size and stay centered', async ({ page }) => {

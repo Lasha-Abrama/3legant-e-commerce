@@ -2,7 +2,7 @@
   var NAV_LINKS = [
     { label: 'Home', href: 'index.html', key: 'Home' },
     { label: 'Shop', href: 'shop.html', key: 'Shop' },
-    { label: 'Product', href: 'shop.html#product-grid', key: 'Product' },
+    { label: 'Blog', href: 'blog.html', key: 'Blog' },
     { label: 'Contact Us', href: 'contact.html', key: 'Contact' },
   ];
 
@@ -42,6 +42,7 @@
 
   function renderHeader(root) {
     var active = root.getAttribute('data-active') || '';
+    if (active === 'Product') active = 'Shop';
     var promoDismissed = root.getAttribute('data-promo') === 'false' || sessionStorage.getItem('lc_promo_dismissed') === '1';
 
     root.innerHTML =
@@ -231,12 +232,12 @@
   }
 
   var FOOTER_VARIANTS = {
-    full: ['Home', 'Shop', 'Product', 'Blog', 'Contact'],
-    cart: ['Home', 'Shop', 'Product', 'Blog', 'Contact'],
+    full: ['Home', 'Shop', 'Blog', 'Contact'],
+    cart: ['Home', 'Shop', 'Blog', 'Contact'],
     minimal: null,
   };
-  var FOOTER_HREFS = { Home: 'index.html', Shop: 'shop.html', Product: 'shop.html#product-grid', Blog: 'blog.html', Contact: 'contact.html' };
-  var FOOTER_LABELS = { Home: 'Home', Shop: 'Shop', Product: 'Product', Blog: 'Blog', Contact: 'Contact Us' };
+  var FOOTER_HREFS = { Home: 'index.html', Shop: 'shop.html', Blog: 'blog.html', Contact: 'contact.html' };
+  var FOOTER_LABELS = { Home: 'Home', Shop: 'Shop', Blog: 'Blog', Contact: 'Contact Us' };
 
   function renderFooter(root) {
     var variant = root.getAttribute('data-variant') || 'full';

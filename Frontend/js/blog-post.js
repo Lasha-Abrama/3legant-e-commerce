@@ -1,15 +1,16 @@
 (function () {
   var postId = qs('id');
   function contentHtml(post) {
-    var images = (post.supportingImages || []).filter(function (url) { return safeImageUrl(url); });
+    var images = (post.supportingImages || []).filter(function (url, index, all) { return safeImageUrl(url) && url !== articleImageUrl(post) && all.indexOf(url) === index; });
+    function figure(url) { return '<figure><img src="' + escapeHtml(safeImageUrl(url)) + '" alt="Supporting interior detail for ' + escapeHtml(post.title) + '" loading="lazy"></figure>'; }
     var paragraphs = (post.content || '').split(/\n\s*\n/).filter(Boolean);
     return paragraphs.map(function (paragraph, index) {
       var match = paragraph.match(/^##\s+([^\n]+)(?:\n([\s\S]*))?$/);
       var html = match ? '<h2>' + escapeHtml(match[1]) + '</h2>' +
         (match[2] ? '<p>' + escapeHtml(match[2]) + '</p>' : '') : '<p>' + escapeHtml(paragraph) + '</p>';
-      if (images[index]) html += '<figure><img src="' + safeImageUrl(images[index]) + '" alt="Supporting interior detail for ' + escapeHtml(post.title) + '" loading="lazy"></figure>';
+      if (images[index]) html += figure(images[index]);
       return html;
-    }).join('');
+    }).join('') + images.slice(paragraphs.length).map(figure).join('');
   }
   async function related(post) {
     var query = '/blogs?take=3&exclude=' + encodeURIComponent(post._id);
@@ -35,13 +36,13 @@
     document.title = post.title + ' — 3legant';
     var author = post.author && typeof post.author === 'object' ? post.author : null;
     var name = author && (author.displayName || [author.firstName, author.lastName].filter(Boolean).join(' '));
-    var date = new Date(post.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    var image = safeImageUrl(articleImageUrl(post));
     document.getElementById('post-content').innerHTML =
       '<article><div class="post-eyebrow">' + escapeHtml(post.category || 'ARTICLE') + '</div>' +
       '<h1 class="post-title">' + escapeHtml(post.title) + '</h1>' +
-      '<div class="post-meta"><span>' + (name ? 'By ' + escapeHtml(name) : 'Author not recorded') + '</span>' +
-      '<time datetime="' + escapeHtml(post.createdAt) + '">' + date + '</time></div>' +
-      '<div class="post-image"><img src="' + safeImageUrl(articleImageUrl(post)) + '" alt="' + escapeHtml(post.title) + '"></div>' +
+      '<div class="post-meta">' + (name ? '<span>By ' + escapeHtml(name) + '</span>' : '') +
+      articleDateHtml(post.createdAt) + '</div>' +
+      (image ? '<div class="post-image"><img src="' + escapeHtml(image) + '" alt="' + escapeHtml(post.title) + '"></div>' : '') +
       '<div class="article-body">' + contentHtml(post) + '<a class="back-to-blog" href="blog.html">← Back to Blog</a></div></article>' +
       '<section id="related-posts" aria-label="Related articles"></section>';
     related(post);

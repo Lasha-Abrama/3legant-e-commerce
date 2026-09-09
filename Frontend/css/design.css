@@ -38,13 +38,13 @@ body{font-family:Inter,sans-serif;line-height:1.5}h1,h2,h3,.site-header__logo,.s
 .community-stars { display:inline-flex; gap:2px; vertical-align:middle; color:#141718; }
 .community-stars svg { display:block; width:16px; height:16px; }
 .community-stars .is-filled svg,.community-rating .is-filled svg { fill:currentColor; }
-.review-product-name { font-size:16px; font-weight:600; margin:0 0 32px 166px; color:#23262f; }
-.community-create { position:relative; margin-bottom:40px; }
+.community-create { position:relative; margin:40px 0; }
 .community-create__field { display:flex; align-items:center; gap:16px; min-height:72px; padding:14px; border:2px solid #e8ecef; border-radius:16px; }
 .community-create__field:focus-within { border-color:#6c7275; }
 .community-create__field textarea { border:0; outline:0; background:transparent; padding:8px 10px; flex:1; min-width:0; resize:vertical; font:inherit; max-height:180px; }
 .community-create__field .btn { border-radius:80px; min-width:176px; min-height:40px; font-weight:400; padding:7px 24px; white-space:nowrap; }
-.compose-rating { position:absolute; left:0; top:-32px; }
+.compose-rating { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-top:12px; font-size:14px; color:#6c7275; }
+.community-help { margin:12px 0 0; font-size:14px; color:#6c7275; }
 .community-rating { display:flex; gap:4px; border:0; padding:0; margin:0; color:#141718; }
 .community-rating label { position:relative; display:flex; cursor:pointer; padding:3px; }
 .community-rating input { position:absolute; opacity:0; inset:0; width:100%; height:100%; margin:0; cursor:pointer; }
@@ -93,7 +93,6 @@ body{font-family:Inter,sans-serif;line-height:1.5}h1,h2,h3,.site-header__logo,.s
   .page-product .tab-row { gap:24px; margin-bottom:32px; justify-content:space-between; }
   .page-product .tab-btn { font-size:14px; }
   .reviews-panel > h2,.review-list-head h3 { font-size:24px; }
-  .review-product-name { margin-left:0; margin-bottom:40px; }
   .community-create__field { gap:8px; padding:10px; flex-wrap:wrap; }
   .community-create__field textarea { flex-basis:100%; }
   .community-create__field .btn { margin-left:auto; min-width:140px; font-size:14px; }
@@ -114,4 +113,4 @@ body{font-family:Inter,sans-serif;line-height:1.5}h1,h2,h3,.site-header__logo,.s
 .community-emoji { position:absolute; right:124px; top:-31px; display:flex; gap:8px; padding:12px 16px; background:#fff; border-radius:40px; box-shadow:0 8px 14px #0003; z-index:1; }
 .community-emoji::after { content:''; position:absolute; bottom:-5px; left:50%; width:12px; height:12px; transform:rotate(45deg); background:#fff; }
 .community-emoji button { position:relative; z-index:1; border:0; background:none; padding:0; cursor:pointer; font-size:14px; line-height:20px; }
-@media(max-width:600px) { .community-emoji { right:0; top:-36px; gap:6px; padding:8px 10px; } .compose-rating { top:-36px; } }
+@media(max-width:600px) { .community-emoji { right:0; top:-36px; gap:6px; padding:8px 10px; } }

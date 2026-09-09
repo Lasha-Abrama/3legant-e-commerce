@@ -6,7 +6,7 @@
   document.getElementById('blog-layouts').innerHTML = layoutSelectorHtml();
   function render() {
     grid.dataset.view = state.view;
-    grid.innerHTML = state.posts.length ? state.posts.map(articleCardHtml).join('') : '<p>No blog posts found.</p>';
+    grid.innerHTML = state.posts.length ? state.posts.map(articleCardHtml).join('') : '<p role="status">No blog posts found.</p>';
     more.hidden = state.posts.length >= state.total;
   }
   async function load(append) {
@@ -21,9 +21,12 @@
       if (!result || result._status >= 400 || !Array.isArray(result.data)) throw new Error('Articles could not be loaded.');
       var posts = append ? state.posts.concat(result.data) : result.data;
       state.posts = posts.filter(function (post, index) { return posts.findIndex(function (item) { return item._id === post._id; }) === index; });
-      state.total = result.total; state.page = page; render();
+      state.total = result.total; state.page = page; more.textContent = 'Show more'; render();
     } catch (error) {
-      if (request === state.request) renderRetryState(grid, 'Articles could not be loaded.', function () { load(append); });
+      if (request === state.request) {
+        if (append) { render(); more.textContent = 'Try loading more'; }
+        else renderRetryState(grid, 'Articles could not be loaded.', function () { load(false); });
+      }
     } finally {
       if (request === state.request) { state.loading = false; more.disabled = false; grid.setAttribute('aria-busy', 'false'); }
     }

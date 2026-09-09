@@ -42,6 +42,9 @@ export class Product {
   @Prop({ type: Number, min: 0, default: null })
   originalPrice: number | null;
 
+  @Prop({ type: Date, default: null, index: true })
+  offerExpiresAt: Date | null;
+
   @Prop({ type: [ProductColorSchema], default: () => [{ name: 'Default', hex: '#c9c4b8' }] })
   colors: ProductColor[];
 

@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model, QueryFilter, Types } from 'mongoose';
 import { Product, ProductDocument } from './schemas/product.schema';
@@ -17,6 +17,7 @@ export class ProductsService {
   ) {}
 
   async findAll(query: FindProductsQueryDto): Promise<PaginatedResult<Product>> {
+    await this.expireOffers();
     const filter: QueryFilter<ProductDocument> = {};
     if (query.category) filter.category = query.category;
     if (typeof query.newArrival === 'boolean') filter.newArrival = query.newArrival;
@@ -50,6 +51,7 @@ export class ProductsService {
   }
 
   async findOne(id: string): Promise<ProductDocument> {
+    await this.expireOffers(id);
     const product = await this.productModel.findById(id).exec();
     if (!product) {
       throw new NotFoundException('პროდუქტი ვერ მოიძებნა');
@@ -59,14 +61,43 @@ export class ProductsService {
 
   async create(dto: CreateProductDto): Promise<Product> {
     const slug = await this.buildUniqueSlug(dto.name);
-    const product = new this.productModel({ ...dto, slug });
+    const { offerDurationDays, ...fields } = dto;
+    const product = new this.productModel({ ...fields, slug, offerExpiresAt: this.offerExpiration(fields, offerDurationDays) });
     return product.save();
   }
 
   async update(id: string, dto: UpdateProductDto): Promise<Product> {
     const product = await this.findOne(id);
-    Object.assign(product, dto);
+    const { offerDurationDays, ...fields } = dto;
+    Object.assign(product, fields);
+    product.offerExpiresAt = this.offerExpiration(product, offerDurationDays, product.offerExpiresAt);
     return product.save();
+  }
+
+  private offerExpiration(product: { price: number; originalPrice?: number | null; discountLabel?: string | null },
+    days?: number | null, existing?: Date | null): Date | null {
+    const hasOffer = (product.originalPrice != null && product.originalPrice > product.price) || Boolean(product.discountLabel?.trim());
+    if (!hasOffer) {
+      if (days != null) throw new BadRequestException('Offer duration requires a discounted product or discount label');
+      return null;
+    }
+    if (days === null) return null;
+    if (days === undefined) return existing ?? null;
+    if (!Number.isInteger(days) || days < 1 || days > 365) throw new BadRequestException('Offer duration must be between 1 and 365 days');
+    return new Date(Date.now() + days * 86400000);
+  }
+
+  // Materialize expired prices before filtering/sorting and before order quotes.
+  // MongoDB evaluates the condition atomically, so a renewed offer is not expired.
+  private async expireOffers(id?: string) {
+    await this.productModel.updateMany({
+      ...(id ? { _id: id } : {}),
+      offerExpiresAt: { $ne: null, $lte: new Date() },
+      $or: [{ originalPrice: { $ne: null } }, { discountLabel: { $nin: [null, ''] } }],
+    }, [{ $set: {
+      price: { $cond: [{ $gt: ['$originalPrice', '$price'] }, '$originalPrice', '$price'] },
+      originalPrice: null, discountLabel: null,
+    } }], { updatePipeline: true }).exec();
   }
 
   async remove(id: string): Promise<Product> {

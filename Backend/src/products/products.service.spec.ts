@@ -5,6 +5,7 @@ import { UsersService } from '../users/users.service';
 describe('ProductsService', () => {
   const productModel = {
     updateOne: jest.fn(),
+    updateMany: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue({}) }),
   };
   const usersService = {
     removeProductFromWishlists: jest.fn(),
@@ -140,4 +141,46 @@ describe('ProductsService', () => {
     expect(query.limit).toHaveBeenCalledWith(6);
     expect(result).toEqual({ data: [{ _id: 'fixture' }], total: 20, page: 2, take: 6 });
   });
+  it('preserves, renews and clears saved offer timing and rejects invalid durations', async () => {
+    const product: any = { price: 80, originalPrice: 100, offerExpiresAt: new Date(Date.now() + 86400000), save: jest.fn().mockResolvedValue({}) };
+    (productModel as any).findById = jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(product) });
+    const original = product.offerExpiresAt;
+    await service.update('id', { description: 'Updated' });
+    expect(product.offerExpiresAt).toEqual(original);
+    const before = Date.now();
+    await service.update('id', { offerDurationDays: 3 });
+    expect(product.offerExpiresAt.getTime()).toBeGreaterThanOrEqual(before + 3 * 86400000);
+    expect(product.offerExpiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 3 * 86400000);
+    expect(product.offerDurationDays).toBeUndefined();
+    await service.update('id', { offerDurationDays: null });
+    expect(product.offerExpiresAt).toBeNull();
+    for (const days of [0, -1, 1.5, 366]) {
+      await expect(service.update('id', { offerDurationDays: days })).rejects.toThrow('between 1 and 365');
+    }
+    await service.update('id', { originalPrice: null, discountLabel: '' });
+    await expect(service.update('id', { offerDurationDays: 2 })).rejects.toThrow('requires a discounted product');
+    expect(product.save).toHaveBeenCalledTimes(4);
+    expect(productModel.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      _id: 'id', offerExpiresAt: { $ne: null, $lte: expect.any(Date) },
+    }), [{ $set: {
+      price: { $cond: [{ $gt: ['$originalPrice', '$price'] }, '$originalPrice', '$price'] },
+      originalPrice: null, discountLabel: null,
+    } }], { updatePipeline: true });
+  });
+
+  it('persists absolute expiration on creation and leaves ordinary products untimed', async () => {
+    const save = jest.fn().mockImplementation(function () { return Promise.resolve(this); });
+    const model: any = jest.fn().mockImplementation(fields => ({ ...fields, save }));
+    model.exists = jest.fn().mockResolvedValue(null);
+    const subject = new ProductsService(model, usersService);
+    const before = Date.now();
+    const offer: any = await subject.create({ name: 'Offer', price: 80, originalPrice: 100, offerDurationDays: 2 } as any);
+    expect(offer.offerExpiresAt.getTime()).toBeGreaterThanOrEqual(before + 2 * 86400000);
+    expect(offer.offerExpiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 2 * 86400000);
+    expect(offer.offerDurationDays).toBeUndefined();
+    const regular: any = await subject.create({ name: 'Regular', price: 100 } as any);
+    expect(regular.offerExpiresAt).toBeNull();
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+
 });

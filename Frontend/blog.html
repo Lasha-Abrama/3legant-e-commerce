@@ -30,8 +30,8 @@
           "
         />
         <div class="page-hero__overlay">
-          <div class="page-hero__crumb">Home / Blog</div>
-          <div class="page-hero__title" >Our Blog</div>
+          <div class="page-hero__crumb" data-breadcrumb-current="Blog">Home / Blog</div>
+          <h1 class="page-hero__title">Our Blog</h1>
           <div class="page-hero__sub">Home ideas and design inspiration</div>
         </div>
       </div>
@@ -39,10 +39,10 @@
       <div class="wrap">
         <div class="section-head" style="margin-bottom: 28px">
           <div class="blog-tabs" aria-label="Blog filters">
-            <button class="blog-tab is-active" type="button" data-filter="all">
+            <button class="blog-tab is-active" type="button" data-filter="all" aria-pressed="true">
               All Blog
             </button>
-            <button class="blog-tab" type="button" data-filter="featured">
+            <button class="blog-tab" type="button" data-filter="featured" aria-pressed="false">
               Featured
             </button>
           </div>

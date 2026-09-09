@@ -52,6 +52,7 @@ describe('PaymentsService', () => {
     expect(stripeClient.checkout.sessions.create).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: 'payment',
+        line_items: [{ price_data: { currency: 'usd', product_data: { name: '3legant order order-id' }, unit_amount: 3800 }, quantity: 1 }],
         metadata: { orderId: 'order-id', userId: 'user-id' },
       }),
       { idempotencyKey: 'order-order-id-checkout' },

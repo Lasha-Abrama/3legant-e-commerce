@@ -109,6 +109,8 @@
         '<div class="field"><span class="field__label">PRICE *</span><input class="input" type="number" step="0.01" id="f-price" value="' + (p.price != null ? p.price : '') + '"></div>' +
         '<div class="field"><span class="field__label">ORIGINAL PRICE</span><input class="input" type="number" step="0.01" id="f-originalPrice" value="' + (p.originalPrice != null ? p.originalPrice : '') + '"></div>' +
         '<div class="field"><span class="field__label">DISCOUNT LABEL</span><input class="input" id="f-discountLabel" placeholder="-50%" value="' + escapeHtml(p.discountLabel || '') + '"></div>' +
+        '<div class="field"><label class="field__label" for="f-offerDuration">OFFER DURATION (DAYS)</label><input class="input" type="number" min="1" max="365" step="1" id="f-offerDuration" aria-describedby="offer-timing-help" placeholder="1–365"><small id="offer-timing-help">Set a new duration from the time you save. Leave blank to keep existing timing.</small>' +
+          (p.offerExpiresAt ? '<small>Saved expiration: ' + escapeHtml(new Date(p.offerExpiresAt).toLocaleString()) + '</small><label><input type="checkbox" id="f-clearOfferExpiry"> Remove expiration</label>' : '') + '</div>' +
         '<div class="field"><span class="field__label">SKU *</span><input class="input" id="f-sku" value="' + escapeHtml(p.sku || '') + '"></div>' +
         '<div class="field"><span class="field__label">MEASUREMENTS</span><input class="input" id="f-measurements" value="' + escapeHtml(p.measurements || '') + '"></div>' +
         '<div class="field"><span class="field__label">STOCK</span><input class="input" type="number" id="f-stock" value="' + (p.stock != null ? p.stock : 50) + '"></div>' +
@@ -134,6 +136,17 @@
         '<button class="btn btn--ghost" id="cancel-product-btn" type="button">Cancel</button>' +
       '</div>';
 
+    function updateOfferField() {
+      var duration = document.getElementById('f-offerDuration');
+      var hasOffer = Number(document.getElementById('f-originalPrice').value) > Number(document.getElementById('f-price').value) || !!document.getElementById('f-discountLabel').value.trim();
+      var clear = document.getElementById('f-clearOfferExpiry');
+      duration.disabled = !hasOffer || !!(clear && clear.checked);
+      if (clear) clear.disabled = !hasOffer;
+    }
+    ['f-price', 'f-originalPrice', 'f-discountLabel', 'f-clearOfferExpiry'].forEach(function (id) {
+      var field = document.getElementById(id); if (field) field.addEventListener('input', updateOfferField);
+    });
+    updateOfferField();
     document.getElementById('cancel-product-btn').addEventListener('click', closeForm);
     document.getElementById('add-color-btn').addEventListener('click', function () {
       state.colors.push({ name: '', hex: '#c9c4b8' });
@@ -233,15 +246,25 @@
       imageLabel: name ? name + ' photo' : 'Product photo',
     };
     var originalPrice = document.getElementById('f-originalPrice').value;
-    if (originalPrice) payload.originalPrice = parseFloat(originalPrice);
+    payload.originalPrice = originalPrice ? parseFloat(originalPrice) : null;
     var discountLabel = document.getElementById('f-discountLabel').value.trim();
-    if (discountLabel) payload.discountLabel = discountLabel;
+    payload.discountLabel = discountLabel;
+    var duration = document.getElementById('f-offerDuration'), clear = document.getElementById('f-clearOfferExpiry');
+    if (clear && clear.checked && !clear.disabled) payload.offerDurationDays = null;
+    else if (!duration.disabled && duration.value !== '') {
+      if (!duration.checkValidity()) { duration.reportValidity(); return; }
+      payload.offerDurationDays = Number(duration.value);
+    }
+    var saveButton = document.getElementById('save-product-btn');
+    if (saveButton.disabled) return;
+    saveButton.disabled = true;
 
     var call = state.editingId
       ? apiPatch('/products/' + state.editingId, payload)
       : apiPost('/products', payload);
 
     call.then(function (res) {
+      saveButton.disabled = false;
       if (!res) return;
       if (res._status >= 400) {
         var message = Array.isArray(res.message) ? res.message.join(', ') : (res.message || 'Save failed');
