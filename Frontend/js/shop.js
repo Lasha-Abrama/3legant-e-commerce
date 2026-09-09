@@ -1,151 +1,137 @@
 (function () {
-  var CATEGORIES = ['All Rooms', 'Living Room', 'Bedroom', 'Kitchen', 'Bathroom', 'Dining', 'Outdoor'];
-  var PRICE_BRACKETS = [
-    { label: '$0 - $100', min: 0, max: 100 },
-    { label: '$100 - $150', min: 100, max: 150 },
-    { label: '$150 - $200', min: 150, max: 200 },
-    { label: '$200 - $300', min: 200, max: 300 },
-    { label: '$300 - $400', min: 300, max: 400 },
-    { label: '$400+', min: 400, max: Infinity },
+  var categories = ['All Rooms', 'Living Room', 'Bedroom', 'Kitchen', 'Bathroom', 'Dining', 'Outdoor'];
+  var prices = [
+    { label: 'All Price' },
+    { label: '$0.00 - 99.99', min: 0, max: 99.99 },
+    { label: '$100.00 - 199.99', min: 100, max: 199.99 },
+    { label: '$200.00 - 299.99', min: 200, max: 299.99 },
+    { label: '$300.00 - 399.99', min: 300, max: 399.99 },
+    { label: '$400.00+', min: 400 }
   ];
-  var PAGE_SIZE = 9;
-  document.querySelectorAll('[data-shop-view]').forEach(function(button) {
-    button.addEventListener('click', function() {
-      document.querySelector('.shop-layout').dataset.view = button.dataset.shopView;
-      document.querySelectorAll('[data-shop-view]').forEach(function(item) {
-        item.setAttribute('aria-pressed', String(item === button));
-      });
-    });
-  });
-
-
-  var requestedCategory = (qs('category') || '').trim();
+  var sizes = { three: 9, four: 12, two: 6, list: 6 };
   var state = {
-    category: CATEGORIES.indexOf(requestedCategory) >= 0 ? requestedCategory : 'All Rooms',
-    prices: {},
-    search: (qs('q') || '').trim(),
-    sort: '',
-    visible: PAGE_SIZE,
-    allProducts: [],
+    category: categories.includes(qs('category')) ? qs('category') : 'All Rooms',
+    search: (qs('q') || '').trim(), price: 0, sort: 'newest', view: 'three',
+    products: [], total: 0, page: 0, loading: false, request: 0
   };
+  var grid = document.getElementById('product-grid');
+  var more = document.getElementById('show-more');
+  var status = document.getElementById('shop-status');
+  var layout = document.querySelector('.shop-layout');
+  var categorySelect = document.getElementById('category-select');
+  var priceSelect = document.getElementById('price-select');
 
   document.querySelectorAll('[data-store-icon]').forEach(function (element) {
-    element.innerHTML = storeIcon(element.getAttribute('data-store-icon'));
+    element.innerHTML = storeIcon(element.dataset.storeIcon);
   });
-
-  function updateResultsLabel() {
-    document.getElementById('active-category-label').textContent = state.search
-      ? 'Search: “' + state.search + '”'
-      : state.category;
-  }
-
-  function renderCategoryList() {
-    document.getElementById('category-list').innerHTML = CATEGORIES.map(function (c) {
-      return '<button data-cat="' + c + '" class="' + (state.category === c ? 'is-active' : '') + '">' + c + '</button>';
+  categorySelect.innerHTML = categories.map(function (category) {
+    return '<option>' + category + '</option>';
+  }).join('');
+  priceSelect.innerHTML = prices.map(function (price, index) {
+    return '<option value="' + index + '">' + price.label + '</option>';
+  }).join('');
+  function syncFilters() {
+    categorySelect.value = state.category;
+    priceSelect.value = String(state.price);
+    document.getElementById('active-category-label').textContent = state.search ? 'Search: ' + state.search : state.category;
+    document.getElementById('category-list').innerHTML = categories.map(function (category) {
+      return '<button type="button" data-cat="' + category + '" class="' +
+        (category === state.category ? 'is-active' : '') + '" aria-pressed="' +
+        (category === state.category) + '">' + category + '</button>';
     }).join('');
-    document.querySelectorAll('#category-list button').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        state.category = btn.getAttribute('data-cat');
-        state.visible = PAGE_SIZE;
-        updateResultsLabel();
-        loadProducts();
-      });
-    });
-  }
-
-  function renderPriceList() {
-    document.getElementById('price-list').innerHTML = PRICE_BRACKETS.map(function (p, i) {
-      return '<label><input type="checkbox" data-price-idx="' + i + '"> ' + p.label + '</label>';
+    document.getElementById('price-list').innerHTML = prices.map(function (price, index) {
+      return '<label>' + price.label + '<input type="radio" name="price-range" value="' +
+        index + '"' + (index === state.price ? ' checked' : '') + '></label>';
     }).join('');
-    document.querySelectorAll('#price-list input').forEach(function (input) {
-      input.addEventListener('change', function () {
-        var idx = input.getAttribute('data-price-idx');
-        state.prices[idx] = input.checked;
-        state.visible = PAGE_SIZE;
-        renderGrid();
+  }
+  function render() {
+    grid.innerHTML = state.products.map(productCardHtml).join('');
+    if (state.view === 'two' || state.view === 'list') {
+      grid.querySelectorAll('.product-card').forEach(function (card, index) {
+        var details = document.createElement('div');
+        details.className = 'shop-card-details';
+        details.appendChild(card.lastElementChild);
+        var description = document.createElement('p');
+        description.className = 'shop-card-description';
+        description.textContent = state.products[index].description || '';
+        details.appendChild(description);
+        details.appendChild(card.querySelector('[data-add-id]'));
+        var wishlist = card.querySelector('[data-wish-id]');
+        wishlist.classList.add('shop-card-wishlist');
+        details.appendChild(wishlist);
+        card.appendChild(details);
       });
-    });
-  }
-
-  function matchesPrice(price) {
-    var active = Object.keys(state.prices).filter(function (k) { return state.prices[k]; });
-    if (active.length === 0) return true;
-    return active.some(function (idx) {
-      var b = PRICE_BRACKETS[idx];
-      return price >= b.min && price <= b.max;
-    });
-  }
-
-  function applySort(list) {
-    var sorted = list.slice();
-    if (state.sort === 'price_asc') sorted.sort(function (a, b) { return a.price - b.price; });
-    if (state.sort === 'price_desc') sorted.sort(function (a, b) { return b.price - a.price; });
-    if (state.sort === 'newest') sorted.sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
-    return sorted;
-  }
-
-  function renderGrid() {
-    var filtered = applySort(state.allProducts.filter(function (p) { return matchesPrice(p.price); }));
-    var slice = filtered.slice(0, state.visible);
-    var grid = document.getElementById('product-grid');
-    grid.innerHTML = slice.length
-      ? slice.map(productCardHtml).join('')
-      : '<div class="shop-empty">No products found' +
-        (state.search ? ' for “' + escapeHtml(state.search) + '”' : '') +
-        '.</div>';
+    }
     wireAddToCartButtons(grid);
-    document.getElementById('show-more').style.display = slice.length >= filtered.length ? 'none' : 'inline-flex';
+    more.hidden = state.products.length >= state.total;
   }
-
-  function loadProducts() {
-    renderCategoryList();
-    var url = '/products?take=200' + (state.category !== 'All Rooms' ? '&category=' + encodeURIComponent(state.category) : '');
-    if (state.search) url += '&search=' + encodeURIComponent(state.search);
-    apiGetSilent(url).then(function (res) {
-      if (!res || res._status >= 400 || !Array.isArray(res.data)) {
-        state.allProducts = [];
-        renderRetryState(document.getElementById('product-grid'), res && res.message, loadProducts);
-        document.getElementById('show-more').style.display = 'none';
-        return;
-      }
-      state.allProducts = res.data;
-      renderGrid();
-    });
-  }
-
-  updateResultsLabel();
-  renderPriceList();
-  loadProducts();
-
-  document.getElementById('sort-select').addEventListener('change', function (e) {
-    state.sort = e.target.value;
-    renderGrid();
-  });
-
-  document.getElementById('show-more').addEventListener('click', function () {
-    state.visible += PAGE_SIZE;
-    renderGrid();
-  });
-
-  document.getElementById('mobile-filter-toggle').addEventListener('click', function () {
-    document.getElementById('shop-sidebar').classList.toggle('is-open');
-  });
-
-  document.querySelectorAll('[data-view]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      var view = button.getAttribute('data-view');
-      var grid = document.getElementById('product-grid');
-      grid.classList.remove('grid-2', 'product-grid--list');
-      if (view === 'grid-2') grid.classList.add('grid-2');
-      if (view === 'list') grid.classList.add('product-grid--list');
-      document.querySelectorAll('[data-view]').forEach(function (candidate) {
-        var active = candidate === button;
-        candidate.classList.toggle('is-active', active);
-        candidate.setAttribute('aria-pressed', String(active));
+  async function load(append) {
+    var request = ++state.request;
+    var page = append ? state.page + 1 : 1;
+    state.loading = true;
+    grid.setAttribute('aria-busy', 'true');
+    more.disabled = true;
+    status.textContent = 'Loading products…';
+    if (!append) { state.products = []; state.total = 0; render(); }
+    var params = new URLSearchParams({ page: String(page), take: String(sizes[state.view]), sort: state.sort });
+    if (state.category !== 'All Rooms') params.set('category', state.category);
+    if (state.search) params.set('search', state.search);
+    var price = prices[state.price];
+    if (price.min !== undefined) params.set('minPrice', price.min);
+    if (price.max !== undefined) params.set('maxPrice', price.max);
+    try {
+      var response = await apiGetSilent('/products?' + params);
+      if (request !== state.request) return;
+      if (!response || response._status >= 400 || !Array.isArray(response.data)) throw new Error('load');
+      var combined = append ? state.products.concat(response.data) : response.data;
+      state.products = combined.filter(function (product, index, all) {
+        return all.findIndex(function (item) { return item._id === product._id; }) === index;
       });
+      state.page = page;
+      state.total = Number(response.total) || 0;
+      render();
+      status.textContent = state.products.length ? '' : 'No products found. Try another category or price range.';
+    } catch (error) {
+      if (request !== state.request) return;
+      status.textContent = '';
+      renderRetryState(status, 'Products could not be loaded. Please try again.', function () { load(append); });
+    } finally {
+      if (request === state.request) {
+        state.loading = false;
+        grid.setAttribute('aria-busy', 'false');
+        more.disabled = false;
+      }
+    }
+  }
+  function filterChanged() { syncFilters(); load(false); }
+  document.getElementById('category-list').addEventListener('click', function (event) {
+    var button = event.target.closest('[data-cat]');
+    if (button) { state.category = button.dataset.cat; filterChanged(); }
+  });
+  document.getElementById('price-list').addEventListener('change', function (event) {
+    state.price = Number(event.target.value); filterChanged();
+  });
+  categorySelect.addEventListener('change', function () { state.category = this.value; filterChanged(); });
+  priceSelect.addEventListener('change', function () { state.price = Number(this.value); filterChanged(); });
+  document.getElementById('sort-select').addEventListener('change', function () { state.sort = this.value; load(false); });
+  document.querySelectorAll('[data-shop-view]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      if (state.view === button.dataset.shopView) return;
+      state.view = button.dataset.shopView;
+      layout.dataset.view = state.view;
+      document.querySelectorAll('[data-shop-view]').forEach(function (item) {
+        item.setAttribute('aria-pressed', String(item === button));
+      });
+      load(false);
     });
   });
-
+  more.addEventListener('click', function () { if (!state.loading) load(true); });
+  document.getElementById('mobile-filter-toggle').addEventListener('click', function () {
+    var open = document.getElementById('shop-sidebar').classList.toggle('is-open');
+    this.setAttribute('aria-expanded', String(open));
+  });
+  syncFilters();
+  load(false);
   document.getElementById('newsletter-slot').innerHTML = newsletterHtml();
   wireNewsletterForm();
 })();

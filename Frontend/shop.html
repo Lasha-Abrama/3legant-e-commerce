@@ -11,6 +11,7 @@
     />
     <link rel="stylesheet" href="css/styles.css" />
     <link rel="stylesheet" href="css/design.css" />
+    <link rel="stylesheet" href="css/shop.css" />
   </head>
   <body class="page-shop">
     <div id="site-header" data-active="Shop"></div>
@@ -18,21 +19,21 @@
     <main>
       <div class="page-hero">
         <img
-          src="images/shop-hero.jpg"
+          src="images/shop-hero.png"
           alt="Shop page hero"
           style="width: 100%; height: 100%; object-fit: cover; display: block"
         />
         <div class="page-hero__overlay">
-          <div class="page-hero__crumb">Home / Shop</div>
-          <div class="page-hero__title">Shop Page</div>
+          <div class="page-hero__crumb"><a href="index.html">Home</a> › Shop</div>
+          <h1 class="page-hero__title">Shop Page</h1>
           <div class="page-hero__sub">
-            Let's design the place you always imagined
+            Let's design the place you always imagined.
           </div>
         </div>
       </div>
 
       <div class="wrap">
-        <div class="shop-layout">
+        <div class="shop-layout" data-view="three">
           <div class="shop-sidebar" id="shop-sidebar">
             <div class="filter-heading">
               <span data-store-icon="filter"></span> Filter
@@ -43,7 +44,7 @@
             <div class="price-list" id="price-list"></div>
           </div>
 
-          <div>
+          <div class="shop-results">
             <div class="section-head">
               <div
                 style="font-size: 20px; font-weight: 600"
@@ -52,14 +53,18 @@
                 All Rooms
               </div>
               <div class="shop-controls">
+                <div class="shop-top-filters">
+                  <label>CATEGORIES<select id="category-select" aria-label="Category"></select></label>
+                  <label>PRICE<select id="price-select" aria-label="Price"></select></label>
+                </div>
                 <button class="mobile-filter-toggle" id="mobile-filter-toggle">
                   <span data-store-icon="filter"></span> Filter
                 </button>
-                <select class="sort-select" id="sort-select">
-                  <option value="">Sort by ⌄</option>
+                <select class="sort-select" id="sort-select" aria-label="Sort by">
+                  <option value="newest">Newest</option>
+                  <option value="oldest">Oldest</option>
                   <option value="price_asc">Price: Low to High</option>
                   <option value="price_desc">Price: High to Low</option>
-                  <option value="newest">Newest</option>
                 </select>
                 <div class="shop-view-buttons" aria-label="Product layout">
                   <button
@@ -68,28 +73,31 @@
                     aria-label="Three column grid"
                     aria-pressed="true"
                   >
-                    ▥</button
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 2h5v5H2zm7 0h5v5H9zm7 0h5v5h-5zM2 9h5v5H2zm7 0h5v5H9zm7 0h5v5h-5zM2 16h5v5H2zm7 0h5v5H9zm7 0h5v5h-5z"/></svg></button
                   ><button
                     type="button"
                     data-shop-view="four"
                     aria-label="Four column grid"
                     aria-pressed="false"
                   >
-                    ▦</button
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm11 0h7v7h-7z"/></svg></button
+                  ><button type="button" data-shop-view="two" aria-label="Two column detailed view" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="13" y="3" width="7" height="18" rx="1"/></svg></button
                   ><button
                     type="button"
                     data-shop-view="list"
                     aria-label="List view"
                     aria-pressed="false"
                   >
-                    ☰
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="13" width="18" height="7" rx="1"/></svg>
                   </button>
                 </div>
               </div>
             </div>
 
-            <div class="grid-3" id="product-grid"></div>
-            <div class="center" style="margin-top: 40px">
+            <div id="shop-status" role="status" aria-live="polite"></div>
+            <div class="grid-3" id="product-grid" aria-busy="false"></div>
+            <div class="center shop-more">
               <button class="btn btn--outline" id="show-more">Show more</button>
             </div>
           </div>

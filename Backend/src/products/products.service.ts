@@ -30,11 +30,12 @@ export class ProductsService {
     }
 
     const sortMap: Record<string, Record<string, 1 | -1>> = {
-      price_asc: { price: 1 },
-      price_desc: { price: -1 },
-      newest: { createdAt: -1 },
+      price_asc: { price: 1, _id: 1 },
+      price_desc: { price: -1, _id: 1 },
+      newest: { createdAt: -1, _id: -1 },
+      oldest: { createdAt: 1, _id: 1 },
     };
-    const sort = sortMap[query.sort ?? ''] ?? { createdAt: -1 };
+    const sort = sortMap[query.sort ?? 'newest'] ?? sortMap.newest;
 
     const page = query.page ?? 1;
     const take = query.take ?? 12;

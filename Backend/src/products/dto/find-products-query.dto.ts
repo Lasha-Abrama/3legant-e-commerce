@@ -2,7 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { PRODUCT_CATEGORIES, ProductCategory } from '../schemas/product.schema';
 
-const SORT_OPTIONS = ['price_asc', 'price_desc', 'newest'] as const;
+const SORT_OPTIONS = ['price_asc', 'price_desc', 'newest', 'oldest'] as const;
 
 export class FindProductsQueryDto {
   @IsOptional()
