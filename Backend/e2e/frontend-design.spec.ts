@@ -26,8 +26,21 @@ async function fixtures(page: Page) {
 }
 
 async function noOverflow(page: Page) {
-  const sizes = await page.evaluate(() => ({ content: document.documentElement.scrollWidth, viewport: innerWidth }));
-  expect(sizes.content).toBeLessThanOrEqual(sizes.viewport);
+  const sizes = await page.evaluate(() => ({
+    content: document.documentElement.scrollWidth,
+    viewport: innerWidth,
+    offenders: Array.from(document.querySelectorAll<HTMLElement>('body *'))
+      .filter(element => {
+        const rect = element.getBoundingClientRect();
+        return rect.left < -0.5 || rect.right > innerWidth + 0.5;
+      })
+      .slice(0, 10)
+      .map(element => {
+        const rect = element.getBoundingClientRect();
+        return `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${element.className ? `.${String(element.className).trim().replace(/\s+/g, '.')}` : ''} (${rect.left}, ${rect.right})`;
+      }),
+  }));
+  expect(sizes.content, sizes.offenders.join('\n')).toBeLessThanOrEqual(sizes.viewport);
 }
 
 test('homepage carousel, wishlist and cart thumbnails stay connected', async ({ page }) => {

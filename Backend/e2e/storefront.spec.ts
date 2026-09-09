@@ -149,8 +149,9 @@ test.describe.serial('storefront critical customer and admin journeys', () => {
   test('customer completes Stripe test checkout and sees the order in history', async ({ page, baseURL }) => {
     await login(page, /account\.html/);
     await page.goto(`/shop.html?q=${encodeURIComponent(product.name)}`);
-    await expect(page.getByText(product.name, { exact: true })).toBeVisible();
-    await page.locator('.product-card').filter({ hasText: product.name }).locator('a[href^="product.html?id="]').first().click();
+    const productCard = page.locator('.product-card').filter({ hasText: product.name }).first();
+    await expect(productCard).toBeVisible();
+    await productCard.locator('a[href^="product.html?id="]').first().click();
     await expect(page.getByRole('heading', { name: product.name })).toBeVisible();
     await page.getByRole('button', { name: 'Add to Cart' }).click();
 

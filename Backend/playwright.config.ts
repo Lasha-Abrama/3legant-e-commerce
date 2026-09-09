@@ -36,6 +36,7 @@ export default defineConfig({
           NODE_ENV: 'test',
           PORT: String(port),
           FRONTEND_URL: baseURL,
+          GOOGLE_OAUTH_REDIRECT_URI: `${baseURL}/api/auth/google/callback`,
           MONGO_URL: process.env.E2E_MONGO_URL || '',
         },
       },
