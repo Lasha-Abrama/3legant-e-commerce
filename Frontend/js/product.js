@@ -45,47 +45,221 @@
   function wireQty() { var stock = Math.max(0, Number(state.product.stock) || 0); function updateControls() { document.getElementById('qty-val').textContent = state.qty; document.getElementById('qty-dec').disabled = state.qty <= 1; document.getElementById('qty-inc').disabled = !stock || state.qty >= stock; } document.getElementById('qty-dec').addEventListener('click', function () { state.qty = Math.max(1, state.qty - 1); updateControls(); }); document.getElementById('qty-inc').addEventListener('click', function () { state.qty = Math.min(stock, state.qty + 1); updateControls(); }); updateControls(); }
   function updateWishlistButton() { var button = document.getElementById('wishlist-btn'); if (!button) return; button.innerHTML = (state.wishlisted ? '♥' : '♡') + ' Wishlist'; button.style.color = state.wishlisted ? 'var(--red)' : 'var(--ink)'; }
   function toggleWishlist() { var call = state.wishlisted ? apiDelete('/users/me/wishlist/' + state.product._id) : apiPost('/users/me/wishlist/' + state.product._id); call.then(function (response) { if (!response || response._status >= 400) return; state.wishlisted = !state.wishlisted; updateWishlistButton(); }); }
-  function renderTabs() { var tabs = [{ key: 'info', label: 'Additional Info' }, { key: 'questions', label: 'Questions' }, { key: 'reviews', label: 'Reviews (' + (state.product.reviewsCount || 0) + ')' }]; document.getElementById('tab-row').innerHTML = tabs.map(function (tab) { return '<button class="tab-btn' + (state.tab === tab.key ? ' is-active' : '') + '" data-tab="' + tab.key + '">' + tab.label + '</button>'; }).join(''); document.querySelectorAll('.tab-btn').forEach(function (button) { button.addEventListener('click', function () { state.tab = button.getAttribute('data-tab'); renderTabs(); renderTabBody(); }); }); }
-  function reviewUserId(review) { return String(review.user && (review.user._id || review.user) || ''); }
-  function isOwnReview(review) { return state.me && reviewUserId(review) === String(state.me._id); }
-  function reviewAvatarHtml(user, name) { var url = user && safeImageUrl(user.profileImageUrl); return url ? '<img class="review-avatar" src="' + url + '" alt="' + escapeHtml(name) + '">' : '<div class="review-avatar review-avatar--initial">' + escapeHtml(String(name || '?').charAt(0).toUpperCase()) + '</div>'; }
-  function sortedReviews() { return state.reviews.slice().sort(function (left, right) { if (state.reviewSort === 'oldest') return new Date(left.createdAt) - new Date(right.createdAt); if (state.reviewSort === 'highest') return right.rating - left.rating || new Date(right.createdAt) - new Date(left.createdAt); if (state.reviewSort === 'lowest') return left.rating - right.rating || new Date(right.createdAt) - new Date(left.createdAt); return new Date(right.createdAt) - new Date(left.createdAt); }); }
-  function reviewHtml(review) { var reviewId = escapeHtml(review._id), likes = Array.isArray(review.likedBy) ? review.likedBy : [], liked = state.me && likes.some(function (id) { return String(id && (id._id || id)) === String(state.me._id); }), replies = Array.isArray(review.replies) ? review.replies : []; return '<article class="review-row">' + reviewAvatarHtml(review.user, review.authorName) + '<div class="review-row__body"><div class="review-name">' + escapeHtml(review.authorName) + '</div><div class="review-stars">' + starString(review.rating) + '</div><p class="review-text">' + escapeHtml(review.text) + '</p><div class="review-actions"><button type="button" data-like-id="' + reviewId + '">' + (liked ? '♥ Liked' : '♡ Like') + (likes.length ? ' (' + likes.length + ')' : '') + '</button><button type="button" data-reply-id="' + reviewId + '">Reply</button>' + (isOwnReview(review) ? '<button type="button" data-edit-id="' + reviewId + '">Edit</button>' : '') + '</div><form class="review-inline-form" data-reply-form="' + reviewId + '" hidden><textarea class="input" rows="2" maxlength="1000" placeholder="Write a reply"></textarea><button class="btn btn--dark" type="submit">Reply</button></form><form class="review-inline-form" data-edit-form="' + reviewId + '" hidden><textarea class="input" rows="3" maxlength="1000">' + escapeHtml(review.text) + '</textarea><select class="input"><option value="5"' + (review.rating === 5 ? ' selected' : '') + '>★★★★★</option><option value="4"' + (review.rating === 4 ? ' selected' : '') + '>★★★★☆</option><option value="3"' + (review.rating === 3 ? ' selected' : '') + '>★★★☆☆</option><option value="2"' + (review.rating === 2 ? ' selected' : '') + '>★★☆☆☆</option><option value="1"' + (review.rating === 1 ? ' selected' : '') + '>★☆☆☆☆</option></select><button class="btn btn--dark" type="submit">Save review</button></form>' + (replies.length ? '<div class="review-replies">' + replies.map(function (reply) { return '<div class="review-reply">' + reviewAvatarHtml(reply.user, reply.authorName) + '<div><strong>' + escapeHtml(reply.authorName) + '</strong><p>' + escapeHtml(reply.text) + '</p></div></div>'; }).join('') + '</div>' : '') + '</div></article>'; }
-  function questionHtml(question) {
-    var questionId = escapeHtml(question._id), answers = Array.isArray(question.answers) ? question.answers : [], likes = Array.isArray(question.likedBy) ? question.likedBy : [], liked = state.me && likes.some(function (id) { return String(id && (id._id || id)) === String(state.me._id); });
-    return '<article class="question-row">' + reviewAvatarHtml(question.user, question.authorName) + '<div class="review-row__body"><div class="review-name">' + escapeHtml(question.authorName) + '</div><p class="review-text">' + escapeHtml(question.text) + '</p><div class="review-actions"><button type="button" data-question-like="' + questionId + '">' + (liked ? '♥ Liked' : '♡ Like') + (likes.length ? ' (' + likes.length + ')' : '') + '</button><button type="button" data-answer-open="' + questionId + '">Answer</button>' + (state.me && reviewUserId(question) === String(state.me._id) ? '<button type="button" data-question-edit="' + questionId + '">Edit</button>' : '') + '</div><form class="review-inline-form" data-answer-form="' + questionId + '" hidden><textarea class="input" rows="2" maxlength="1000" placeholder="Write an answer"></textarea><button class="btn btn--dark" type="submit" aria-label="Send answer">Send &#10148;</button></form><form class="review-inline-form" data-question-edit-form="' + questionId + '" hidden><textarea class="input" rows="2" maxlength="1000">' + escapeHtml(question.text) + '</textarea><button class="btn btn--dark" type="submit">Save</button></form>' + (answers.length ? '<div class="review-replies">' + answers.map(function (answer) { var answerId = escapeHtml(answer._id), answerLikes = Array.isArray(answer.likedBy) ? answer.likedBy : [], answerLiked = state.me && answerLikes.some(function (id) { return String(id && (id._id || id)) === String(state.me._id); }); return '<div class="question-answer">' + reviewAvatarHtml(answer.user, answer.authorName) + '<div><strong>' + escapeHtml(answer.authorName) + '</strong><p>' + escapeHtml(answer.text) + '</p><div class="review-actions"><button type="button" data-answer-like="' + questionId + ':' + answerId + '">' + (answerLiked ? '♥ Liked' : '♡ Like') + (answerLikes.length ? ' (' + answerLikes.length + ')' : '') + '</button><button type="button" data-answer-reply-open="' + questionId + ':' + answerId + '">Reply</button></div><form class="review-inline-form" data-answer-reply-form="' + questionId + ':' + answerId + '" hidden><textarea class="input" rows="2" maxlength="1000" placeholder="Write a reply"></textarea><button class="btn btn--dark" type="submit" aria-label="Send reply">Send &#10148;</button></form>' + (answer.replies && answer.replies.length ? '<div class="answer-replies">' + answer.replies.map(function (reply) { return '<p><strong>' + escapeHtml(reply.authorName) + ':</strong> ' + escapeHtml(reply.text) + '</p>'; }).join('') + '</div>' : '') + '</div></div>'; }).join('') + '</div>' : '') + '</div></article>';
+  var communityLimit = { reviews: 5, questions: 5 };
+  var questionSort = 'newest';
+  var icons = {
+    star: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/>',
+    send: '<path d="m21 3-7 18-4-7-7-4 18-7ZM10 14 21 3"/>',
+    chevron: '<path d="m8 10 4 4 4-4"/>',
+  };
+  function icon(name) { return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + icons[name] + '</svg>'; }
+  function stars(rating) {
+    return '<span class="community-stars" role="img" aria-label="' + Number(rating || 0) + ' out of 5 stars">' + [1, 2, 3, 4, 5].map(function (value) { return '<span class="' + (value <= Math.round(rating) ? 'is-filled' : '') + '">' + icon('star') + '</span>'; }).join('') + '</span>';
   }
-  function renderQuestions() {
-    var body = document.getElementById('tab-body');
-    if (state.questions === null) { body.innerHTML = '<div class="product-tab-copy">Loading questions…</div>'; return; }
-    body.innerHTML = '<div class="reviews-panel"><h2>Questions</h2>' + (state.me ? '<div class="review-compose"><textarea class="input" id="question-text" rows="2" maxlength="1000" placeholder="Ask a question about this product"></textarea><div><span class="faint">Other customers can help answer.</span><button class="btn btn--dark" id="submit-question" type="button">Ask question</button></div><div class="error-text" id="question-error"></div></div>' : '<p class="faint"><a href="login.html?next=' + encodeURIComponent('product.html?id=' + productId) + '">Sign in</a> to ask or answer a question.</p>') + '<div id="question-list">' + (state.questionsError ? '' : state.questions.map(questionHtml).join('')) + '</div></div>';
-    if (state.questionsError) renderRetryState(document.getElementById('question-list'), state.questionsError, loadQuestions);
-    wireQuestionActions();
+  function ratingInput(rating) {
+    return '<fieldset class="community-rating"><legend class="sr-only">Rating</legend>' + [1, 2, 3, 4, 5].map(function (value) {
+      return '<label class="' + (value <= rating ? 'is-filled' : '') + '"><input type="radio" name="rating" value="' + value + '" aria-label="' + value + ' star' + (value > 1 ? 's' : '') + '"' + (value === rating ? ' checked' : '') + ' required>' + icon('star') + '</label>';
+    }).join('') + '</fieldset>';
   }
-  function wireQuestionActions() {
-    var submit = document.getElementById('submit-question');
-    if (submit) submit.addEventListener('click', function () { var text = document.getElementById('question-text').value.trim(), error = document.getElementById('question-error'); if (!text) { error.textContent = 'Please write a question.'; return; } apiPost('/products/' + productId + '/questions', { text: text }).then(reloadQuestionsIfSuccess); });
-    document.querySelectorAll('[data-question-like]').forEach(function (button) { button.addEventListener('click', function () { apiPost('/products/' + productId + '/questions/' + button.getAttribute('data-question-like') + '/like').then(reloadQuestionsIfSuccess); }); });
-    document.querySelectorAll('[data-answer-open], [data-question-edit], [data-answer-reply-open]').forEach(function (button) { button.addEventListener('click', function () { var value = button.getAttribute('data-answer-open') || button.getAttribute('data-question-edit') || button.getAttribute('data-answer-reply-open'), selector = button.hasAttribute('data-answer-open') ? '[data-answer-form="' + value + '"]' : button.hasAttribute('data-question-edit') ? '[data-question-edit-form="' + value + '"]' : '[data-answer-reply-form="' + value + '"]', form = document.querySelector(selector); if (form) form.hidden = !form.hidden; }); });
-    document.querySelectorAll('[data-answer-form]').forEach(function (form) { form.addEventListener('submit', function (event) { event.preventDefault(); var text = form.querySelector('textarea').value.trim(); if (text) apiPost('/products/' + productId + '/questions/' + form.getAttribute('data-answer-form') + '/answers', { text: text }).then(reloadQuestionsIfSuccess); }); });
-    document.querySelectorAll('[data-question-edit-form]').forEach(function (form) { form.addEventListener('submit', function (event) { event.preventDefault(); var text = form.querySelector('textarea').value.trim(); if (text) apiPatch('/products/' + productId + '/questions/' + form.getAttribute('data-question-edit-form'), { text: text }).then(reloadQuestionsIfSuccess); }); });
-    document.querySelectorAll('[data-answer-like]').forEach(function (button) { button.addEventListener('click', function () { var ids = button.getAttribute('data-answer-like').split(':'); apiPost('/products/' + productId + '/questions/' + ids[0] + '/answers/' + ids[1] + '/like').then(reloadQuestionsIfSuccess); }); });
-    document.querySelectorAll('[data-answer-reply-form]').forEach(function (form) { form.addEventListener('submit', function (event) { event.preventDefault(); var text = form.querySelector('textarea').value.trim(), ids = form.getAttribute('data-answer-reply-form').split(':'); if (text) apiPost('/products/' + productId + '/questions/' + ids[0] + '/answers/' + ids[1] + '/replies', { text: text }).then(reloadQuestionsIfSuccess); }); });
+  function renderTabs() {
+    var tabs = [{ key: 'info', label: 'Additional Info' }, { key: 'questions', label: 'Questions' }, { key: 'reviews', label: 'Reviews' }];
+    var row = document.getElementById('tab-row');
+    row.setAttribute('role', 'tablist');
+    row.setAttribute('aria-label', 'Product details');
+    row.innerHTML = tabs.map(function (tab) { return '<button type="button" role="tab" id="tab-' + tab.key + '" aria-controls="tab-body" aria-selected="' + (state.tab === tab.key) + '" tabindex="' + (state.tab === tab.key ? 0 : -1) + '" class="tab-btn' + (state.tab === tab.key ? ' is-active' : '') + '" data-tab="' + tab.key + '">' + tab.label + '</button>'; }).join('');
+    row.onclick = function (event) { var button = event.target.closest('[data-tab]'); if (!button) return; state.tab = button.dataset.tab; renderTabs(); renderTabBody(); document.getElementById('tab-' + state.tab).focus(); };
+    row.onkeydown = function (event) {
+      var index = tabs.findIndex(function (tab) { return tab.key === state.tab; });
+      if (event.key === 'ArrowRight') index = (index + 1) % tabs.length;
+      else if (event.key === 'ArrowLeft') index = (index + tabs.length - 1) % tabs.length;
+      else if (event.key === 'Home') index = 0;
+      else if (event.key === 'End') index = tabs.length - 1;
+      else return;
+      event.preventDefault(); row.querySelector('[data-tab="' + tabs[index].key + '"]').click();
+    };
   }
-  function loadQuestions() { apiGetSilent('/products/' + productId + '/questions').then(function (questions) { state.questions = Array.isArray(questions) ? questions : []; state.questionsError = Array.isArray(questions) ? '' : (questions && questions.message) || 'Questions could not be loaded.'; if (state.tab === 'questions') renderQuestions(); }); }
-  function reloadQuestionsIfSuccess(response) { if (response && response._status < 400) { state.questions = null; loadQuestions(); } }
+  function reviewUserId(item) { return String(item.user && (item.user._id || item.user) || ''); }
+  function isOwnReview(item) { return state.me && reviewUserId(item) === String(state.me._id); }
+  function author(item) { var user = item.user; return user && (user.displayName || [user.firstName, user.lastName].filter(Boolean).join(' ')) || item.authorName; }
+  function reviewAvatarHtml(user, name) { var url = user && safeImageUrl(user.profileImageUrl); return url ? '<img class="review-avatar" src="' + escapeHtml(url) + '" alt="">' : '<div class="review-avatar review-avatar--initial" aria-hidden="true">' + escapeHtml(String(name || '?').charAt(0).toUpperCase()) + '</div>'; }
+  function hasReaction(item, field) { return state.me && (item[field] || []).some(function (id) { return String(id && (id._id || id)) === String(state.me._id); }); }
+  function actionsHtml(item, path) {
+    var voting = path.indexOf('questions/') === 0;
+    return '<div class="review-actions"><button type="button" data-action="like" aria-pressed="' + !!hasReaction(item, 'likedBy') + '">Like <span>' + (item.likedBy || []).length + '</span></button>' +
+      (voting ? '<button type="button" data-action="dislike" aria-pressed="' + !!hasReaction(item, 'dislikedBy') + '">Dislike <span>' + (item.dislikedBy || []).length + '</span></button>' : '') +
+      '<button type="button" data-action="reply">' + (voting && path.split('/').length === 2 ? 'Answer' : 'Reply') + '</button>' +
+      (isOwnReview(item) ? '<button type="button" data-action="edit">Edit</button>' : '') + '</div>';
+  }
+  function contentHtml(item) {
+    return (item.rating !== undefined ? '<div class="review-stars">' + stars(item.rating) + '</div>' : '') + '<p class="review-text">' + escapeHtml(item.text) + '</p>';
+  }
+  function itemHtml(item, path, addressed) {
+    var parts = path.split('/'), root = parts.length === 2, children = '';
+    if (root && parts[0] === 'reviews') children = (item.replies || []).map(function (reply) {
+      var target = (item.replies || []).find(function (entry) { return entry._id === reply.replyTo; });
+      return itemHtml(reply, path + '/replies/' + reply._id, author(target || item));
+    }).join('');
+    if (root && parts[0] === 'questions') children = (item.answers || []).map(function (answer) {
+      return itemHtml(answer, path + '/answers/' + answer._id) + (answer.replies || []).map(function (reply) {
+        var target = (answer.replies || []).find(function (entry) { return entry._id === reply.replyTo; });
+        return itemHtml(reply, path + '/answers/' + answer._id + '/replies/' + reply._id, author(target || answer));
+      }).join('');
+    }).join('');
+    return '<article class="' + (root ? 'review-row' : 'community-reply') + '" data-path="' + escapeHtml(path) + '">' + reviewAvatarHtml(item.user, author(item)) +
+      '<div class="review-row__body"><div class="review-name">' + escapeHtml(author(item)) + '</div>' +
+      (addressed ? '<div class="reply-address">Replying to <strong>' + escapeHtml(addressed) + '</strong></div>' : '') +
+      '<div class="community-content">' + contentHtml(item) + '</div>' + actionsHtml(item, path) +
+      '<div class="community-composer-slot"></div><div class="error-text community-error" role="alert"></div>' +
+      (children ? '<div class="review-replies">' + children + '</div>' : '') + '</div></article>';
+  }
+  function sortedItems(kind) {
+    var sort = kind === 'reviews' ? state.reviewSort : questionSort;
+    return (state[kind] || []).slice().sort(function (a, b) {
+      var date = new Date(b.createdAt) - new Date(a.createdAt);
+      if (sort === 'oldest') return -date;
+      if (sort === 'highest') return b.rating - a.rating || date;
+      if (sort === 'lowest') return a.rating - b.rating || date;
+      if (sort === 'helpful') return ((b.likedBy || []).length - (b.dislikedBy || []).length) - ((a.likedBy || []).length - (a.dislikedBy || []).length) || date;
+      return date;
+    });
+  }
+  function countLabel(count, kind) { return count + ' ' + (kind === 'reviews' ? 'Review' : 'Question') + (count === 1 ? '' : 's'); }
+  function renderList(kind) {
+    var list = document.getElementById('community-list'); if (!list || state.tab !== kind) return;
+    var items = sortedItems(kind);
+    if (state[kind + 'Error']) { renderRetryState(list, state[kind + 'Error'], kind === 'reviews' ? loadReviews : loadQuestions); return; }
+    list.innerHTML = items.slice(0, communityLimit[kind]).map(function (item) { return itemHtml(item, kind + '/' + item._id); }).join('') || '<p class="faint community-empty">' + (kind === 'reviews' ? 'No reviews yet. Share your experience with this product.' : 'No questions yet. Start the conversation.') + '</p>';
+    var more = document.getElementById('community-more'); if (more) more.hidden = items.length <= communityLimit[kind];
+  }
   function renderTabBody() {
-    var p = state.product, body = document.getElementById('tab-body');
-    if (state.tab === 'info') { body.innerHTML = '<div class="product-tab-copy">Category: ' + escapeHtml(p.category) + '<br>' + (p.measurements ? 'Dimensions: ' + escapeHtml(p.measurements) + '<br>' : '') + 'SKU: ' + escapeHtml(p.sku) + '<br>Assembly: no tools required, ready to use out of the box.</div>'; return; }
-    if (state.tab === 'questions') { if (state.questions === null) loadQuestions(); renderQuestions(); return; }
-    var reviews = sortedReviews();
-    body.innerHTML = '<div class="reviews-panel"><h2>Customer Reviews</h2><div class="review-summary"><span>' + starString(p.ratingAvg) + '</span><span class="faint">' + p.reviewsCount + ' Reviews</span></div>' + (state.me ? '<div class="review-compose"><textarea class="input" placeholder="Write your review" rows="3" id="review-text"></textarea><div><select class="input" id="review-rating"><option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3">★★★☆☆</option><option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option></select><button class="btn btn--dark" id="submit-review" type="button">Write Review</button></div><div class="error-text" id="review-error"></div></div>' : '<p class="faint"><a href="login.html?next=' + encodeURIComponent('product.html?id=' + p._id) + '">Sign in</a> to review a product you purchased.</p>') + '<div class="review-list-head"><h3>' + reviews.length + ' Reviews</h3><label>Sort <select class="input" id="review-sort"><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="highest">Highest rating</option><option value="lowest">Lowest rating</option></select></label></div><div id="review-list">' + (state.reviewsError ? '' : reviews.map(reviewHtml).join('')) + '</div></div>';
-    if (state.reviewsError) renderRetryState(document.getElementById('review-list'), state.reviewsError, loadReviews); wireReviewActions();
+    var p = state.product, body = document.getElementById('tab-body'), kind = state.tab;
+    body.setAttribute('role', 'tabpanel'); body.setAttribute('aria-labelledby', 'tab-' + kind);
+    if (kind === 'info') { body.innerHTML = '<div class="product-tab-copy">Category: ' + escapeHtml(p.category) + '<br>' + (p.measurements ? 'Dimensions: ' + escapeHtml(p.measurements) + '<br>' : '') + 'SKU: ' + escapeHtml(p.sku) + '<br>Assembly: no tools required, ready to use out of the box.</div>'; return; }
+    if (kind === 'questions' && state.questions === null) { body.innerHTML = '<p role="status">Loading questions…</p>'; loadQuestions(); return; }
+    var reviews = kind === 'reviews', items = state[kind], count = items.length;
+    body.innerHTML = '<section class="reviews-panel"><h2>' + (reviews ? 'Customer Reviews' : 'Product Questions') + '</h2>' +
+      (reviews ? '<div class="review-summary">' + stars(p.ratingAvg) + '<span>' + countLabel(count, kind) + '</span></div>' : '<p class="faint">Ask about this product. Share what you know.</p>') +
+      '<div class="review-product-name">' + escapeHtml(p.name) + '</div>' +
+      '<form class="community-create" data-kind="' + kind + '">' + '<div class="community-emoji" role="toolbar" aria-label="Insert emoji">' + ['❤️', '🙌', '👍', '😊', '🤣', '😡'].map(function (emoji) { return '<button type="button" data-emoji="' + emoji + '" aria-label="Insert ' + emoji + '">' + emoji + '</button>'; }).join('') + '</div>' + (reviews ? '<div class="compose-rating">' + ratingInput(5) + '</div>' : '') +
+      '<div class="community-create__field"><textarea name="text" maxlength="1000" rows="1" required aria-label="' + (reviews ? 'Write your review' : 'Ask a product question') + '" placeholder="' + (reviews ? 'Share your experience' : 'What would you like to know?') + '"></textarea><button type="submit" class="btn btn--dark">' + (reviews ? 'Write Review' : 'Ask question') + '</button></div><div class="error-text" role="alert"></div></form>' +
+      (!state.me ? '<p class="community-signin"><a href="login.html?next=' + encodeURIComponent('product.html?id=' + productId) + '">Sign in</a> to join the conversation.' + (reviews ? ' Reviews are available to customers who purchased this product.' : '') + '</p>' : '') +
+      '<div class="review-list-head"><h3>' + countLabel(count, kind) + '</h3><label class="community-sort"><span class="sr-only">Sort ' + kind + '</span><select id="community-sort" class="input"><option value="newest">Newest</option><option value="oldest">Oldest</option>' +
+      (reviews ? '<option value="highest">Highest rating</option><option value="lowest">Lowest rating</option>' : '<option value="helpful">Most helpful</option>') + '</select>' + icon('chevron') + '</label></div><div id="community-list"></div><button id="community-more" class="btn btn--outline" type="button">Load more</button></section>';
+    var sort = document.getElementById('community-sort'); sort.value = reviews ? state.reviewSort : questionSort;
+    sort.onchange = function () { if (reviews) state.reviewSort = sort.value; else questionSort = sort.value; renderList(kind); };
+    document.getElementById('community-more').onclick = function () { communityLimit[kind] += 5; renderList(kind); };
+    body.onclick = communityClick; body.onsubmit = communitySubmit;
+    body.onchange = function (event) { if (event.target.name !== 'rating') return; event.target.closest('fieldset').querySelectorAll('label').forEach(function (label) { label.classList.toggle('is-filled', Number(label.querySelector('input').value) <= Number(event.target.value)); }); };
+    renderList(kind);
   }
-  function wireReviewActions() { var sort = document.getElementById('review-sort'); if (sort) { sort.value = state.reviewSort; sort.addEventListener('change', function () { state.reviewSort = sort.value; renderTabBody(); }); } var submit = document.getElementById('submit-review'); if (submit) submit.addEventListener('click', function () { var text = document.getElementById('review-text').value.trim(), error = document.getElementById('review-error'); if (!text) { error.textContent = 'Please write a review before submitting.'; return; } submit.disabled = true; apiPost('/products/' + productId + '/reviews', { text: text, rating: Number(document.getElementById('review-rating').value) }).then(function (response) { if (!response || response._status >= 400) { error.textContent = (response && response.message) || 'Could not submit review.'; submit.disabled = false; return; } reloadReviewsAndProduct(); }); }); document.querySelectorAll('[data-like-id]').forEach(function (button) { button.addEventListener('click', function () { apiPost('/products/' + productId + '/reviews/' + button.getAttribute('data-like-id') + '/like').then(reloadIfSuccess); }); }); document.querySelectorAll('[data-reply-id], [data-edit-id]').forEach(function (button) { button.addEventListener('click', function () { var selector = button.hasAttribute('data-reply-id') ? '[data-reply-form="' + button.getAttribute('data-reply-id') + '"]' : '[data-edit-form="' + button.getAttribute('data-edit-id') + '"]', form = document.querySelector(selector); if (form) form.hidden = !form.hidden; }); }); document.querySelectorAll('[data-reply-form]').forEach(function (form) { form.addEventListener('submit', function (event) { event.preventDefault(); var text = form.querySelector('textarea').value.trim(); if (text) apiPost('/products/' + productId + '/reviews/' + form.getAttribute('data-reply-form') + '/replies', { text: text }).then(reloadIfSuccess); }); }); document.querySelectorAll('[data-edit-form]').forEach(function (form) { form.addEventListener('submit', function (event) { event.preventDefault(); var text = form.querySelector('textarea').value.trim(); if (text) apiPatch('/products/' + productId + '/reviews/' + form.getAttribute('data-edit-form'), { text: text, rating: Number(form.querySelector('select').value) }).then(reloadIfSuccess); }); }); }
-  function reloadIfSuccess(response) { if (response && response._status < 400) reloadReviewsAndProduct(); }
-  function reloadReviewsAndProduct() { Promise.all([apiGetSilent('/products/' + productId), apiGetSilent('/products/' + productId + '/reviews')]).then(function (results) { if (results[0] && results[0]._status < 400) state.product = results[0]; state.reviews = Array.isArray(results[1]) ? results[1] : []; state.reviewsError = Array.isArray(results[1]) ? '' : (results[1] && results[1].message) || 'Reviews could not be loaded.'; renderTabs(); renderTabBody(); }); }
-  function loadReviews() { apiGetSilent('/products/' + productId + '/reviews').then(function (reviews) { state.reviews = Array.isArray(reviews) ? reviews : []; state.reviewsError = Array.isArray(reviews) ? '' : (reviews && reviews.message) || 'Reviews could not be loaded.'; renderTabBody(); }); }
+  function findItem(path) {
+    var parts = path.split('/'), item = state[parts[0]].find(function (entry) { return entry._id === parts[1]; });
+    for (var i = 2; i < parts.length; i += 2) item = (item[parts[i]] || []).find(function (entry) { return entry._id === parts[i + 1]; });
+    return item;
+  }
+  function ownElement(row, selector) { return row.querySelector(':scope > .review-row__body > ' + selector); }
+  function requireAuth() { if (state.me) return true; redirectToLogin(); return false; }
+  async function requestCommunity(container, call) {
+    if (container.dataset.busy === 'true') return null;
+    container.dataset.busy = 'true'; container.setAttribute('aria-busy', 'true');
+    var controls = Array.from(container.querySelectorAll('button, textarea, input'));
+    controls.forEach(function (control) { control.disabled = true; });
+    var error = container.matches('article') ? ownElement(container, '.community-error') : container.querySelector('.error-text');
+    if (error) error.textContent = '';
+    try {
+      var response = await call();
+      if (!response || response._status >= 400) throw new Error(response && (Array.isArray(response.message) ? response.message.join(' ') : response.message) || 'Could not save. Please try again.');
+      return response;
+    } catch (failure) { if (error) error.textContent = failure.message; return null; }
+    finally { container.dataset.busy = 'false'; container.removeAttribute('aria-busy'); controls.forEach(function (control) { control.disabled = false; }); }
+  }
+  async function communityClick(event) {
+    var emoji = event.target.closest('[data-emoji]');
+    if (emoji) { var input = emoji.closest('form').elements.text; if (input.value.length + emoji.dataset.emoji.length <= input.maxLength) input.setRangeText(emoji.dataset.emoji, input.selectionStart, input.selectionEnd, 'end'); input.focus(); return; }
+    var button = event.target.closest('[data-action]'); if (!button) return;
+    var row = button.closest('[data-path]'), path = row.dataset.path, item = findItem(path), action = button.dataset.action;
+    if (action === 'cancel-edit') { ownElement(row, '.community-content').innerHTML = contentHtml(item); ownElement(row, '.review-actions').hidden = false; ownElement(row, '.review-actions').querySelector('[data-action="edit"]').focus(); return; }
+    if (action === 'cancel-reply') { ownElement(row, '.community-composer-slot').innerHTML = ''; ownElement(row, '.review-actions').querySelector('[data-action="reply"]').focus(); return; }
+    if (!requireAuth()) return;
+    if (action === 'like' || action === 'dislike') {
+      var result = await requestCommunity(row, function () { return apiPost('/products/' + productId + '/' + path + '/' + action); });
+      if (!result) return;
+      ['likedBy', 'dislikedBy'].forEach(function (field) {
+        if (field === 'dislikedBy' && path.indexOf('reviews/') === 0) return;
+        item[field] = (item[field] || []).filter(function (id) { return String(id) !== String(state.me._id); });
+        if (result[field === 'likedBy' ? 'liked' : 'disliked']) item[field].push(state.me._id);
+      });
+      var actions = ownElement(row, '.review-actions');
+      ['like', 'dislike'].forEach(function (reaction) { var control = actions.querySelector('[data-action="' + reaction + '"]'); if (!control) return; control.setAttribute('aria-pressed', String(!!result[reaction === 'like' ? 'liked' : 'disliked'])); control.querySelector('span').textContent = result[reaction === 'like' ? 'likesCount' : 'dislikesCount']; });
+      return;
+    }
+    if (action === 'edit') {
+      ownElement(row, '.community-composer-slot').innerHTML = '';
+      ownElement(row, '.review-actions').hidden = true;
+      ownElement(row, '.community-content').innerHTML = '<form class="community-edit">' + (item.rating !== undefined ? ratingInput(item.rating) : '') + '<textarea class="input" name="text" rows="3" maxlength="1000" required aria-label="Edit ' + (item.rating !== undefined ? 'review' : 'message') + '">' + escapeHtml(item.text) + '</textarea><div class="inline-controls"><button class="btn btn--dark" type="submit">Save</button><button type="button" data-action="cancel-edit">Cancel</button></div><div class="error-text" role="alert"></div></form>';
+      ownElement(row, '.community-content').querySelector('textarea').focus(); return;
+    }
+    if (action === 'reply') {
+      var slot = ownElement(row, '.community-composer-slot');
+      if (slot.children.length) { slot.innerHTML = ''; return; }
+      slot.innerHTML = '<form class="community-reply-form"><label>Replying to <strong>' + escapeHtml(author(item)) + '</strong><textarea class="input" name="text" rows="2" maxlength="1000" required aria-label="Reply to ' + escapeHtml(author(item)) + '"></textarea></label><div class="inline-controls"><button class="btn btn--dark send-reply" type="submit" aria-label="Send reply">' + icon('send') + '</button><button type="button" data-action="cancel-reply">Cancel</button></div><div class="error-text" role="alert"></div></form>';
+      slot.querySelector('textarea').focus();
+    }
+  }
+  async function communitySubmit(event) {
+    var form = event.target;
+    if (!form.matches('.community-create, .community-edit, .community-reply-form')) return;
+    event.preventDefault(); if (!requireAuth()) return;
+    var text = form.elements.text.value.trim();
+    if (!text) { form.querySelector('.error-text').textContent = 'Please enter some text.'; form.elements.text.focus(); return; }
+    var data = { text: text }, row = form.closest('[data-path]'), path = row && row.dataset.path;
+    if (form.elements.rating) data.rating = Number(form.elements.rating.value);
+    if (form.matches('.community-create')) {
+      var kind = form.dataset.kind;
+      var created = await requestCommunity(form, function () { return apiPost('/products/' + productId + '/' + kind, data); });
+      if (!created) return;
+      created.user = state.me; state[kind].unshift(created); form.reset();
+      form.querySelectorAll('.community-rating label').forEach(function (label) { label.classList.add('is-filled'); });
+      updateSummary(kind); renderList(kind); return;
+    }
+    var edit = form.matches('.community-edit'), parts = path.split('/'), endpoint = path;
+    if (!edit) {
+      if (parts[0] === 'reviews') { endpoint = parts.slice(0, 2).join('/') + '/replies'; if (parts.length > 2) data.replyToId = parts[3]; }
+      else if (parts.length === 2) endpoint += '/answers';
+      else { endpoint = parts.slice(0, 4).join('/') + '/replies'; if (parts.length > 4) data.replyToId = parts[5]; }
+    }
+    var response = await requestCommunity(form, function () { return edit ? apiPatch('/products/' + productId + '/' + endpoint, data) : apiPost('/products/' + productId + '/' + endpoint, data); });
+    if (!response) return;
+    var index = state[parts[0]].findIndex(function (entry) { return entry._id === parts[1]; });
+    state[parts[0]][index] = response;
+    if (edit) {
+      var updated = findItem(path);
+      ownElement(row, '.community-content').innerHTML = contentHtml(updated);
+      ownElement(row, '.review-actions').hidden = false;
+      ownElement(row, '.review-actions').querySelector('[data-action="edit"]').focus();
+    } else {
+      var root = row.closest('.review-row'), rootPath = parts.slice(0, 2).join('/');
+      root.outerHTML = itemHtml(response, rootPath);
+      var restored = document.querySelector('[data-path="' + path + '"]');
+      if (restored) ownElement(restored, '.review-actions').querySelector('[data-action="reply"]').focus();
+    }
+    updateSummary(parts[0]);
+  }
+  function updateSummary(kind) {
+    if (kind === 'reviews') {
+      state.product.reviewsCount = state.reviews.length;
+      state.product.ratingAvg = state.reviews.reduce(function (total, review) { return total + review.rating; }, 0) / (state.reviews.length || 1);
+      var summary = document.querySelector('.review-summary'); if (summary) summary.innerHTML = stars(state.product.ratingAvg) + '<span>' + countLabel(state.reviews.length, 'reviews') + '</span>';
+      var productRating = document.querySelector('.product-rating'); if (productRating) productRating.textContent = starString(state.product.ratingAvg) + ' ' + state.product.reviewsCount + ' Reviews';
+    }
+    var heading = document.querySelector('.review-list-head h3'); if (heading && state.tab === kind) heading.textContent = countLabel(state[kind].length, kind);
+  }
+  function loadQuestions() {
+    apiGetSilent('/products/' + productId + '/questions').then(function (questions) { state.questions = Array.isArray(questions) ? questions : []; state.questionsError = Array.isArray(questions) ? '' : (questions && questions.message) || 'Questions could not be loaded.'; if (state.tab === 'questions') renderTabBody(); });
+  }
+  function loadReviews() {
+    apiGetSilent('/products/' + productId + '/reviews').then(function (reviews) { state.reviews = Array.isArray(reviews) ? reviews : []; state.reviewsError = Array.isArray(reviews) ? '' : (reviews && reviews.message) || 'Reviews could not be loaded.'; if (state.tab === 'reviews') renderTabBody(); });
+  }
   function loadRecommendations() { apiGetSilent('/products?take=8&category=' + encodeURIComponent(state.product.category)).then(function (response) { var products = response && Array.isArray(response.data) ? response.data : [], recommendations = products.filter(function (product) { return product._id !== productId; }).slice(0, 5); if (!recommendations.length) return; var section = document.getElementById('product-recommendations'), grid = document.getElementById('recommended-products'); grid.innerHTML = recommendations.map(productCardHtml).join(''); wireAddToCartButtons(grid); section.hidden = false; }); }
   function loadProduct() { Promise.all([apiGetSilent('/products/' + productId), apiGetSilent('/products/' + productId + '/reviews'), apiGetSilent('/auth/me')]).then(function (results) { var product = results[0]; if (!product || product._status >= 500 || product._networkError) { renderRetryState(document.getElementById('product-content'), product && product.message, loadProduct); return; } if (product._status >= 400) { document.getElementById('product-content').innerHTML = '<p>Product not found.</p>'; return; } state.product = product; state.reviews = Array.isArray(results[1]) ? results[1] : []; state.reviewsError = Array.isArray(results[1]) ? '' : (results[1] && results[1].message) || 'Reviews could not be loaded.'; state.me = results[2] && results[2].user; function afterAuth() { renderProduct(); renderTabs(); renderTabBody(); loadRecommendations(); } if (state.me) apiGetSilent('/users/me/wishlist').then(function (wishlist) { state.wishlisted = Array.isArray(wishlist) && wishlist.some(function (item) { return item._id === productId; }); afterAuth(); }); else afterAuth(); }); }
   document.getElementById('newsletter-slot').innerHTML = newsletterHtml(); wireNewsletterForm(); loadProduct();

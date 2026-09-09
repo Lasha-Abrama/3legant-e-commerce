@@ -57,6 +57,25 @@ export class ReviewsController {
     @Body() dto: CreateReviewReplyDto,
   ) {
     const authorName = request.user.displayName || `${request.user.firstName} ${request.user.lastName}`;
-    return this.reviewsService.addReply(productId, reviewId, String(request.user._id), authorName, dto.text);
+    return this.reviewsService.addReply(productId, reviewId, String(request.user._id), authorName, dto.text, dto.replyToId);
   }
+  @Post(':reviewId/replies/:replyId/like')
+  @UseGuards(JwtAuthGuard)
+  likeReply(
+    @Param('productId', ParseObjectIdPipe) productId: string,
+    @Param('reviewId', ParseObjectIdPipe) reviewId: string,
+    @Param('replyId', ParseObjectIdPipe) replyId: string,
+    @Req() request: AuthenticatedRequest,
+  ) { return this.reviewsService.toggleReplyLike(productId, reviewId, replyId, String(request.user._id)); }
+
+  @Patch(':reviewId/replies/:replyId')
+  @UseGuards(JwtAuthGuard)
+  editReply(
+    @Param('productId', ParseObjectIdPipe) productId: string,
+    @Param('reviewId', ParseObjectIdPipe) reviewId: string,
+    @Param('replyId', ParseObjectIdPipe) replyId: string,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreateReviewReplyDto,
+  ) { return this.reviewsService.updateReply(productId, reviewId, replyId, String(request.user._id), dto.text); }
+
 }

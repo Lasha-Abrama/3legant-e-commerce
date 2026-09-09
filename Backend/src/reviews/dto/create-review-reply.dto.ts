@@ -1,6 +1,10 @@
-import { IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsMongoId, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class CreateReviewReplyDto {
+  @IsOptional()
+  @IsMongoId()
+  replyToId?: string;
+
   @IsString()
   @MinLength(1, { message: 'Reply text is required' })
   @Matches(/\S/, { message: 'Reply text is required' })

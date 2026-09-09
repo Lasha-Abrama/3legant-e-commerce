@@ -1904,32 +1904,12 @@ select.input:focus {
 .review-avatar--initial { display: grid; place-items: center; color: var(--muted); font-size: 15px; font-weight: 600; }
 .reviews-panel > h2 { margin: 0 0 16px; font-size: 24px; }
 .review-summary { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; color: var(--ink); }
-.review-compose { margin: 24px 0 32px; }
-.review-compose > div:nth-child(2) { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; }
-.review-compose select { width: 154px; letter-spacing: 1px; }
 .review-list-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .review-list-head h3 { font-size: 18px; }
 .review-list-head label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .review-list-head select { width: 150px; padding: 8px; }
 .review-actions { display: flex; gap: 14px; margin-top: 10px; }
 .review-actions button { border: 0; padding: 0; background: transparent; color: var(--ink); cursor: pointer; font-size: 12px; font-weight: 600; }
-.review-inline-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; width: min(100%, 620px); margin: 14px 0 0 18px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-soft); animation: inlineComposer .18s ease-out; }
-.review-inline-form textarea { grid-column: 1 / -1; }
-.review-inline-form select { width: 154px; letter-spacing: 1px; }
-.review-inline-form .btn { width: auto; min-width: 0; justify-self: end; padding: 9px 15px; }
-.review-replies { margin-top: 16px; padding-left: 18px; border-left: 2px solid var(--line); }
-.review-reply { display: flex; gap: 10px; padding-top: 12px; }
-.review-reply .review-avatar { width: 30px; height: 30px; flex-basis: 30px; font-size: 12px; }
-.review-reply strong { font-size: 12px; }
-.review-reply p { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
-.question-row { display: flex; gap: 14px; padding: 20px 0; border-top: 1px solid var(--line); }
-.question-answer { display: flex; gap: 10px; padding-top: 12px; }
-.question-answer .review-avatar { width: 30px; height: 30px; flex-basis: 30px; font-size: 12px; }
-.question-answer strong { font-size: 12px; }
-.question-answer p { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
-.answer-replies { margin: 8px 0 0 10px; padding-left: 10px; border-left: 1px solid var(--line); }
-.answer-replies p { margin: 5px 0; }
-@keyframes inlineComposer { from { opacity: 0; transform: translate(-8px, -4px); } to { opacity: 1; transform: translate(0, 0); } }
 .product-tab-copy { max-width: 700px; color: #4a4843; font-size: 14px; line-height: 1.9; }
 .product-tab-copy h2 { margin: 0 0 8px; color: var(--ink); }
 .product-tab-copy p { margin: 0 0 18px; }

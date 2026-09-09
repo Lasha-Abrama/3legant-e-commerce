@@ -1,4 +1,4 @@
-import { IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsMongoId, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class QuestionTextDto {
   @IsString()
@@ -6,4 +6,10 @@ export class QuestionTextDto {
   @Matches(/\S/, { message: 'Message is required' })
   @MaxLength(1000, { message: 'A message cannot exceed 1000 characters' })
   text: string;
+}
+
+export class AnswerReplyDto extends QuestionTextDto {
+  @IsOptional()
+  @IsMongoId()
+  replyToId?: string;
 }

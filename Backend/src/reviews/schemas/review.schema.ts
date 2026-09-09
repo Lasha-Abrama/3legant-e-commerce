@@ -5,6 +5,12 @@ export type ReviewDocument = HydratedDocument<Review>;
 
 @Schema({ _id: true, timestamps: true })
 export class ReviewReply {
+  @Prop({ type: [MongooseSchema.Types.ObjectId], ref: 'User', default: [] })
+  likedBy: Types.ObjectId[];
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
+  replyTo: Types.ObjectId;
+
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   user: Types.ObjectId;
 

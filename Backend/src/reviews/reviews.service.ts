@@ -1,3 +1,4 @@
+import { toggleReaction } from '../common/utils/community-reaction';
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -69,21 +70,28 @@ export class ReviewsService {
   }
 
   async toggleLike(productId: string, reviewId: string, userId: string) {
-    const review = await this.findReviewDocument(productId, reviewId);
-    const alreadyLiked = review.likedBy.some((likedUserId) => String(likedUserId) === userId);
-    if (alreadyLiked) {
-      review.likedBy = review.likedBy.filter((likedUserId) => String(likedUserId) !== userId);
-    } else {
-      review.likedBy.push(new Types.ObjectId(userId));
-    }
-    await review.save();
-    return { liked: !alreadyLiked, likesCount: review.likedBy.length };
+    return toggleReaction(this.reviewModel, productId, reviewId, userId);
   }
 
-  async addReply(productId: string, reviewId: string, userId: string, authorName: string, text: string) {
-    const review = await this.findReviewDocument(productId, reviewId);
-    review.replies.push({ user: new Types.ObjectId(userId), authorName, text } as never);
-    await review.save();
+  async addReply(productId: string, reviewId: string, userId: string, authorName: string, text: string, replyToId?: string) {
+    const result = await this.reviewModel.updateOne({ _id: reviewId, product: productId,
+      ...(replyToId ? { 'replies._id': replyToId } : {}),
+    }, { $push: { replies: { user: new Types.ObjectId(userId), authorName, text,
+      ...(replyToId ? { replyTo: new Types.ObjectId(replyToId) } : {}),
+    } } }, { runValidators: true }).exec();
+    if (!result.matchedCount) throw new NotFoundException('Review or reply not found');
+    return this.findReview(productId, reviewId);
+  }
+
+  toggleReplyLike(productId: string, reviewId: string, replyId: string, userId: string) {
+    return toggleReaction(this.reviewModel, productId, reviewId, userId, [{ field: 'replies', id: replyId }]);
+  }
+
+  async updateReply(productId: string, reviewId: string, replyId: string, userId: string, text: string) {
+    const result = await this.reviewModel.updateOne({ _id: reviewId, product: productId,
+      replies: { $elemMatch: { _id: replyId, user: userId } },
+    }, { $set: { 'replies.$.text': text, 'replies.$.updatedAt': new Date() } }, { runValidators: true }).exec();
+    if (!result.matchedCount) throw new ForbiddenException('You can only edit your own reply on this product');
     return this.findReview(productId, reviewId);
   }
 
