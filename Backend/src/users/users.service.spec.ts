@@ -130,7 +130,7 @@ describe('UsersService', () => {
       email: 'GOOGLE@example.com',
       firstName: 'Google',
       lastName: 'User',
-    })).rejects.toBeInstanceOf(BadRequestException);
+    })).rejects.toMatchObject({ response: { code: 'GOOGLE_ACCOUNT_EXISTS' } });
 
     expect(user.googleId).toBeUndefined();
     expect(user.save).not.toHaveBeenCalled();

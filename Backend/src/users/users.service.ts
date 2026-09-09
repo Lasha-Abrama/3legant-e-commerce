@@ -78,7 +78,10 @@ export class UsersService {
       // Email/password registrations do not verify mailbox ownership. Never merge
       // that account into a Google identity using only a matching email address.
       if (existingEmailUser.googleId === input.googleId) return existingEmailUser;
-      throw new BadRequestException('This email already has an account. Sign in using its existing sign-in method.');
+      throw new BadRequestException({
+        code: 'GOOGLE_ACCOUNT_EXISTS',
+        message: 'This email already has an account. Sign in using its existing sign-in method.',
+      });
     }
 
     const user = new this.userModel({

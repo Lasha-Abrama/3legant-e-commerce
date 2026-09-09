@@ -21,7 +21,7 @@ import { configureApp } from './setup';
 import { HealthController } from './health.controller';
 import { ContactController } from './contact/contact.controller';
 import { ContactService } from './contact/contact.service';
-import { ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { ProfileImageController } from './uploads/profile-image.controller';
 import { ProfileImagesService } from './uploads/profile-images.service';
 
@@ -348,6 +348,36 @@ describe('API integration boundaries', () => {
     expect(response.headers.location).toBe('https://accounts.google.com/oauth');
     expect(response.headers['set-cookie'][0]).toContain('google_oauth_state=encoded-state.signature');
     expect(googleOAuthService.getAuthorizationUrl).toHaveBeenCalledWith('oauth-state');
+  });
+
+  it('shows an actionable error when a verified Google email already uses another sign-in method', async () => {
+    googleOAuthService.validateState.mockReturnValue('/account.html');
+    googleOAuthService.getProfileFromAuthorizationCode.mockResolvedValue({ googleId: 'new-google-id', email: 'existing@example.com' });
+    authService.signInWithGoogle.mockRejectedValueOnce(new BadRequestException({ code: 'GOOGLE_ACCOUNT_EXISTS', message: 'Existing account' }));
+    const response = await request(app.getHttpServer())
+      .get('/api/auth/google/callback?code=google-code&state=oauth-state')
+      .set('Cookie', 'google_oauth_state=encoded-state.signature')
+      .expect(302)
+      .expect('Location', 'https://store.example/oauth-callback.html?error=account_exists');
+    expect(String(response.headers['set-cookie'] || '')).not.toContain('google_oauth_session=');
+  });
+
+  it('distinguishes expired state and does not exchange the Google code', async () => {
+    googleOAuthService.validateState.mockImplementationOnce(() => { throw new BadRequestException('Expired'); });
+    await request(app.getHttpServer())
+      .get('/api/auth/google/callback?code=google-code&state=old-state')
+      .expect(302)
+      .expect('Location', 'https://store.example/oauth-callback.html?error=session_expired');
+    expect(googleOAuthService.getProfileFromAuthorizationCode).not.toHaveBeenCalled();
+  });
+
+  it('does not disclose unexpected internal errors in the callback URL', async () => {
+    googleOAuthService.validateState.mockReturnValue('/account.html');
+    googleOAuthService.getProfileFromAuthorizationCode.mockRejectedValueOnce(new Error('Private provider details'));
+    await request(app.getHttpServer())
+      .get('/api/auth/google/callback?code=google-code&state=oauth-state')
+      .expect(302)
+      .expect('Location', 'https://store.example/oauth-callback.html?error=failed');
   });
 
   it('handles cancelled Google OAuth authentication without exchanging a code', async () => {

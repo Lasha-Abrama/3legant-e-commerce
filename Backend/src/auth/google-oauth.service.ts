@@ -114,7 +114,7 @@ export class GoogleOAuthService {
     }
   }
 
-  getFrontendCallbackUrl(returnPath: string | undefined, error?: 'cancelled' | 'failed') {
+  getFrontendCallbackUrl(returnPath: string | undefined, error?: 'cancelled' | 'failed' | 'account_exists' | 'session_expired') {
     const callbackUrl = new URL('/oauth-callback.html', this.configService.getOrThrow<string>('FRONTEND_URL'));
     if (error) {
       callbackUrl.searchParams.set('error', error);

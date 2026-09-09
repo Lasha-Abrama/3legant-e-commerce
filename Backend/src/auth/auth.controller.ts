@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Headers, HttpCode, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, HttpCode, Logger, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -12,6 +12,8 @@ import { GoogleOAuthService } from './google-oauth.service';
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private readonly authService: AuthService,
     private readonly googleOAuthService: GoogleOAuthService,
@@ -64,12 +66,15 @@ export class AuthController {
     if (!code) {
       return response.redirect(this.googleOAuthService.getFrontendCallbackUrl(undefined, 'failed'));
     }
+    let stage = 'state';
     try {
       const returnPath = this.googleOAuthService.validateState(
         state,
         this.getCookieValue(request.headers.cookie, this.googleOAuthService.getStateCookieName()),
       );
+      stage = 'google_profile';
       const profile = await this.googleOAuthService.getProfileFromAuthorizationCode(code);
+      stage = 'account';
       const authResponse = await this.authService.signInWithGoogle(profile);
       response.cookie(
         this.googleOAuthService.getSessionCookieName(),
@@ -77,8 +82,15 @@ export class AuthController {
         this.googleOAuthService.getSessionCookieOptions(),
       );
       return response.redirect(this.googleOAuthService.getFrontendCallbackUrl(returnPath));
-    } catch {
-      return response.redirect(this.googleOAuthService.getFrontendCallbackUrl(undefined, 'failed'));
+    } catch (failure) {
+      const details = failure instanceof BadRequestException ? failure.getResponse() : null;
+      const accountExists = stage === 'account' && typeof details === 'object' && details !== null
+        && 'code' in details && details.code === 'GOOGLE_ACCOUNT_EXISTS';
+      const reason = accountExists ? 'account_exists'
+        : stage === 'state' && failure instanceof BadRequestException ? 'session_expired' : 'failed';
+      // Do not log OAuth codes, cookies, tokens, emails or raw provider errors.
+      this.logger.warn(`Google sign-in failed: stage=${stage}, reason=${reason}`);
+      return response.redirect(this.googleOAuthService.getFrontendCallbackUrl(undefined, reason));
     }
   }
 
