@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { ProductsService } from '../products/products.service';
+import { CouponsService } from '../coupons/coupons.service';
 
 describe('OrdersService', () => {
   const productsService = {
@@ -8,6 +9,12 @@ describe('OrdersService', () => {
     decrementStock: jest.fn(),
     incrementStock: jest.fn(),
   } as unknown as ProductsService;
+  const couponsService = {
+    validate: jest.fn().mockResolvedValue(null),
+    reserve: jest.fn().mockResolvedValue(undefined),
+    release: jest.fn().mockResolvedValue(undefined),
+    consume: jest.fn().mockResolvedValue(undefined),
+  } as unknown as CouponsService;
   const orderModel = jest.fn().mockImplementation((data) => ({
     ...data,
     save: jest.fn().mockResolvedValue(data),
@@ -19,7 +26,7 @@ describe('OrdersService', () => {
   const connection = {
     startSession: jest.fn().mockResolvedValue(session),
   };
-  const service = new OrdersService(orderModel as never, productsService, connection as never);
+  const service = new OrdersService(orderModel as never, productsService, connection as never, couponsService);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -108,6 +115,11 @@ describe('OrdersService', () => {
     productsService.findOne = jest.fn().mockResolvedValue({
       _id: '507f1f77bcf86cd799439011', name: 'Real product', price: 100,
       stock: 10, colors: [{ name: 'Black' }], images: ['/images/products/tray-table.jpg'],
+    });
+    couponsService.validate = jest.fn().mockResolvedValue({
+      _id: 'coupon-id',
+      code: 'HOME20',
+      percentage: 20,
     });
     const order = await service.create('507f1f77bcf86cd799439012', {
       items: [{ productId: '507f1f77bcf86cd799439011', name: 'Forged', color: 'Black', price: 1, qty: 1 }],
@@ -274,7 +286,7 @@ describe('OrdersService', () => {
           inventoryStatus: 'insufficient',
         }),
       },
-      { new: true },
+      { new: true, session },
     );
   });
 
