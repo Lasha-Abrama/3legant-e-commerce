@@ -34,7 +34,7 @@ function deferred() { let resolve; const promise = new Promise(r => { resolve = 
     firstName: 'Local', lastName: 'Verification', isAdmin: true, tokenVersion: 0, refreshSessions: [],
     passwordHash: await bcrypt.hash('Legacy-password1!', 4), billingAddress: {}, shippingAddress: {} };
   const userModel = {
-    findById: () => query(user), findOne: () => query(user),
+    findById: () => query(user), findOne: filter => query(filter.email && filter.email !== user.email ? null : user),
     updateOne(filter, update) {
       if (filter.tokenVersion !== undefined && filter.tokenVersion !== user.tokenVersion) return query({ matchedCount: 0 });
       if (update.$inc) user.tokenVersion += update.$inc.tokenVersion;
@@ -137,6 +137,23 @@ function deferred() { let resolve; const promise = new Promise(r => { resolve = 
     await expect(page.locator('.password-requirements')).toBeHidden();
     for (const path of ['/register.html', '/reset-password.html?token=' + 'x'.repeat(43)]) {
       await page.goto(origin + path);
+      if (path === '/register.html') {
+        const requirements = page.locator('.password-requirements');
+        await expect(requirements).toBeHidden();
+        await page.locator('[name=password]').focus();
+        await expect(requirements).toBeHidden();
+        await page.locator('[name=password]').fill('abcdefg');
+        await expect(requirements.locator('li')).toHaveText([
+          'Use at least 8 characters.', 'Add an uppercase letter (A–Z).',
+          'Add a number (0–9).', 'Add a special character, such as !, @, or #.',
+        ]);
+        await page.locator('[name=password]').fill('Testtest2');
+        await expect(requirements.locator('li')).toHaveText(['Add a special character, such as !, @, or #.']);
+        await page.locator('[name=password]').fill('');
+        await expect(requirements).toBeHidden();
+        assert.equal(await page.locator('[name=password]').evaluate(input => input.reportValidity()), false);
+        await expect(requirements).toBeVisible();
+      }
       await page.locator('[name=password]').fill('Abcdefg1');
       await expect(page.locator('.password-requirements li')).toHaveCount(1);
       await page.locator('[name=password]').fill('Abcdef1!');
@@ -196,6 +213,59 @@ function deferred() { let resolve; const promise = new Promise(r => { resolve = 
     await page.waitForURL('**/account.html');
     await expect(page.locator('#account-name')).toContainText('Local');
     console.log('PASS logout revokes sessions and clears cookie; guards reject reload; email/password login still works.');
+
+    let registration;
+    users.create = async input => {
+      registration = input;
+      Object.assign(user, input, { isAdmin: false });
+      return user;
+    };
+    await page.goto(origin + '/register.html');
+    await page.locator('[name=firstName]').fill('Signup');
+    await page.locator('[name=lastName]').fill('Verification');
+    await page.locator('[name=email]').fill('signup@example.test');
+    await page.locator('[name=password]').fill('Testtest2!');
+    await page.locator('[name=confirmPassword]').fill('Testtest2!');
+    await page.locator('[name=agree]').check();
+    await page.locator('#register-form [type=submit]').click();
+    await page.waitForURL('**/account.html');
+    await expect(page.locator('#account-name')).toContainText('Signup');
+    assert(registration && await bcrypt.compare('Testtest2!', registration.passwordHash));
+    console.log('PASS valid signup submits through backend validation, hashes the password, and opens the account.');
+
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await page.goto(origin + '/index.html');
+    await expect(page.locator('.hero-slider')).toHaveCSS('height', '536px');
+    await page.locator('.hero-arrow--next').click();
+    await expect(page.locator('#hero-img')).toHaveAttribute('src', /slide_2/);
+    await page.locator('.hero-arrow--prev').click();
+    await expect(page.locator('#hero-img')).toHaveAttribute('src', /slide_1/);
+    const touchContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const touchPage = await touchContext.newPage();
+    await touchPage.route('**/*', route => route.request().url().startsWith(origin) ? route.continue() : route.abort());
+    await touchPage.goto(origin + '/index.html');
+    const cdp = await touchContext.newCDPSession(touchPage);
+    async function swipe(startX, startY, endX, endY) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: startX, y: startY }] });
+      for (let step = 1; step <= 10; step++) {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{
+          x: startX + (endX - startX) * step / 10, y: startY + (endY - startY) * step / 10,
+        }] });
+      }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    }
+    await expect(touchPage.locator('#hero-img')).toHaveAttribute('src', /slide_1/);
+    const hero = await touchPage.locator('.hero-slider').boundingBox();
+    const middle = hero.y + hero.height / 2;
+    await swipe(300, middle, 80, middle);
+    await expect(touchPage.locator('#hero-img')).toHaveAttribute('src', /slide_2/);
+    await swipe(80, middle, 300, middle);
+    await expect(touchPage.locator('#hero-img')).toHaveAttribute('src', /slide_1/);
+    await swipe(190, middle + 80, 190, middle - 100);
+    await expect.poll(() => touchPage.evaluate(() => scrollY)).toBeGreaterThan(50);
+    await expect(touchPage.locator('#hero-img')).toHaveAttribute('src', /slide_1/);
+    await touchContext.close();
+    console.log('PASS touch carousel swipes both ways and preserves native vertical page scrolling.');
   } finally {
     release.resolve();
     if (browser) await browser.close();

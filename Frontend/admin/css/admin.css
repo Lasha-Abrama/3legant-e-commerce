@@ -69,16 +69,16 @@ body { background: #faf9f6; }
 .status-select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: #fff; }
 
 .admin-form-panel { margin-bottom: 28px; }
-#coupon-editor { max-width: 760px; }
+#coupon-editor { max-width: 680px; }
 .coupon-editor-form { display: grid; gap: 22px; }
 .coupon-editor-form h2 { margin: 0; font-size: 20px; }
 .coupon-editor-form .field { display: grid; gap: 8px; margin: 0; font-size: 13px; }
-.coupon-code-group { display: grid; gap: 8px; }
+.coupon-code-group { display: grid; gap: 10px; padding-bottom: 6px; }
 .coupon-code-controls { display: flex; align-items: stretch; gap: 10px; max-width: 540px; }
 .coupon-code-controls .input { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: .06em; }
 .coupon-code-controls .btn { flex-shrink: 0; white-space: nowrap; }
 .coupon-code-group small { color: var(--muted); line-height: 1.5; }
-.coupon-fields-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.coupon-fields-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 20px; }
 .coupon-fields-grid .input { min-width: 0; width: 100%; }
 .coupon-active { display: flex; align-items: center; gap: 9px; font-size: 13px; }
 .coupon-form-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }

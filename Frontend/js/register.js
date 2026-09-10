@@ -1,7 +1,7 @@
 (function () {
   var form = document.getElementById('register-form');
   var errorEl = document.getElementById('register-error');
-  var validatePassword = PasswordPolicy.attach(form.querySelector('[name="password"]'));
+  var validatePassword = PasswordPolicy.attach(form.querySelector('[name="password"]'), { deferEmpty: true });
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();

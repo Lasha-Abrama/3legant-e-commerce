@@ -10,7 +10,8 @@
   function missing(value) {
     return rules.filter(function (rule) { return !rule.valid(value); }).map(function (rule) { return rule.message; });
   }
-  function attach(input) {
+  function attach(input, options) {
+    options = options || {};
     var list = document.createElement('ul');
     list.className = 'password-requirements';
     list.id = (input.id || input.name) + '-requirements';
@@ -18,7 +19,7 @@
     input.setAttribute('aria-describedby', list.id);
     input.setAttribute('autocomplete', 'new-password');
     input.insertAdjacentElement('afterend', list);
-    function update() {
+    function update(force) {
       var errors = missing(input.value);
       list.replaceChildren();
       errors.forEach(function (message) {
@@ -26,13 +27,14 @@
         item.textContent = message;
         list.appendChild(item);
       });
-      list.hidden = errors.length === 0;
+      list.hidden = errors.length === 0 || (options.deferEmpty && !input.value && !force);
       input.setCustomValidity(errors.join(' '));
       return errors.length === 0;
     }
-    input.addEventListener('input', update);
+    input.addEventListener('input', function () { update(false); });
+    input.addEventListener('invalid', function () { update(true); });
     update();
-    return update;
+    return function () { return update(true); };
   }
   window.PasswordPolicy = { missing: missing, attach: attach };
 })();

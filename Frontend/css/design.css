@@ -114,3 +114,11 @@ body{font-family:Inter,sans-serif;line-height:1.5}h1,h2,h3,.site-header__logo,.s
 .community-emoji::after { content:''; position:absolute; bottom:-5px; left:50%; width:12px; height:12px; transform:rotate(45deg); background:#fff; }
 .community-emoji button { position:relative; z-index:1; border:0; background:none; padding:0; cursor:pointer; font-size:14px; line-height:20px; }
 @media(max-width:600px) { .community-emoji { right:0; top:-36px; gap:6px; padding:8px 10px; } }
+.hero-slider { touch-action: pan-y pinch-zoom; }
+.hero-slider.is-swiping > img { transition: none; }
+@media (pointer: coarse) {
+  .hero-slider > img { transition: transform 180ms ease-out; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-slider > img { transition: none; }
+}

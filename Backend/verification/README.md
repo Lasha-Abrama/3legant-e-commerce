@@ -76,3 +76,14 @@ The browser tests prove the local handoff, cookie, guard, and pricing behavior w
 - `Backend/verification/README.md`
 
 Suggested commit: `fix: tighten password validation, OAuth handoff, and coupon UI`
+# Final release polish coverage
+
+The same isolated runner also verifies that signup requirements are hidden while
+empty/untouched, show only missing rules after input (including `Testtest2`),
+and appear on an invalid empty submission. Valid signup runs through the real
+controller, validation, and password hashing with fixture persistence.
+
+Mobile carousel checks dispatch Chromium touch gestures in both directions and
+verify native vertical page scrolling. Coupon editor screenshots are generated
+for desktop and mobile. These checks do not replace live Google consent,
+MongoDB persistence, or Stripe test-mode payment verification.

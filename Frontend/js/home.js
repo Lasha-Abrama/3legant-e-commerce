@@ -98,6 +98,37 @@
   document.querySelector('.hero-arrow--next').addEventListener('click', function () { showSlide(slideIndex + 1); });
   dots.addEventListener('click', function (event) { if (event.target.dataset.slide !== undefined) showSlide(Number(event.target.dataset.slide)); });
   showSlide(0);
+  var slider = document.querySelector('.hero-slider');
+  var heroImage = document.getElementById('hero-img');
+  var gesture = null;
+  heroImage.draggable = false;
+  slider.addEventListener('pointerdown', function (event) {
+    if (event.pointerType === 'mouse' || !event.isPrimary || event.target.closest('button')) return;
+    gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, delta: 0 };
+    slider.setPointerCapture(event.pointerId);
+  });
+  slider.addEventListener('pointermove', function (event) {
+    if (!gesture || gesture.id !== event.pointerId) return;
+    var horizontal = event.clientX - gesture.x;
+    var vertical = event.clientY - gesture.y;
+    if (Math.abs(vertical) > Math.abs(horizontal)) return;
+    gesture.delta = horizontal;
+    slider.classList.add('is-swiping');
+    heroImage.style.transform = 'translateX(' + Math.max(-slider.clientWidth / 4, Math.min(slider.clientWidth / 4, horizontal)) + 'px)';
+  });
+  function finishSwipe(event) {
+    if (!gesture || gesture.id !== event.pointerId) return;
+    if (event.type === 'pointerup' && Math.abs(gesture.delta) >= 40) {
+      showSlide(slideIndex + (gesture.delta < 0 ? 1 : -1));
+    }
+    gesture = null;
+    slider.classList.remove('is-swiping');
+    heroImage.style.transform = '';
+    if (slider.hasPointerCapture(event.pointerId)) slider.releasePointerCapture(event.pointerId);
+  }
+  slider.addEventListener('pointerup', finishSwipe);
+  slider.addEventListener('pointercancel', finishSwipe);
+  slider.addEventListener('lostpointercapture', finishSwipe);
   loadArticles();
   loadNewArrivals();
 })();
