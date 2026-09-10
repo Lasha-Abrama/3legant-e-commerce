@@ -47,7 +47,7 @@ describe('Refresh session security', () => {
     await service.rotateRefreshSession('old', 'replacement');
     expect(model.findOneAndUpdate).toHaveBeenCalledWith(expect.objectContaining({ refreshSessions: {
       $elemMatch: { hash: 'old', expiresAt: { $gt: expect.any(Date) }, 'previousHashes.2047': { $exists: false } },
-    } }), { $set: { 'refreshSessions.$.hash': 'replacement' }, $push: { 'refreshSessions.$.previousHashes': 'old' } }, { new: true });
+    } }), { $set: { 'refreshSessions.$.hash': 'replacement' }, $push: { 'refreshSessions.$.previousHashes': 'old' } }, { returnDocument: 'after' });
   });
   it('revokes the refresh family when an old token is replayed', async () => {
     const model = { findOneAndUpdate: jest.fn().mockReturnValue({ select: () => ({ exec: async () => null }) }),

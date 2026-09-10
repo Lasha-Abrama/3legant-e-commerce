@@ -50,7 +50,7 @@ export class CouponsService {
     const filter: Record<string, unknown> = { _id: id };
     if (dto.usageLimit != null) filter.$expr = { $lte: [{ $add: ['$usedCount', '$reservedCount'] }, dto.usageLimit] };
     try {
-      const coupon = await this.coupons.findOneAndUpdate(filter, { $set: dto }, { new: true, runValidators: true }).exec();
+      const coupon = await this.coupons.findOneAndUpdate(filter, { $set: dto }, { returnDocument: 'after', runValidators: true }).exec();
       if (coupon) return coupon;
       if (!await this.coupons.exists({ _id: id })) throw new NotFoundException('Coupon not found.');
       throw new BadRequestException('Usage limit cannot be below paid uses plus active reservations.');
@@ -103,7 +103,7 @@ export class CouponsService {
 
   async consume(orderId: Types.ObjectId, session: ClientSession) {
     const reservation = await this.reservations.findOneAndUpdate(
-      { orderId, state: 'held' }, { $set: { state: 'used' } }, { new: true, session },
+      { orderId, state: 'held' }, { $set: { state: 'used' } }, { returnDocument: 'after', session },
     ).exec();
     if (!reservation) {
       if (await this.reservations.exists({ orderId, state: 'used' }).session(session)) return;
@@ -121,7 +121,7 @@ export class CouponsService {
     try {
       await session.withTransaction(async () => {
         const reservation = await this.reservations.findOneAndUpdate(
-          { orderId, state: 'held' }, { $set: { state: 'released' } }, { new: true, session },
+          { orderId, state: 'held' }, { $set: { state: 'released' } }, { returnDocument: 'after', session },
         ).exec();
         if (reservation) {
           const result = await this.coupons.updateOne(

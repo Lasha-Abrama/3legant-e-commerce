@@ -205,7 +205,7 @@ describe('OrdersService', () => {
           inventoryAdjustedAt: expect.any(Date),
         }),
       },
-      { new: true, session },
+      { returnDocument: 'after', session },
     );
     expect(productsService.decrementStock).toHaveBeenCalledWith(updatedOrder.items, session);
     expect(session.endSession).toHaveBeenCalled();
@@ -243,7 +243,7 @@ describe('OrdersService', () => {
           checkoutSessionStatus: 'failed',
         },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
     expect(productsService.decrementStock).not.toHaveBeenCalled();
   });
@@ -286,7 +286,7 @@ describe('OrdersService', () => {
           inventoryStatus: 'insufficient',
         }),
       },
-      { new: true, session },
+      { returnDocument: 'after', session },
     );
   });
 
@@ -398,7 +398,7 @@ describe('OrdersService', () => {
           inventoryStatus: 'restore_failed',
         }),
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
   });
 
@@ -455,7 +455,7 @@ describe('OrdersService', () => {
         inventoryStatus: 'adjusted',
       },
       { $set: { status: 'Shipped' } },
-      { new: true },
+      { returnDocument: 'after' },
     );
   });
 

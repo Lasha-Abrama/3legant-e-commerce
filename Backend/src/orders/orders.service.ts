@@ -144,7 +144,7 @@ export class OrdersService {
             checkoutSessionStatus: 'open',
           },
         },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
     if (order) {
@@ -172,7 +172,7 @@ export class OrdersService {
             checkoutSessionStatus,
           },
         },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
     if (order) {
@@ -213,7 +213,7 @@ export class OrdersService {
       .findOneAndUpdate(
         { _id: orderId, paymentStatus: { $in: allowedCurrentStatuses } },
         { $set: paymentUpdate },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
     if (order) {
@@ -255,7 +255,7 @@ export class OrdersService {
           .findOneAndUpdate(
             { _id: orderId, paymentStatus: { $in: ['pending', 'failed'] } },
             { $set: paymentUpdate },
-            { new: true, session },
+            { returnDocument: 'after', session },
           )
           .exec();
         if (!paidOrder) {
@@ -309,7 +309,7 @@ export class OrdersService {
       await session.withTransaction(async () => {
         result = await this.orderModel.findOneAndUpdate(
           { _id: orderId, paymentStatus: { $in: ['pending', 'failed'] } },
-          { $set: paymentUpdate }, { new: true, session },
+          { $set: paymentUpdate }, { returnDocument: 'after', session },
         ).exec();
         if (result?.couponId) await this.couponsService.consume(result._id, session);
         if (!result) result = await this.orderModel.findById(orderId).session(session).exec();
@@ -334,7 +334,7 @@ export class OrdersService {
                 refundedAt: new Date(),
               },
             },
-            { new: true, session },
+            { returnDocument: 'after', session },
           )
           .exec();
         if (!refundedOrder) {
@@ -409,7 +409,7 @@ export class OrdersService {
             inventoryStatus: 'restore_failed',
           },
         },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
     if (order) {
@@ -486,7 +486,7 @@ export class OrdersService {
       .findOneAndUpdate(
         transitionFilter,
         { $set: { status } },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
     if (updatedOrder) {

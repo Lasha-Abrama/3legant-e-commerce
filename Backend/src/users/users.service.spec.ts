@@ -57,7 +57,7 @@ describe('UsersService', () => {
     expect((userModel as any).findOneAndUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ _id: 'user-id' }),
       expect.objectContaining({ $set: expect.objectContaining({ email: 'new@example.com' }), $inc: { tokenVersion: 1 } }),
-      { new: true, runValidators: true },
+      { returnDocument: 'after', runValidators: true },
     );
     expect(user.save).not.toHaveBeenCalled();
   });
@@ -83,7 +83,7 @@ describe('UsersService', () => {
     expect((userModel as any).findOneAndUpdate).toHaveBeenCalledWith(
       { _id: 'user-id' },
       { $set: { profileImageUrl: 'https://res.cloudinary.com/test/new.png', profileImagePublicId: 'loam-co/profile-images/new-avatar' } },
-      { new: false, runValidators: true },
+      { returnDocument: 'before', runValidators: true },
     );
     expect(user.save).not.toHaveBeenCalled();
   });
@@ -217,7 +217,7 @@ describe('UsersService', () => {
     expect((userModel as any).findOneAndUpdate).toHaveBeenCalledWith(
       { email: 'sofia@example.com' },
       { passwordResetTokenHash: 'token-hash', passwordResetExpiresAt: expiresAt },
-      { new: true },
+      { returnDocument: 'after' },
     );
   });
 
@@ -232,7 +232,7 @@ describe('UsersService', () => {
         $inc: { tokenVersion: 1 },
         $unset: { refreshSessions: 1, passwordResetTokenHash: 1, passwordResetExpiresAt: 1 },
       },
-      { new: true, runValidators: true },
+      { returnDocument: 'after', runValidators: true },
     );
     await expect(service.resetPasswordWithToken('valid-hash', 'other-hash')).rejects.toBeInstanceOf(BadRequestException);
   });
