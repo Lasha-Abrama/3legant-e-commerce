@@ -150,7 +150,7 @@
   function couponHtml() {
     return '<section class="coupon-section"><h3>Have a coupon?</h3><p>Add your code for an instant cart discount.</p>' +
       '<form class="coupon-form"><img src="images/icons/ticket-percent.svg" alt="">' +
-      '<input name="coupon" aria-label="Coupon code" placeholder="Coupon Code" maxlength="32" value="' +
+      '<input name="coupon" aria-label="Coupon code" placeholder="Coupon Code" maxlength="12" pattern="[A-Za-z0-9]{8,12}" value="' +
       escapeHtml(localStorage.getItem('lc_coupon') || '') + '"><button type="submit">Apply</button></form>' +
       '<button class="coupon-remove" type="button"' + (localStorage.getItem('lc_coupon') ? '' : ' hidden') +
       '>Remove coupon</button><p class="coupon-message" role="status"></p></section>';

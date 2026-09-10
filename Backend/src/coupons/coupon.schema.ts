@@ -3,7 +3,7 @@ import { HydratedDocument, Types, Schema as MongooseSchema } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Coupon {
-  @Prop({ required: true, unique: true, uppercase: true, trim: true })
+  @Prop({ required: true, unique: true, uppercase: true, trim: true, match: /^[A-Z0-9]{8,12}$/ })
   code: string;
 
   @Prop({ required: true, min: 1, max: 100 })

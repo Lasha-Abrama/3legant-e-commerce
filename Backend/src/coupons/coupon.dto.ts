@@ -5,7 +5,7 @@ import { PartialType } from '@nestjs/mapped-types';
 export class CreateCouponDto {
   @Transform(({ value }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
   @IsString()
-  @Matches(/^[A-Z0-9][A-Z0-9-]{3,31}$/)
+  @Matches(/^[A-Z0-9]{8,12}$/, { message: 'Coupon codes must contain 8–12 letters or numbers.' })
   code: string;
 
   @IsInt()

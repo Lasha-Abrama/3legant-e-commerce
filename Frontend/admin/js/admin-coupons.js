@@ -15,6 +15,7 @@
           '</td><td>' + (expired ? 'Expired' : coupon.active ? 'Active' : 'Inactive') +
           '</td><td><button class="btn btn--outline btn-sm" data-edit="' + escapeHtml(coupon._id) + '">Edit</button> ' +
           (coupon.active ? '<button class="btn btn--outline btn-sm" data-deactivate="' + escapeHtml(coupon._id) + '">Deactivate</button>' : '') +
+          (!coupon.active && !coupon.reservedCount ? '<button class="btn btn--outline btn-sm" data-delete="' + escapeHtml(coupon._id) + '">Delete</button>' : '') +
           '</td></tr>';
       }).join('') || '<tr><td colspan="7">No coupons yet. Add your first coupon.</td></tr>';
     });
@@ -31,7 +32,7 @@
     var initialExpiry = coupon.expiresAt ? localDate(coupon.expiresAt) : '';
     editor.hidden = false;
     editor.innerHTML = '<form id="coupon-form"><h2>' + (coupon._id ? 'Edit coupon' : 'Create coupon') + '</h2>' +
-      '<label class="field">Code<input class="input" name="code" required minlength="4" maxlength="32" pattern="[A-Za-z0-9][A-Za-z0-9-]{3,31}" value="' + escapeHtml(coupon.code || '') + '"></label>' +
+      '<label class="field">Code (8–12 letters or numbers)<input class="input" name="code" required minlength="8" maxlength="12" pattern="[A-Za-z0-9]{8,12}" value="' + escapeHtml(coupon.code || '') + '"></label>' +
       '<button class="btn btn--outline btn-sm" type="button" id="generate-coupon">Generate Coupon</button>' +
       '<label class="field">Percentage (1–100)<input class="input" type="number" name="percentage" required min="1" max="100" step="1" value="' + Number(coupon.percentage || 10) + '"></label>' +
       '<label class="field">Total usage limit (blank = unlimited)<input class="input" type="number" name="usageLimit" min="1" max="1000000000" step="1" value="' + (coupon.usageLimit == null ? '' : Number(coupon.usageLimit)) + '"></label>' +
@@ -41,13 +42,14 @@
       '<button class="btn btn--outline btn-sm" type="button" id="cancel-coupon">Cancel</button></form>';
     var form = document.getElementById('coupon-form');
     var status = document.getElementById('coupon-form-message');
+    var generatedCode = '';
     document.getElementById('cancel-coupon').onclick = function () { editor.hidden = true; };
     document.getElementById('generate-coupon').onclick = function () {
       var button = this;
       button.disabled = true;
       apiPost('/admin/coupons/generate', {}).then(function (result) {
         button.disabled = false;
-        if (result && result.code) form.elements.code.value = result.code;
+        if (result && result.code) { generatedCode = result.code; form.elements.code.value = result.code; }
         else status.textContent = result && result.message || 'Could not generate a coupon.';
       });
     };
@@ -71,6 +73,16 @@
       (coupon._id ? apiPatch('/admin/coupons/' + coupon._id, data) : apiPost('/admin/coupons', data)).then(function (result) {
         save.disabled = false;
         if (!result || result._status >= 400) {
+          if (result && result._status === 409 && data.code === generatedCode) {
+            apiPost('/admin/coupons/generate', {}).then(function (replacement) {
+              if (replacement && replacement.code) {
+                generatedCode = replacement.code;
+                form.elements.code.value = generatedCode;
+                status.textContent = 'That code was just taken. A new code is ready; review it and save again.';
+              } else status.textContent = 'Code collision. Click Generate Coupon to try again.';
+            });
+            return;
+          }
           status.textContent = result && result.message || 'Could not save coupon.'; return;
         }
         editor.hidden = true;
@@ -86,9 +98,20 @@
     var editButton = event.target.closest('[data-edit]');
     if (editButton) { edit(coupons.find(function (coupon) { return coupon._id === editButton.dataset.edit; })); return; }
     var deactivate = event.target.closest('[data-deactivate]');
+    var remove = event.target.closest('[data-delete]');
+    if (remove) {
+      if (!window.confirm('Delete this coupon? Historical orders will keep their saved discount.')) return;
+      remove.disabled = true;
+      apiDelete('/admin/coupons/' + remove.dataset.delete).then(function (result) {
+        remove.disabled = false;
+        message.textContent = result && result._status < 400 ? 'Coupon deleted.' : result && result.message || 'Could not delete coupon.';
+        load();
+      });
+      return;
+    }
     if (!deactivate) return;
     deactivate.disabled = true;
-    apiDelete('/admin/coupons/' + deactivate.dataset.deactivate).then(function (result) {
+    apiPatch('/admin/coupons/' + deactivate.dataset.deactivate, { active: false }).then(function (result) {
       deactivate.disabled = false;
       if (!result || result._status >= 400) { message.textContent = result && result.message || 'Could not deactivate coupon.'; return; }
       message.textContent = 'Coupon deactivated. Existing payment reservations are still honored.';

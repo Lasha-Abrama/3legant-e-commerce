@@ -342,6 +342,25 @@
       return;
     }
     if (paymentResult === 'cancelled') {
+      if (returnedOrderId) {
+        renderPaymentVerification();
+        apiPost('/payments/cancel-checkout-session', { orderId: returnedOrderId }).then(function (result) {
+          if (!result || result._status >= 400) {
+            renderPaymentPending();
+            return;
+          }
+          if (!result.cancelled) { verifyReturnedOrder(returnedOrderId, 10); return; }
+          clearPendingOrder();
+          window.history.replaceState({}, '', 'checkout.html');
+          window.CartStore.refreshPricing().then(function () {
+            renderSteps(2);
+            renderForm();
+            var error = document.getElementById('checkout-error');
+            if (error) error.textContent = 'Payment was cancelled. Your cart and checkout details are still available.';
+          });
+        });
+        return;
+      }
       window.history.replaceState({}, '', 'checkout.html');
     }
 

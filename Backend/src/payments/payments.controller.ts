@@ -30,4 +30,10 @@ export class PaymentsController {
     }
     return this.paymentsService.handleWebhook(request.rawBody, signature);
   }
+
+  @Post('cancel-checkout-session')
+  @UseGuards(JwtAuthGuard)
+  cancelCheckoutSession(@Req() request: AuthenticatedRequest, @Body() dto: CreateCheckoutSessionDto) {
+    return this.paymentsService.cancelCheckoutSession(String(request.user._id), dto.orderId);
+  }
 }

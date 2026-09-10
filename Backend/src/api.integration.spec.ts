@@ -26,6 +26,10 @@ import { ProfileImageController } from './uploads/profile-image.controller';
 import { ProfileImagesService } from './uploads/profile-images.service';
 import { BlogsController } from './blogs/blogs.controller';
 import { BlogsService } from './blogs/blogs.service';
+import { CouponsController } from './coupons/coupons.controller';
+import { CouponsService } from './coupons/coupons.service';
+import { PaymentsController } from './payments/payments.controller';
+import { PaymentsService } from './payments/payments.service';
 
 describe('API integration boundaries', () => {
   let app: NestExpressApplication;
@@ -89,10 +93,14 @@ describe('API integration boundaries', () => {
   const profileImagesService = {
     update: jest.fn(),
   };
+  const couponsService = { list: jest.fn(), generate: jest.fn(), create: jest.fn(), update: jest.fn(), remove: jest.fn() };
+  const paymentsService = { cancelCheckoutSession: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [
+        CouponsController,
+        PaymentsController,
         HealthController,
         AuthController,
         ProductsController,
@@ -105,6 +113,8 @@ describe('API integration boundaries', () => {
         ContactAdminController,
       ],
       providers: [
+        { provide: CouponsService, useValue: couponsService },
+        { provide: PaymentsService, useValue: paymentsService },
         JwtAuthGuard,
         AdminGuard,
         { provide: AuthService, useValue: authService },
@@ -677,6 +687,32 @@ describe('API integration boundaries', () => {
     await request(app.getHttpServer()).post('/api/orders/quote').send({ ...body, total: 1 }).expect(400);
     await request(app.getHttpServer()).post('/api/orders/quote').send({ ...body, items: [] }).expect(400);
   });
+  it('protects coupon management and validates codes before persistence', async () => {
+    const id = '507f1f77bcf86cd799439011';
+    for (const [method, path] of [['get', ''], ['post', ''], ['post', '/generate'], ['patch', '/' + id], ['delete', '/' + id]] as const) {
+      await request(app.getHttpServer())[method]('/api/admin/coupons' + path).expect(401);
+      await request(app.getHttpServer())[method]('/api/admin/coupons' + path).set('Authorization', 'Bearer user-token').expect(403);
+    }
+    const payload = { code: ' home2026 ', percentage: 20, expiresAt: '2099-01-01T00:00:00.000Z' };
+    couponsService.create.mockResolvedValue({ _id: id });
+    await request(app.getHttpServer()).post('/api/admin/coupons').set('Authorization', 'Bearer admin-token').send(payload).expect(201);
+    expect(couponsService.create).toHaveBeenCalledWith(expect.objectContaining({ code: 'HOME2026' }));
+    await request(app.getHttpServer()).post('/api/admin/coupons').set('Authorization', 'Bearer admin-token').send({ ...payload, code: 'SHORT' }).expect(400);
+    await request(app.getHttpServer()).patch('/api/admin/coupons/' + id).set('Authorization', 'Bearer admin-token').send({ code: 'TOO-LONG-CODE-2026' }).expect(400);
+    couponsService.remove.mockResolvedValue({ message: 'Coupon deleted.' });
+    await request(app.getHttpServer()).delete('/api/admin/coupons/' + id).set('Authorization', 'Bearer admin-token').expect(200);
+    expect(couponsService.remove).toHaveBeenCalledWith(id);
+  });
+
+  it('requires authentication for Stripe cancellation and uses the guard owner', async () => {
+    const orderId = '507f1f77bcf86cd799439011';
+    await request(app.getHttpServer()).post('/api/payments/cancel-checkout-session').send({ orderId }).expect(401);
+    paymentsService.cancelCheckoutSession.mockResolvedValue({ cancelled: true });
+    await request(app.getHttpServer()).post('/api/payments/cancel-checkout-session').set('Authorization', 'Bearer user-token').send({ orderId }).expect(201);
+    expect(paymentsService.cancelCheckoutSession).toHaveBeenCalledWith('user-id', orderId);
+    await request(app.getHttpServer()).post('/api/payments/cancel-checkout-session').set('Authorization', 'Bearer user-token').send({ orderId, userId: 'other-user' }).expect(400);
+  });
+
   it('records the authenticated admin and rejects author impersonation and non-admin blog creation', async () => {
     const body = { title: 'Interior guide', content: 'Useful content', image: '/images/blog-hero.png', category: 'Design', featured: true };
     blogsService.create.mockResolvedValue({ ...body, author: 'admin-id' });

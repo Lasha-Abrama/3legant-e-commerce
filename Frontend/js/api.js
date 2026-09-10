@@ -64,6 +64,10 @@ function getAuthHeaders() {
 function setAccessToken(token, remember) {
   accessToken = token || '';
   accessTokenExpiresAt = Date.now() + 19 * 60 * 1000;
+  try {
+    var payload = JSON.parse(atob(accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    if (Number.isFinite(payload.exp)) accessTokenExpiresAt = payload.exp * 1000 - 60 * 1000;
+  } catch (error) {}
   sessionReady = true;
 }
 

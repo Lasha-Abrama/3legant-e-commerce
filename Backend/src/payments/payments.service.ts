@@ -52,6 +52,7 @@ export class PaymentsService {
         if (error instanceof Stripe.errors.StripeError && error.code !== 'resource_missing') {
           throw new BadRequestException(error.message);
         }
+        throw error;
       }
     }
 
@@ -90,6 +91,10 @@ export class PaymentsService {
     }
 
     if (!session.url) {
+      // A created session may still accept payment. Close it before releasing capacity.
+      await this.ordersService.attachStripeCheckoutSession(String(order._id), userId, session.id,
+        new Date(session.expires_at * 1000));
+      await this.cancelCheckoutSession(userId, String(order._id));
       throw new BadRequestException('Stripe did not return a checkout URL');
     }
     await this.ordersService.attachStripeCheckoutSession(
@@ -103,6 +108,26 @@ export class PaymentsService {
       sessionId: session.id,
       expiresAt: new Date(session.expires_at * 1000),
     };
+  }
+
+  async cancelCheckoutSession(userId: string, orderId: string) {
+    const order = await this.ordersService.findByIdForUser(orderId, userId);
+    if (order.paymentStatus === 'paid' || order.paymentStatus === 'refunded') return { cancelled: false };
+    if (!order.stripeCheckoutSessionId) throw new BadRequestException('Checkout is still starting. Please retry.');
+    const stripe = this.getStripeClient();
+    let session = await stripe.checkout.sessions.retrieve(order.stripeCheckoutSessionId);
+    if (session.status === 'open') {
+      try {
+        session = await stripe.checkout.sessions.expire(session.id);
+      } catch (error) {
+        // Payment can win the race with cancellation; never release on a timeout alone.
+        session = await stripe.checkout.sessions.retrieve(session.id);
+        if (session.status === 'open') throw error;
+      }
+    }
+    if (session.status !== 'expired') return { cancelled: false };
+    await this.ordersService.updateStripePayment(orderId, 'failed', session.id, undefined, 'expired');
+    return { cancelled: true };
   }
 
   async createRefund(orderId: string) {

@@ -19,7 +19,7 @@ describe('PaymentsService', () => {
     reserveCoupon: jest.fn(),
   } as unknown as OrdersService;
   const stripeClient = {
-    checkout: { sessions: { create: jest.fn(), retrieve: jest.fn() } },
+    checkout: { sessions: { create: jest.fn(), retrieve: jest.fn(), expire: jest.fn() } },
     refunds: { create: jest.fn() },
     webhooks: { constructEvent: jest.fn() },
   } as unknown as Stripe;
@@ -257,5 +257,42 @@ describe('PaymentsService', () => {
       service.handleWebhook(Buffer.from('{}'), 'invalid-signature'),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(ordersService.updateStripePayment).not.toHaveBeenCalled();
+  });
+
+  it('expires the owned Stripe session before releasing a cancelled payment', async () => {
+    ordersService.findByIdForUser = jest.fn().mockResolvedValue({ paymentStatus: 'pending', stripeCheckoutSessionId: 'session-id' });
+    stripeClient.checkout.sessions.retrieve = jest.fn().mockResolvedValue({ id: 'session-id', status: 'open' });
+    stripeClient.checkout.sessions.expire = jest.fn().mockResolvedValue({ id: 'session-id', status: 'expired' });
+    await expect(service.cancelCheckoutSession('user-id', 'order-id')).resolves.toEqual({ cancelled: true });
+    expect(ordersService.findByIdForUser).toHaveBeenCalledWith('order-id', 'user-id');
+    expect(stripeClient.checkout.sessions.expire).toHaveBeenCalledWith('session-id');
+    expect(ordersService.updateStripePayment).toHaveBeenCalledWith('order-id', 'failed', 'session-id', undefined, 'expired');
+  });
+
+  it('does not release capacity when payment wins a cancellation race', async () => {
+    ordersService.findByIdForUser = jest.fn().mockResolvedValue({ paymentStatus: 'pending', stripeCheckoutSessionId: 'session-id' });
+    stripeClient.checkout.sessions.retrieve = jest.fn()
+      .mockResolvedValueOnce({ id: 'session-id', status: 'open' })
+      .mockResolvedValueOnce({ id: 'session-id', status: 'complete' });
+    stripeClient.checkout.sessions.expire = jest.fn().mockRejectedValue(new Error('Already completed'));
+    await expect(service.cancelCheckoutSession('user-id', 'order-id')).resolves.toEqual({ cancelled: false });
+    expect(ordersService.updateStripePayment).not.toHaveBeenCalled();
+  });
+
+  it('retains the reservation when cancellation has an ambiguous network failure', async () => {
+    ordersService.findByIdForUser = jest.fn().mockResolvedValue({ paymentStatus: 'pending', stripeCheckoutSessionId: 'session-id' });
+    stripeClient.checkout.sessions.retrieve = jest.fn().mockResolvedValue({ id: 'session-id', status: 'open' });
+    stripeClient.checkout.sessions.expire = jest.fn().mockRejectedValue(new Error('Network failure'));
+    await expect(service.cancelCheckoutSession('user-id', 'order-id')).rejects.toThrow('Network failure');
+    expect(ordersService.updateStripePayment).not.toHaveBeenCalled();
+  });
+
+  it('does not create another session when retrieving an existing session fails', async () => {
+    ordersService.findByIdForUser = jest.fn().mockResolvedValue({ paymentMethod: 'card', paymentStatus: 'pending',
+      status: 'Processing', checkoutSessionStatus: 'open', stripeCheckoutSessionId: 'session-id' });
+    stripeClient.checkout.sessions.retrieve = jest.fn().mockRejectedValue(new Error('Network failure'));
+    await expect(service.createCheckoutSession('user-id', 'order-id')).rejects.toThrow('Network failure');
+    expect(stripeClient.checkout.sessions.create).not.toHaveBeenCalled();
+    expect(ordersService.reserveCoupon).not.toHaveBeenCalled();
   });
 });

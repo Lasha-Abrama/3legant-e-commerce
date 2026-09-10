@@ -13,8 +13,14 @@ export class CouponsService {
     @InjectConnection() private readonly connection: Connection,
   ) {}
 
-  generate() {
-    return { code: 'HOME-' + randomBytes(8).toString('hex').toUpperCase() };
+  async generate() {
+    // 32 symbols allow unbiased selection from cryptographic bytes; omit I/O.
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const code = Array.from(randomBytes(10), (byte) => alphabet[byte & 31]).join('');
+      if (!await this.coupons.exists({ code })) return { code };
+    }
+    throw new ConflictException('Could not generate a unique coupon. Please try again.');
   }
 
   list() {
@@ -51,9 +57,18 @@ export class CouponsService {
     } catch (error) { this.duplicate(error); }
   }
 
+  async remove(id: string) {
+    // Atomic with reservation increments: never remove capacity backing a payment.
+    const deleted = await this.coupons.findOneAndDelete({ _id: id, active: false, reservedCount: 0 }).exec();
+    if (deleted) return { message: 'Coupon deleted.' };
+    if (!await this.coupons.exists({ _id: id })) throw new NotFoundException('Coupon not found.');
+    throw new BadRequestException('Deactivate the coupon and wait for held payments before deleting it.');
+  }
+
   async validate(code?: string, session?: ClientSession) {
     const normalized = code?.trim().toUpperCase();
     if (!normalized) return null;
+    if (!/^[A-Z0-9]{8,12}$/.test(normalized)) throw new BadRequestException('Invalid coupon code.');
     const coupon = await this.coupons.findOne({ code: normalized }).session(session ?? null).exec();
     if (!coupon) throw new BadRequestException('Invalid coupon code.');
     if (coupon.expiresAt.getTime() <= Date.now()) throw new BadRequestException('Coupon has expired.');

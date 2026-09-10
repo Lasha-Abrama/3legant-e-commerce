@@ -24,7 +24,7 @@ export class CouponsController {
   }
 
   @Delete(':id')
-  deactivate(@Param('id', ParseObjectIdPipe) id: string) {
-    return this.coupons.update(id, { active: false });
+  remove(@Param('id', ParseObjectIdPipe) id: string) {
+    return this.coupons.remove(id);
   }
 }

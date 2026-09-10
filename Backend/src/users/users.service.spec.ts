@@ -88,6 +88,17 @@ describe('UsersService', () => {
     expect(user.save).not.toHaveBeenCalled();
   });
 
+  it.each([undefined, 'incorrect-password'])('rejects email changes without valid re-authentication (%p)', async (currentPassword) => {
+    service.findById = jest.fn().mockResolvedValue({ _id: 'user-id', email: 'old@example.com' } as never);
+    (userModel as any).findById = jest.fn().mockReturnValue({ select: () => ({
+      exec: async () => ({ passwordHash: await bcrypt.hash('correct-password', 4) }),
+    }) });
+    (userModel as any).findOneAndUpdate = jest.fn();
+    await expect(service.updateProfile('user-id', { email: 'new@example.com', currentPassword }))
+      .rejects.toThrow('current password is required');
+    expect((userModel as any).findOneAndUpdate).not.toHaveBeenCalled();
+  });
+
   it('returns the profile image URL without exposing its Cloudinary public identifier', () => {
     const safeUser = service.toSafeUser({
       _id: 'user-id',
