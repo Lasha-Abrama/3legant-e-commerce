@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
@@ -41,6 +41,33 @@ export class UsersService {
       .findOne({ email: email.toLowerCase().trim() })
       .select('+passwordHash')
       .exec();
+  }
+
+  async addRefreshSession(userId: string, tokenVersion: number, hash: string, expiresAt: Date) {
+    await this.userModel.updateOne({ _id: userId }, {
+      $pull: { refreshSessions: { expiresAt: { $lte: new Date() } } },
+    }).exec();
+    const result = await this.userModel.updateOne({ _id: userId, tokenVersion }, {
+      $push: { refreshSessions: { $each: [{ hash, previousHashes: [], expiresAt }], $slice: -10 } },
+    }).exec();
+    if (result.matchedCount !== 1) throw new UnauthorizedException('Please sign in again.');
+  }
+
+  async rotateRefreshSession(hash: string, replacementHash: string) {
+    const user = await this.userModel.findOneAndUpdate({
+      refreshSessions: { $elemMatch: { hash, expiresAt: { $gt: new Date() }, 'previousHashes.2047': { $exists: false } } },
+    }, {
+      $set: { 'refreshSessions.$.hash': replacementHash },
+      $push: { 'refreshSessions.$.previousHashes': hash },
+    }, { new: true }).select('+refreshSessions').exec();
+    if (!user) {
+      await this.userModel.updateOne({ 'refreshSessions.previousHashes': hash }, {
+        $pull: { refreshSessions: { previousHashes: hash } },
+      }).exec();
+      throw new UnauthorizedException('Your session has expired. Please sign in again.');
+    }
+    const session = user.refreshSessions.find((entry) => entry.hash === replacementHash)!;
+    return { user, expiresAt: session.expiresAt };
   }
 
   findByGoogleId(googleId: string) {
@@ -104,8 +131,15 @@ export class UsersService {
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     const user = await this.findById(userId);
-    const { email, ...profile } = dto;
-    if (email !== undefined) {
+    const { email, currentPassword, ...profile } = dto;
+    if (email !== undefined && email.toLowerCase().trim() !== user.email) {
+      const credentials = await this.userModel.findById(userId).select('+passwordHash').exec();
+      if (!credentials?.passwordHash) {
+        throw new BadRequestException('Use password reset to set a password before changing your email.');
+      }
+      if (!currentPassword || !await bcrypt.compare(currentPassword, credentials.passwordHash)) {
+        throw new BadRequestException('Your current password is required to change your email.');
+      }
       const normalizedEmail = email.toLowerCase().trim();
       const existingUser = await this.userModel
         .findOne({ _id: { $ne: user._id }, email: normalizedEmail })
@@ -113,7 +147,18 @@ export class UsersService {
       if (existingUser) {
         throw new BadRequestException('ეს ელფოსტა უკვე რეგისტრირებულია');
       }
-      user.email = normalizedEmail;
+      try {
+        const updated = await this.userModel.findOneAndUpdate(
+          { _id: userId, email: user.email, passwordHash: credentials.passwordHash, tokenVersion: credentials.tokenVersion ?? 0 },
+          { $set: { ...profile, email: normalizedEmail }, $inc: { tokenVersion: 1 },
+            $unset: { refreshSessions: 1, passwordResetTokenHash: 1, passwordResetExpiresAt: 1 } },
+          { new: true, runValidators: true },
+        ).exec();
+        if (!updated) throw new BadRequestException('Credentials changed. Please sign in again.');
+        return updated;
+      } catch (error) {
+        this.rethrowDuplicateEmail(error);
+      }
     }
     Object.assign(user, profile);
     try {
@@ -167,7 +212,7 @@ export class UsersService {
       {
         $set: { passwordHash },
         $inc: { tokenVersion: 1 },
-        $unset: { passwordResetTokenHash: 1, passwordResetExpiresAt: 1 },
+        $unset: { refreshSessions: 1, passwordResetTokenHash: 1, passwordResetExpiresAt: 1 },
       },
     ).exec();
     if (result.matchedCount !== 1) throw new BadRequestException('Credentials changed. Sign in again before changing your password.');
@@ -175,7 +220,7 @@ export class UsersService {
   }
 
   async invalidateAccessTokens(userId: string) {
-    const result = await this.userModel.updateOne({ _id: userId }, { $inc: { tokenVersion: 1 } }).exec();
+    const result = await this.userModel.updateOne({ _id: userId }, { $inc: { tokenVersion: 1 }, $unset: { refreshSessions: 1 } }).exec();
     if (result.matchedCount !== 1) throw new NotFoundException('მომხმარებელი ვერ მოიძებნა');
   }
 
@@ -197,7 +242,7 @@ export class UsersService {
         {
           $set: { passwordHash },
           $inc: { tokenVersion: 1 },
-          $unset: { passwordResetTokenHash: 1, passwordResetExpiresAt: 1 },
+          $unset: { refreshSessions: 1, passwordResetTokenHash: 1, passwordResetExpiresAt: 1 },
         },
         { new: true, runValidators: true },
       )

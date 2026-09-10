@@ -3,6 +3,11 @@ import { IsEmail, ValidateIf, IsString, MaxLength, MinLength } from 'class-valid
 
 export class UpdateProfileDto {
   @ValidateIf((_object, value) => value !== undefined)
+  @IsString()
+  @MaxLength(128)
+  currentPassword?: string;
+
+  @ValidateIf((_object, value) => value !== undefined)
   @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @MaxLength(100)

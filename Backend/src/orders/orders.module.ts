@@ -6,12 +6,14 @@ import { OrdersController } from './orders.controller';
 import { OrdersAdminController } from './orders-admin.controller';
 import { UsersModule } from '../users/users.module';
 import { ProductsModule } from '../products/products.module';
+import { CouponsModule } from '../coupons/coupons.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }]),
     UsersModule,
     ProductsModule,
+    CouponsModule,
   ],
   controllers: [OrdersController, OrdersAdminController],
   providers: [OrdersService],

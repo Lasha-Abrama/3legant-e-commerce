@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CookieOptions, Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -57,6 +58,45 @@ export class AuthService {
     return { accessToken, user: this.usersService.toSafeUser(user) };
   }
 
+  private refreshCookieOptions(): CookieOptions {
+    return { httpOnly: true, secure: this.configService.get('NODE_ENV') === 'production'
+      || this.configService.getOrThrow<string>('FRONTEND_URL').startsWith('https:'),
+      sameSite: 'lax', path: '/api/auth' };
+  }
+
+  async establishSession(userId: string, response: Response) {
+    const user = await this.usersService.findById(userId);
+    const token = randomBytes(32).toString('base64url');
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await this.usersService.addRefreshSession(userId, user.tokenVersion ?? 0, this.hashResetToken(token), expiresAt);
+    response.setHeader('Cache-Control', 'no-store');
+    response.cookie('threelegant_refresh', token, { ...this.refreshCookieOptions(), expires: expiresAt });
+  }
+
+  clearSessionCookie(response: Response) {
+    response.setHeader('Cache-Control', 'no-store');
+    response.clearCookie('threelegant_refresh', this.refreshCookieOptions());
+  }
+
+  validateSessionRequest(request: Request) {
+    const origin = request.headers.origin;
+    if (request.headers['x-requested-with'] !== 'threelegant'
+      || (origin && origin !== new URL(this.configService.getOrThrow<string>('FRONTEND_URL')).origin)
+      || request.headers['sec-fetch-site'] === 'cross-site') {
+      throw new ForbiddenException('Invalid session request.');
+    }
+  }
+
+  async refresh(token: string | undefined, response: Response) {
+    response.setHeader('Cache-Control', 'no-store');
+    if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) throw new UnauthorizedException('Please sign in.');
+    const replacement = randomBytes(32).toString('base64url');
+    const { user, expiresAt } = await this.usersService.rotateRefreshSession(this.hashResetToken(token), this.hashResetToken(replacement));
+    const accessToken = await this.jwtService.signAsync({ sub: String(user._id), tokenVersion: user.tokenVersion ?? 0 });
+    response.cookie('threelegant_refresh', replacement, { ...this.refreshCookieOptions(), expires: expiresAt });
+    return { accessToken, user: this.usersService.toSafeUser(user) };
+  }
+
   async signInWithGoogle(profile: GoogleProfile) {
     const user = await this.usersService.findOrCreateGoogleUser(profile);
     return this.createAuthResponse(String(user._id));
@@ -72,7 +112,12 @@ export class AuthService {
       const payload = await this.jwtService.verifyAsync<{
         sub: string;
         tokenVersion?: number;
+        iat: number;
+        exp: number;
       }>(token);
+      if (!Number.isFinite(payload.iat) || !Number.isFinite(payload.exp) || payload.exp - payload.iat > 1800) {
+        throw new UnauthorizedException('Please sign in again.');
+      }
       const user = await this.usersService.findById(payload.sub);
       if ((user.tokenVersion ?? 0) !== (payload.tokenVersion ?? 0)) {
         return null;

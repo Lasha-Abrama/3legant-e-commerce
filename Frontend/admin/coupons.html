@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coupons — Admin</title>
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body data-admin-page="coupons">
+<div id="admin-shell"></div>
+<main class="admin-main">
+  <div class="admin-topbar"><h1>Coupons</h1><button class="btn btn--dark btn-sm" id="add-coupon">+ Add coupon</button></div>
+  <p>Paid uses count only confirmed payments. Reserved slots protect active checkouts until payment succeeds, fails or expires. Deactivation keeps order history intact.</p>
+  <p id="coupon-message" role="status"></p>
+  <div class="admin-card admin-form-panel" id="coupon-editor" hidden></div>
+  <div class="admin-card admin-table-wrap">
+    <table class="admin-table">
+      <thead><tr><th>Code</th><th>Discount</th><th>Paid / limit</th><th>Reserved</th><th>Expires (local)</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="coupons-body"></tbody>
+    </table>
+  </div>
+</main>
+<script src="../js/api.js"></script>
+<script src="js/admin-guard.js"></script>
+<script src="js/admin-coupons.js"></script>
+</body>
+</html>

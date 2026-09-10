@@ -1,21 +1,17 @@
 import { BadRequestException } from '@nestjs/common';
 import { ShippingOption } from './schemas/order.schema';
 
-export const COUPONS: Readonly<Record<string, number>> = Object.freeze({
-  WELCOME10: 10, DESIGN15: 15, HOME20: 20, STYLE30: 30, DEMO50: 50,
-});
-
 export function calculatePricing(
   items: Array<{ price: number; qty: number }>,
   shippingOption: ShippingOption,
-  requestedCode = '',
+  coupon?: { code: string; percentage: number } | null,
 ) {
-  const couponCode = requestedCode.trim().toUpperCase();
-  if (couponCode && !Object.prototype.hasOwnProperty.call(COUPONS, couponCode)) {
-    throw new BadRequestException('Invalid coupon code. Please check the code and try again.');
+  const couponCode = coupon?.code || '';
+  if (coupon && (!Number.isInteger(coupon.percentage) || coupon.percentage < 1 || coupon.percentage > 100)) {
+    throw new BadRequestException('Invalid coupon percentage.');
   }
   const subtotalCents = items.reduce((sum, item) => sum + Math.round(item.price * 100) * item.qty, 0);
-  const discountPercent = couponCode ? COUPONS[couponCode] : 0;
+  const discountPercent = coupon?.percentage || 0;
   const discountCents = Math.round(subtotalCents * discountPercent / 100);
   const shippingCents = shippingOption === 'express' ? 1500 :
     shippingOption === 'pickup' ? -Math.round(subtotalCents * 0.05) : 0;

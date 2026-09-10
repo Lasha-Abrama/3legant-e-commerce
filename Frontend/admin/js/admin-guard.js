@@ -4,6 +4,7 @@
     { key: 'products', label: 'Products', href: 'products.html' },
     { key: 'blogs', label: 'Blog', href: 'blogs.html' },
     { key: 'orders', label: 'Orders', href: 'orders.html' },
+    { key: 'coupons', label: 'Coupons', href: 'coupons.html' },
     { key: 'users', label: 'Users', href: 'users.html' },
     { key: 'messages', label: 'Messages', href: 'messages.html' },
     { key: 'reviews', label: 'Reviews', href: 'reviews.html' },
@@ -28,7 +29,11 @@
 
     document.getElementById('admin-logout').addEventListener('click', function (e) {
       e.preventDefault();
-      apiPost('/auth/logout', {}).then(function () {
+      apiPost('/auth/logout', {}).then(function (result) {
+        if (!result || result._status >= 400) {
+          document.getElementById('admin-logout').textContent = 'Sign out failed — retry';
+          return;
+        }
         clearAccessToken();
         window.location.href = 'login.html';
       });

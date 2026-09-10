@@ -22,7 +22,12 @@ export class JwtAuthGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync<{
         sub: string;
         tokenVersion?: number;
+        iat: number;
+        exp: number;
       }>(token);
+      if (!Number.isFinite(payload.iat) || !Number.isFinite(payload.exp) || payload.exp - payload.iat > 1800) {
+        throw new UnauthorizedException('Please sign in again.');
+      }
       const user = await this.usersService.findById(payload.sub);
       if ((user.tokenVersion ?? 0) !== (payload.tokenVersion ?? 0)) {
         throw new UnauthorizedException('გაიარეთ ავტორიზაცია');

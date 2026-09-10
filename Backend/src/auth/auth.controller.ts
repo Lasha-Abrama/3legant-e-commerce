@@ -21,16 +21,18 @@ export class AuthController {
 
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60 * 60 * 1000 } })
-  async register(@Body() dto: RegisterDto) {
+  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) response: Response) {
     const user = await this.authService.register(dto);
+    await this.authService.establishSession(String(user._id), response);
     return this.authService.createAuthResponse(String(user._id));
   }
 
   @Post('login')
   @HttpCode(200)
   @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
-  async login(@Body() dto: LoginDto) {
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) response: Response) {
     const user = await this.authService.validateUser(dto);
+    await this.authService.establishSession(String(user._id), response);
     return this.authService.createAuthResponse(String(user._id));
   }
 
@@ -76,6 +78,7 @@ export class AuthController {
       const profile = await this.googleOAuthService.getProfileFromAuthorizationCode(code);
       stage = 'account';
       const authResponse = await this.authService.signInWithGoogle(profile);
+      await this.authService.establishSession(String(authResponse.user.id), response);
       response.cookie(
         this.googleOAuthService.getSessionCookieName(),
         authResponse.accessToken,
@@ -126,8 +129,18 @@ export class AuthController {
   @Post('logout')
   @HttpCode(200)
   @UseGuards(JwtAuthGuard)
-  logout(@Req() request: AuthenticatedRequest) {
-    return this.authService.logout(String(request.user._id));
+  async logout(@Req() request: AuthenticatedRequest, @Res({ passthrough: true }) response: Response) {
+    const result = await this.authService.logout(String(request.user._id));
+    this.authService.clearSessionCookie(response);
+    return result;
+  }
+
+  @Post('refresh')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 60, ttl: 60 * 1000 } })
+  refresh(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
+    this.authService.validateSessionRequest(request);
+    return this.authService.refresh(this.getCookieValue(request.headers.cookie, 'threelegant_refresh'), response);
   }
 
   @Get('me')

@@ -92,6 +92,9 @@ export const OrderShippingAddressSchema = SchemaFactory.createForClass(OrderShip
 
 @Schema({ timestamps: true })
 export class Order {
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Coupon' })
+  couponId?: Types.ObjectId;
+
   @Prop({ unique: true, sparse: true, default: () => '3L-' + randomUUID().replace(/-/g, '').slice(0, 16).toUpperCase() })
   orderCode: string;
 

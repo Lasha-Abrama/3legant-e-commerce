@@ -6,6 +6,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { AuthenticatedRequest } from '../common/types/authenticated-request';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('users/me')
 @UseGuards(JwtAuthGuard)
@@ -13,6 +14,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Patch()
+  @Throttle({ default: { limit: 5, ttl: 15 * 60 * 1000 } })
   async updateProfile(@Req() request: AuthenticatedRequest, @Body() dto: UpdateProfileDto) {
     const user = await this.usersService.updateProfile(String(request.user._id), dto);
     return this.usersService.toSafeUser(user);
@@ -25,6 +27,7 @@ export class UsersController {
   }
 
   @Patch('password')
+  @Throttle({ default: { limit: 5, ttl: 15 * 60 * 1000 } })
   changePassword(@Req() request: AuthenticatedRequest, @Body() dto: ChangePasswordDto) {
     return this.usersService.changePassword(String(request.user._id), dto);
   }

@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
-import { MongooseModule } from '@nestjs/mongoose';
+import { getConnectionToken, MongooseModule } from '@nestjs/mongoose';
+import { Connection } from 'mongoose';
+import { MongoThrottlerStorage } from './common/mongo-throttler.storage';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { existsSync } from 'fs';
@@ -30,16 +32,20 @@ const frontendRootPath = [
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
-    ThrottlerModule.forRoot({
-      throttlers: [{ ttl: 60_000, limit: 120 }],
-      errorMessage: 'Too many requests. Please try again later.',
+    ThrottlerModule.forRootAsync({
+      inject: [getConnectionToken()],
+      useFactory: (connection: Connection) => ({
+        throttlers: [{ ttl: 60_000, limit: 120 }],
+        storage: new MongoThrottlerStorage(connection),
+        errorMessage: 'Too many requests. Please try again later.',
+      }),
     }),
     JwtModule.registerAsync({
       global: true,
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '7d' },
+        signOptions: { expiresIn: '20m' },
       }),
     }),
     MongooseModule.forRootAsync({

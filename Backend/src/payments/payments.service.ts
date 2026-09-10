@@ -37,9 +37,11 @@ export class PaymentsService {
         if (existingSession.status === 'complete') {
           throw new BadRequestException('ამ შეკვეთის გადახდა უკვე დასრულებულია');
         }
-        await this.ordersService.updateCheckoutSessionStatus(
+        await this.ordersService.updateStripePayment(
           String(order._id),
+          'failed',
           existingSession.id,
+          undefined,
           'expired',
         );
         throw new BadRequestException('გადახდის სესია ვადაგასულია; შექმენით ახალი შეკვეთა');
@@ -54,6 +56,7 @@ export class PaymentsService {
     }
 
     const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
+    await this.ordersService.reserveCoupon(order);
     let session: Stripe.Checkout.Session;
     try {
       session = await stripe.checkout.sessions.create(
@@ -77,6 +80,9 @@ export class PaymentsService {
         { idempotencyKey: `order-${order._id}-checkout` },
       );
     } catch (error) {
+      if (error instanceof Stripe.errors.StripeInvalidRequestError) {
+        await this.ordersService.updateStripePayment(String(order._id), 'failed', '', undefined, 'failed');
+      }
       if (error instanceof Stripe.errors.StripeError) {
         throw new BadRequestException(error.message);
       }
@@ -149,7 +155,8 @@ export class PaymentsService {
     ) {
       const session = event.data.object as Stripe.Checkout.Session;
       const orderId = session.metadata?.orderId;
-      if (orderId && session.payment_status === 'paid') {
+      if (orderId && (session.payment_status === 'paid'
+        || (session.payment_status === 'no_payment_required' && session.amount_total === 0))) {
         const order = await this.ordersService.findById(orderId);
         if (
           session.amount_total !== Math.round(order.total * 100) ||

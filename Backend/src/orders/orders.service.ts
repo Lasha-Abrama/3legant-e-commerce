@@ -11,6 +11,7 @@ import {
 import { CreateOrderDto, QuoteOrderDto } from './dto/create-order.dto';
 import { calculatePricing } from './pricing';
 import { ProductsService } from '../products/products.service';
+import { CouponsService } from '../coupons/coupons.service';
 
 const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   Processing: ['Shipped', 'Cancelled'],
@@ -25,6 +26,7 @@ export class OrdersService {
     @InjectModel(Order.name) private readonly orderModel: Model<OrderDocument>,
     private readonly productsService: ProductsService,
     @InjectConnection() private readonly connection: Connection,
+    private readonly couponsService: CouponsService,
   ) {}
 
   async quote(dto: QuoteOrderDto) {
@@ -54,7 +56,18 @@ export class OrdersService {
         ...(product.images?.[0] ? { image: product.images[0] } : {}),
       };
     });
-    return { items: orderItems, ...calculatePricing(orderItems, dto.shippingOption, dto.couponCode) };
+    const coupon = await this.couponsService.validate(dto.couponCode);
+    return { items: orderItems, ...(coupon ? { couponId: coupon._id } : {}),
+      ...calculatePricing(orderItems, dto.shippingOption, coupon) };
+  }
+
+  reserveCoupon(order: OrderDocument) {
+    return this.couponsService.reserve(order);
+  }
+
+  async releaseCoupon(orderId: string) {
+    const order = await this.findById(orderId);
+    if (order.couponId && order.paymentStatus === 'failed') await this.couponsService.release(orderId);
   }
 
   async create(userId: string, dto: CreateOrderDto) {
@@ -204,6 +217,7 @@ export class OrdersService {
       )
       .exec();
     if (order) {
+      if (order.couponId && order.paymentStatus === 'failed') await this.couponsService.release(orderId);
       return order;
     }
 
@@ -211,6 +225,7 @@ export class OrdersService {
     if (!existingOrder) {
       throw new NotFoundException('შეკვეთა ვერ მოიძებნა');
     }
+    if (existingOrder.couponId && existingOrder.paymentStatus === 'failed') await this.couponsService.release(orderId);
     return existingOrder;
   }
 
@@ -252,6 +267,7 @@ export class OrdersService {
         }
 
         await this.productsService.decrementStock(paidOrder.items, session);
+        if (paidOrder.couponId) await this.couponsService.consume(paidOrder._id, session);
       });
     } catch (error) {
       if (error instanceof ConflictException) {
@@ -287,22 +303,20 @@ export class OrdersService {
       paymentUpdate.stripePaymentIntentId = stripePaymentIntentId;
     }
 
-    const order = await this.orderModel
-      .findOneAndUpdate(
-        { _id: orderId, paymentStatus: { $in: ['pending', 'failed'] } },
-        { $set: paymentUpdate },
-        { new: true },
-      )
-      .exec();
-    if (order) {
-      return order;
-    }
-
-    const existingOrder = await this.orderModel.findById(orderId).exec();
-    if (!existingOrder) {
-      throw new NotFoundException('შეკვეთა ვერ მოიძებნა');
-    }
-    return existingOrder;
+    const session = await this.connection.startSession();
+    let result: OrderDocument | null = null;
+    try {
+      await session.withTransaction(async () => {
+        result = await this.orderModel.findOneAndUpdate(
+          { _id: orderId, paymentStatus: { $in: ['pending', 'failed'] } },
+          { $set: paymentUpdate }, { new: true, session },
+        ).exec();
+        if (result?.couponId) await this.couponsService.consume(result._id, session);
+        if (!result) result = await this.orderModel.findById(orderId).session(session).exec();
+        if (!result) throw new NotFoundException('შეკვეთა ვერ მოიძებნა');
+      });
+    } finally { await session.endSession(); }
+    return result;
   }
 
   async refundStripePayment(stripePaymentIntentId: string, stripeChargeId: string) {

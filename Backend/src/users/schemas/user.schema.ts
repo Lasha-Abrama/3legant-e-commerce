@@ -31,6 +31,13 @@ export const AddressSchema = SchemaFactory.createForClass(Address);
 
 @Schema({ timestamps: true })
 export class User {
+  @Prop({ type: [{
+    hash: { type: String, required: true },
+    previousHashes: { type: [String], default: [] },
+    expiresAt: { type: Date, required: true },
+  }], select: false, default: [] })
+  refreshSessions: { hash: string; previousHashes: string[]; expiresAt: Date }[];
+
   @Prop({ required: true, trim: true })
   firstName: string;
 

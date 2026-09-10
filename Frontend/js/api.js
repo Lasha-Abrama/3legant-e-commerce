@@ -1,5 +1,10 @@
 var API = '/api';
 var ACCESS_TOKEN_KEY = 'threelegant_access_token';
+var accessToken = '';
+var accessTokenExpiresAt = 0;
+var sessionReady = false;
+var refreshRequest = null;
+try { localStorage.removeItem(ACCESS_TOKEN_KEY); sessionStorage.removeItem(ACCESS_TOKEN_KEY); } catch (error) {}
 var API_UNAVAILABLE_MESSAGE = 'The service is currently unavailable. Please try again.';
 
 function productImageUrl(product) {
@@ -53,20 +58,52 @@ function renderRetryState(container, message, retry) {
 }
 
 function getAuthHeaders() {
-  var token = localStorage.getItem(ACCESS_TOKEN_KEY) || sessionStorage.getItem(ACCESS_TOKEN_KEY);
-  return token ? { Authorization: 'Bearer ' + token } : {};
+  return accessToken ? { Authorization: 'Bearer ' + accessToken } : {};
 }
 
 function setAccessToken(token, remember) {
-  clearAccessToken();
-  if (!token) return;
-  var storage = remember === false ? sessionStorage : localStorage;
-  storage.setItem(ACCESS_TOKEN_KEY, token);
+  accessToken = token || '';
+  accessTokenExpiresAt = Date.now() + 19 * 60 * 1000;
+  sessionReady = true;
 }
 
 function clearAccessToken() {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  accessToken = '';
+  accessTokenExpiresAt = 0;
+  sessionReady = true;
+  try { localStorage.removeItem(ACCESS_TOKEN_KEY); sessionStorage.removeItem(ACCESS_TOKEN_KEY); } catch (error) {}
+}
+
+function refreshAccessToken() {
+  if (refreshRequest) return refreshRequest;
+  function rotate() {
+    return fetch(API + '/auth/refresh', {
+      method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'threelegant' },
+    }).then(function (response) {
+      if (response.status === 401) { clearAccessToken(); return false; }
+      if (!response.ok) throw new Error(API_UNAVAILABLE_MESSAGE);
+      return response.json().then(function (data) { setAccessToken(data.accessToken); return true; });
+    });
+  }
+  refreshRequest = (navigator.locks ? navigator.locks.request('threelegant-session', rotate) : rotate())
+    .finally(function () { refreshRequest = null; });
+  return refreshRequest;
+}
+
+function authenticatedFetch(url, options) {
+  options = options || {};
+  var ready = !sessionReady || (accessToken && Date.now() >= accessTokenExpiresAt)
+    ? refreshAccessToken() : Promise.resolve();
+  function send() {
+    return fetch(API + url, Object.assign({}, options, {
+      credentials: 'same-origin',
+      headers: Object.assign({}, options.headers, getAuthHeaders()),
+    }));
+  }
+  return ready.then(send).then(function (response) {
+    if (response.status !== 401 || url === '/auth/login' || url === '/auth/register') return response;
+    return refreshAccessToken().then(function (refreshed) { return refreshed ? send() : response; });
+  });
 }
 
 function redirectToLogin() {
@@ -75,7 +112,7 @@ function redirectToLogin() {
 }
 
 function apiGet(url) {
-  return fetch(API + url, { headers: getAuthHeaders() }).then(function (res) {
+  return authenticatedFetch(url).then(function (res) {
     if (res.status === 401) {
       clearAccessToken();
       redirectToLogin();
@@ -86,7 +123,7 @@ function apiGet(url) {
 }
 
 function apiGetSilent(url) {
-  return fetch(API + url, { headers: getAuthHeaders() }).then(function (res) {
+  return authenticatedFetch(url).then(function (res) {
     if (res.status === 401) {
       clearAccessToken();
     }
@@ -95,9 +132,9 @@ function apiGetSilent(url) {
 }
 
 function apiSend(method, url, data) {
-  return fetch(API + url, {
+  return authenticatedFetch(url, {
     method: method,
-    headers: Object.assign({ 'Content-Type': 'application/json' }, getAuthHeaders()),
+    headers: { 'Content-Type': 'application/json' },
     body: data !== undefined ? JSON.stringify(data) : undefined,
   }).then(function (res) {
     if (res.status === 401) {
@@ -113,9 +150,8 @@ function apiUpload(url, file, options) {
   options = options || {};
   var formData = new FormData();
   formData.append(options.field || 'file', file);
-  return fetch(API + url, {
+  return authenticatedFetch(url, {
     method: options.method || 'POST',
-    headers: getAuthHeaders(),
     body: formData,
   }).then(function (res) {
     if (res.status === 401) {
@@ -130,9 +166,8 @@ function apiUpload(url, file, options) {
 function apiProfileImage(file) {
   var formData = new FormData();
   formData.append('image', file);
-  return fetch(API + '/users/me/profile-image', {
+  return authenticatedFetch('/users/me/profile-image', {
     method: 'PATCH',
-    headers: getAuthHeaders(),
     body: formData,
   }).then(function (res) {
     if (res.status === 401) {

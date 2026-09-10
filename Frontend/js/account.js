@@ -96,6 +96,7 @@
       '<div class="faint" style="font-size:11px;margin-bottom:16px;">This will be how your name will be displayed in the account section and in reviews.</div>' +
       '<div class="field"><span class="field__label">EMAIL *</span><input class="input" id="f-email" value="' + escapeHtml(u.email || '') + '"></div>' +
       '<div class="field"><span class="field__label">PHONE</span><input class="input" id="f-phone" value="' + escapeHtml(u.phone || '') + '"></div>' +
+      '<div class="field"><label class="field__label" for="f-email-password">CURRENT PASSWORD (only when changing email)</label><input class="input" type="password" autocomplete="current-password" id="f-email-password"><small>Google-only account? Use password reset to set a password first. Changing email signs out all devices.</small></div>' +
       '<div class="error-text" id="profile-msg"></div>' +
       '<button class="btn btn--dark" id="save-profile" style="margin-bottom:28px;">Save changes</button>' +
 
@@ -115,10 +116,17 @@
         lastName: document.getElementById('f-lastName').value,
         displayName: document.getElementById('f-displayName').value,
         email: document.getElementById('f-email').value,
+        currentPassword: document.getElementById('f-email-password').value,
         phone: document.getElementById('f-phone').value,
       }).then(function (res) {
         if (!res) return;
         if (res._status >= 400) { msg.style.color = 'var(--red)'; msg.textContent = res.message; return; }
+        if (res.email !== state.user.email) {
+          clearAccessToken();
+          window.location.href = 'login.html?next=account.html';
+          return;
+        }
+        document.getElementById('f-email-password').value = '';
         state.user = res;
         msg.style.color = 'var(--green)';
         msg.textContent = 'Saved.';
