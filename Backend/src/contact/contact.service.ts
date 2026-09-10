@@ -68,7 +68,7 @@ export class ContactService {
         ],
       },
       { $set: { emailDeliveryClaimedUntil: new Date(Date.now() + 120_000) } },
-      { new: true },
+      { returnDocument: 'after' },
     ).exec();
     if (!subscriber) return { message: 'You are already subscribed to our newsletter.' };
 

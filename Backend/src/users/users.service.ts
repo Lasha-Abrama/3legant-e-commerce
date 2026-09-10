@@ -59,7 +59,7 @@ export class UsersService {
     }, {
       $set: { 'refreshSessions.$.hash': replacementHash },
       $push: { 'refreshSessions.$.previousHashes': hash },
-    }, { new: true }).select('+refreshSessions').exec();
+    }, { returnDocument: 'after' }).select('+refreshSessions').exec();
     if (!user) {
       await this.userModel.updateOne({ 'refreshSessions.previousHashes': hash }, {
         $pull: { refreshSessions: { previousHashes: hash } },
@@ -152,7 +152,7 @@ export class UsersService {
           { _id: userId, email: user.email, passwordHash: credentials.passwordHash, tokenVersion: credentials.tokenVersion ?? 0 },
           { $set: { ...profile, email: normalizedEmail }, $inc: { tokenVersion: 1 },
             $unset: { refreshSessions: 1, passwordResetTokenHash: 1, passwordResetExpiresAt: 1 } },
-          { new: true, runValidators: true },
+          { returnDocument: 'after', runValidators: true },
         ).exec();
         if (!updated) throw new BadRequestException('Credentials changed. Please sign in again.');
         return updated;
@@ -183,7 +183,7 @@ export class UsersService {
       .findOneAndUpdate(
         { _id: userId },
         { $set: { profileImageUrl: image.url, profileImagePublicId: image.publicId } },
-        { new: false, runValidators: true },
+        { returnDocument: 'before', runValidators: true },
       )
       .select('+profileImagePublicId')
       .exec();
@@ -229,7 +229,7 @@ export class UsersService {
       .findOneAndUpdate(
         { email: email.toLowerCase().trim() },
         { passwordResetTokenHash: tokenHash, passwordResetExpiresAt: expiresAt },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
   }
@@ -244,7 +244,7 @@ export class UsersService {
           $inc: { tokenVersion: 1 },
           $unset: { refreshSessions: 1, passwordResetTokenHash: 1, passwordResetExpiresAt: 1 },
         },
-        { new: true, runValidators: true },
+        { returnDocument: 'after', runValidators: true },
       )
       .exec();
     if (!user) {
