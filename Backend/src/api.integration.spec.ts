@@ -39,6 +39,10 @@ describe('API integration boundaries', () => {
     requestPasswordReset: jest.fn(),
     resetPassword: jest.fn(),
     signInWithGoogle: jest.fn(),
+    establishSession: jest.fn(),
+    clearSessionCookie: jest.fn(),
+    validateSessionRequest: jest.fn(),
+    refresh: jest.fn(),
   };
   const googleOAuthService = {
     createState: jest.fn(),
@@ -132,8 +136,9 @@ describe('API integration boundaries', () => {
     contactService.subscribe.mockReset();
     profileImagesService.update.mockReset();
     jwtService.verifyAsync.mockImplementation(async (token: string) => {
-      if (token === 'admin-token') return { sub: 'admin-id', tokenVersion: 1 };
-      if (token === 'user-token') return { sub: 'user-id', tokenVersion: 0 };
+      const iat = Math.floor(Date.now() / 1000);
+      if (token === 'admin-token') return { sub: 'admin-id', tokenVersion: 1, iat, exp: iat + 900 };
+      if (token === 'user-token') return { sub: 'user-id', tokenVersion: 0, iat, exp: iat + 900 };
       throw new Error('invalid token');
     });
     usersService.findById.mockImplementation(async (id: string) => ({

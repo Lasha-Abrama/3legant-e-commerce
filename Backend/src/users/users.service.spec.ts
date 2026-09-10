@@ -14,26 +14,52 @@ describe('UsersService', () => {
     service.getWishlist = UsersService.prototype.getWishlist.bind(service);
   });
 
-  it('normalizes profile emails before saving', async () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  function mockPasswordVerification() {
+    (jest.spyOn(bcrypt, 'compare') as unknown as jest.SpyInstance<Promise<boolean>, [string, string]>)
+      .mockResolvedValue(true);
+  }
+
+  it('normalizes a changed email and rotates credentials atomically', async () => {
     const user = {
       _id: 'user-id',
       email: 'old@example.com',
-      save: jest.fn().mockResolvedValue(undefined),
+      save: jest.fn(),
     };
-    user.save.mockResolvedValue(user);
+    const updatedUser = { _id: 'user-id', email: 'new@example.com' };
     service.findById = jest.fn().mockResolvedValue(user as never);
+    (userModel as any).findById = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ passwordHash: 'existing-hash', tokenVersion: 0 }),
+      }),
+    });
     (userModel as any).findOne = jest.fn().mockReturnValue({
       exec: jest.fn().mockResolvedValue(null),
     });
+    (userModel as any).findOneAndUpdate = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(updatedUser),
+    });
+    mockPasswordVerification();
 
     await expect(
-      service.updateProfile('user-id', { email: '  NEW@Example.com  ' }),
-    ).resolves.toBe(user);
+      service.updateProfile('user-id', {
+        email: '  NEW@Example.com  ',
+        currentPassword: 'old-password',
+      }),
+    ).resolves.toBe(updatedUser);
     expect((userModel as any).findOne).toHaveBeenCalledWith({
       _id: { $ne: 'user-id' },
       email: 'new@example.com',
     });
-    expect(user.email).toBe('new@example.com');
+    expect((userModel as any).findOneAndUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: 'user-id' }),
+      expect.objectContaining({ $set: expect.objectContaining({ email: 'new@example.com' }), $inc: { tokenVersion: 1 } }),
+      { new: true, runValidators: true },
+    );
+    expect(user.save).not.toHaveBeenCalled();
   });
 
   it('replaces the authenticated user profile image and preserves the old identifier for cleanup', async () => {
@@ -79,12 +105,21 @@ describe('UsersService', () => {
       save: jest.fn(),
     };
     service.findById = jest.fn().mockResolvedValue(user as never);
+    (userModel as any).findById = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ passwordHash: 'existing-hash', tokenVersion: 0 }),
+      }),
+    });
     (userModel as any).findOne = jest.fn().mockReturnValue({
       exec: jest.fn().mockResolvedValue({ _id: 'other-user-id' }),
     });
+    mockPasswordVerification();
 
     await expect(
-      service.updateProfile('user-id', { email: 'used@example.com' }),
+      service.updateProfile('user-id', {
+        email: 'used@example.com',
+        currentPassword: 'old-password',
+      }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(user.save).not.toHaveBeenCalled();
   });
@@ -109,7 +144,7 @@ describe('UsersService', () => {
     const [filter, update] = (userModel as any).updateOne.mock.calls[0];
     expect(filter).toEqual({ _id: 'user-id', passwordHash: user.passwordHash });
     expect(update.$inc).toEqual({ tokenVersion: 1 });
-    expect(update.$unset).toEqual({ passwordResetTokenHash: 1, passwordResetExpiresAt: 1 });
+    expect(update.$unset).toEqual({ refreshSessions: 1, passwordResetTokenHash: 1, passwordResetExpiresAt: 1 });
     await expect(bcrypt.compare('new-password', update.$set.passwordHash)).resolves.toBe(true);
     expect(user.save).not.toHaveBeenCalled();
   });
@@ -154,7 +189,10 @@ describe('UsersService', () => {
   it('atomically increments the token version when logging out', async () => {
     (userModel as any).updateOne = jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue({ matchedCount: 1 }) });
     await expect(service.invalidateAccessTokens('user-id')).resolves.toBeUndefined();
-    expect((userModel as any).updateOne).toHaveBeenCalledWith({ _id: 'user-id' }, { $inc: { tokenVersion: 1 } });
+    expect((userModel as any).updateOne).toHaveBeenCalledWith(
+      { _id: 'user-id' },
+      { $inc: { tokenVersion: 1 }, $unset: { refreshSessions: 1 } },
+    );
   });
 
   it('stores a normalized password reset token for an existing email', async () => {
@@ -181,7 +219,7 @@ describe('UsersService', () => {
       {
         $set: { passwordHash: 'new-hash' },
         $inc: { tokenVersion: 1 },
-        $unset: { passwordResetTokenHash: 1, passwordResetExpiresAt: 1 },
+        $unset: { refreshSessions: 1, passwordResetTokenHash: 1, passwordResetExpiresAt: 1 },
       },
       { new: true, runValidators: true },
     );

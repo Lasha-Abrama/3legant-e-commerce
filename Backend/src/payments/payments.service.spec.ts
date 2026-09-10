@@ -16,6 +16,7 @@ describe('PaymentsService', () => {
     updateCheckoutSessionStatus: jest.fn(),
     refundStripePayment: jest.fn(),
     updateStripePayment: jest.fn(),
+    reserveCoupon: jest.fn(),
   } as unknown as OrdersService;
   const stripeClient = {
     checkout: { sessions: { create: jest.fn(), retrieve: jest.fn() } },

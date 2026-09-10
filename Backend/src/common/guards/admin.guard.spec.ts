@@ -25,7 +25,8 @@ describe('AdminGuard', () => {
   it('allows a valid administrator', async () => {
     const request = { headers: { authorization: 'Bearer admin-token' } } as Record<string, unknown>;
     const user = { _id: 'admin-id', isAdmin: true, tokenVersion: 2 };
-    jwtService.verifyAsync = jest.fn().mockResolvedValue({ sub: 'admin-id', tokenVersion: 2 });
+    const iat = Math.floor(Date.now() / 1000);
+    jwtService.verifyAsync = jest.fn().mockResolvedValue({ sub: 'admin-id', tokenVersion: 2, iat, exp: iat + 900 });
     usersService.findById = jest.fn().mockResolvedValue(user);
 
     await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
@@ -34,7 +35,8 @@ describe('AdminGuard', () => {
 
   it('rejects administrator tokens issued before session invalidation', async () => {
     const request = { headers: { authorization: 'Bearer stale-admin-token' } } as Record<string, unknown>;
-    jwtService.verifyAsync = jest.fn().mockResolvedValue({ sub: 'admin-id', tokenVersion: 1 });
+    const iat = Math.floor(Date.now() / 1000);
+    jwtService.verifyAsync = jest.fn().mockResolvedValue({ sub: 'admin-id', tokenVersion: 1, iat, exp: iat + 900 });
     usersService.findById = jest.fn().mockResolvedValue({
       _id: 'admin-id',
       isAdmin: true,
@@ -48,8 +50,9 @@ describe('AdminGuard', () => {
 
   it('rejects an authenticated non-administrator', async () => {
     const request = { headers: { authorization: 'Bearer user-token' } } as Record<string, unknown>;
-    jwtService.verifyAsync = jest.fn().mockResolvedValue({ sub: 'user-id', tokenVersion: 0 });
-    usersService.findById = jest.fn().mockResolvedValue({ _id: 'user-id', isAdmin: false });
+    const iat = Math.floor(Date.now() / 1000);
+    jwtService.verifyAsync = jest.fn().mockResolvedValue({ sub: 'user-id', tokenVersion: 0, iat, exp: iat + 900 });
+    usersService.findById = jest.fn().mockResolvedValue({ _id: 'user-id', isAdmin: false, tokenVersion: 0 });
 
     await expect(guard.canActivate(contextFor(request))).rejects.toBeInstanceOf(ForbiddenException);
   });

@@ -24,8 +24,9 @@ describe('JwtAuthGuard', () => {
 
   it('attaches the verified user to the request', async () => {
     const request = { headers: { authorization: 'Bearer valid-token' } } as Record<string, unknown>;
-    const user = { _id: 'user-id' };
-    jwtService.verifyAsync = jest.fn().mockResolvedValue({ sub: 'user-id' });
+    const user = { _id: 'user-id', tokenVersion: 0 };
+    const iat = Math.floor(Date.now() / 1000);
+    jwtService.verifyAsync = jest.fn().mockResolvedValue({ sub: 'user-id', tokenVersion: 0, iat, exp: iat + 900 });
     usersService.findById = jest.fn().mockResolvedValue(user);
 
     await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
@@ -51,9 +52,12 @@ describe('JwtAuthGuard', () => {
     const request = {
       headers: { authorization: 'Bearer stale-token' },
     } as Record<string, unknown>;
+    const iat = Math.floor(Date.now() / 1000);
     jwtService.verifyAsync = jest.fn().mockResolvedValue({
       sub: 'user-id',
       tokenVersion: 0,
+      iat,
+      exp: iat + 900,
     });
     usersService.findById = jest.fn().mockResolvedValue({
       _id: 'user-id',
