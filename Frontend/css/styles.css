@@ -1,3 +1,6 @@
+.password-requirements { margin: 8px 0 0; padding-left: 18px; color: var(--red, #b42318); font-size: 12px; line-height: 1.6; }
+.password-requirements[hidden] { display: none; }
+
 :root {
   --ink: #1c1c1a;
   --muted: #6f6c66;

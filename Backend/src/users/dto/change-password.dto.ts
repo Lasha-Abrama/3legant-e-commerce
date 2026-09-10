@@ -1,4 +1,5 @@
-import { IsByteLength, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { StrongPassword } from '../../auth/password-policy';
 
 export class ChangePasswordDto {
   @IsString()
@@ -6,8 +7,6 @@ export class ChangePasswordDto {
   @IsNotEmpty({ message: 'ძველი პაროლი სავალდებულოა' })
   oldPassword: string;
 
-  @IsString()
-  @IsByteLength(0, 72, { message: 'Password must not exceed 72 UTF-8 bytes' })
-  @MinLength(8, { message: 'ახალი პაროლი მინიმუმ 8 სიმბოლო უნდა იყოს' })
+  @StrongPassword()
   newPassword: string;
 }

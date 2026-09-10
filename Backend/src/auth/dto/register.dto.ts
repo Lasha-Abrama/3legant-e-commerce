@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
-import { IsByteLength, IsEmail, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { StrongPassword } from '../password-policy';
 
 export class RegisterDto {
   @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
@@ -19,8 +20,6 @@ export class RegisterDto {
   @IsEmail({}, { message: 'ელფოსტის ფორმატი არასწორია' })
   email: string;
 
-  @IsString()
-  @IsByteLength(0, 72, { message: 'Password must not exceed 72 UTF-8 bytes' })
-  @MinLength(8, { message: 'პაროლი მინიმუმ 8 სიმბოლო უნდა იყოს' })
+  @StrongPassword()
   password: string;
 }

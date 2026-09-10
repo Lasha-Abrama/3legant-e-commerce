@@ -306,7 +306,7 @@ describe('API integration boundaries', () => {
         firstName: 'Test',
         lastName: 'User',
         email: 'not-an-email',
-        password: 'password123',
+        password: 'Password123!',
       },
       {
         firstName: 'Test',
@@ -317,13 +317,13 @@ describe('API integration boundaries', () => {
       {
         firstName: 'Test',
         email: 'test@example.com',
-        password: 'password123',
+        password: 'Password123!',
       },
       {
         firstName: 'Test',
         lastName: 'User',
         email: 'test@example.com',
-        password: 'password123',
+        password: 'Password123!',
         isAdmin: true,
       },
     ];
@@ -348,7 +348,7 @@ describe('API integration boundaries', () => {
         firstName: 'Test',
         lastName: 'User',
         email: 'test@example.com',
-        password: 'password123',
+        password: 'Password123!',
       })
       .expect(201)
       .expect({ accessToken: 'token', user: { _id: 'new-user-id' } });
@@ -357,7 +357,7 @@ describe('API integration boundaries', () => {
       firstName: 'Test',
       lastName: 'User',
       email: 'test@example.com',
-      password: 'password123',
+      password: 'Password123!',
     });
   });
 
@@ -467,7 +467,7 @@ describe('API integration boundaries', () => {
       .expect({ message: 'Check your email' });
     await request(app.getHttpServer())
       .post('/api/auth/reset-password')
-      .send({ token: 'a'.repeat(43), password: 'new-password' })
+      .send({ token: 'a'.repeat(43), password: 'New-password1' })
       .expect(200)
       .expect({ message: 'Password reset' });
   });

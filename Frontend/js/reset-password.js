@@ -4,6 +4,7 @@
   var successEl = document.getElementById('reset-password-success');
   var submitButton = form.querySelector('[type="submit"]');
   var token = qs('token');
+  var validatePassword = PasswordPolicy.attach(form.querySelector('[name="password"]'));
 
   if (!token) {
     errorEl.textContent = 'This reset link is invalid. Request a new one.';
@@ -14,6 +15,7 @@
     event.preventDefault();
     errorEl.textContent = '';
     successEl.textContent = '';
+    if (!validatePassword()) return;
     var password = form.querySelector('[name="password"]').value;
     var confirmPassword = form.querySelector('[name="confirmPassword"]').value;
     if (password !== confirmPassword) {

@@ -37,7 +37,15 @@
         return;
       }
       setAccessToken(result.accessToken, true);
-      window.location.replace(safeLocalRedirect(qs('next'), 'account.html'));
+      // The header can already be rotating the refresh cookie. Do not navigate
+      // until its response is received: navigation can abort the cookie handoff.
+      return refreshAccessToken().then(function (refreshed) {
+        if (!refreshed) {
+          showError('Your sign-in session could not be restored. Please sign in again.');
+          return;
+        }
+        window.location.replace(safeLocalRedirect(qs('next'), 'account.html'));
+      });
     })
     .catch(function () {
       showError(API_UNAVAILABLE_MESSAGE);

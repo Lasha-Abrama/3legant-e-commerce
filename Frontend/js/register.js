@@ -1,10 +1,12 @@
 (function () {
   var form = document.getElementById('register-form');
   var errorEl = document.getElementById('register-error');
+  var validatePassword = PasswordPolicy.attach(form.querySelector('[name="password"]'));
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     errorEl.textContent = '';
+    if (!validatePassword()) return;
 
     var data = {
       firstName: form.querySelector('[name="firstName"]').value,

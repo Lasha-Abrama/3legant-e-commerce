@@ -31,15 +31,16 @@
     coupon = coupon || {};
     var initialExpiry = coupon.expiresAt ? localDate(coupon.expiresAt) : '';
     editor.hidden = false;
-    editor.innerHTML = '<form id="coupon-form"><h2>' + (coupon._id ? 'Edit coupon' : 'Create coupon') + '</h2>' +
-      '<label class="field">Code (8–12 letters or numbers)<input class="input" name="code" required minlength="8" maxlength="12" pattern="[A-Za-z0-9]{8,12}" value="' + escapeHtml(coupon.code || '') + '"></label>' +
-      '<button class="btn btn--outline btn-sm" type="button" id="generate-coupon">Generate Coupon</button>' +
+    editor.innerHTML = '<form id="coupon-form" class="coupon-editor-form"><h2>' + (coupon._id ? 'Edit coupon' : 'Create coupon') + '</h2>' +
+      '<div class="coupon-code-group"><label class="field" for="coupon-code">Coupon code</label><div class="coupon-code-controls"><input class="input" id="coupon-code" name="code" required minlength="8" maxlength="12" pattern="[A-Za-z0-9]{8,12}" aria-describedby="coupon-code-help" value="' + escapeHtml(coupon.code || '') + '">' +
+      '<button class="btn btn--outline btn-sm" type="button" id="generate-coupon">Generate Code</button></div><small id="coupon-code-help">8–12 letters or numbers. You can edit a generated code before saving.</small></div>' +
+      '<div class="coupon-fields-grid">' +
       '<label class="field">Percentage (1–100)<input class="input" type="number" name="percentage" required min="1" max="100" step="1" value="' + Number(coupon.percentage || 10) + '"></label>' +
       '<label class="field">Total usage limit (blank = unlimited)<input class="input" type="number" name="usageLimit" min="1" max="1000000000" step="1" value="' + (coupon.usageLimit == null ? '' : Number(coupon.usageLimit)) + '"></label>' +
       '<label class="field">Expiration (your local time)<input class="input" type="datetime-local" name="expiresAt" required value="' + initialExpiry + '"></label>' +
-      '<label class="field"><span><input type="checkbox" name="active"' + (coupon.active !== false ? ' checked' : '') + '> Active</span></label>' +
-      '<p role="status" id="coupon-form-message"></p><button class="btn btn--dark btn-sm" type="submit">Save coupon</button> ' +
-      '<button class="btn btn--outline btn-sm" type="button" id="cancel-coupon">Cancel</button></form>';
+      '</div><label class="coupon-active"><input type="checkbox" name="active"' + (coupon.active !== false ? ' checked' : '') + '> Active — available for new checkouts</label>' +
+      '<p role="status" id="coupon-form-message"></p><div class="coupon-form-actions"><button class="btn btn--dark btn-sm" type="submit">Save coupon</button> ' +
+      '<button class="btn btn--outline btn-sm" type="button" id="cancel-coupon">Cancel</button></div></form>';
     var form = document.getElementById('coupon-form');
     var status = document.getElementById('coupon-form-message');
     var generatedCode = '';

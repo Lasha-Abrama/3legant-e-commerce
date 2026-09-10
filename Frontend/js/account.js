@@ -134,8 +134,11 @@
       });
     });
 
+    var validatePassword = PasswordPolicy.attach(document.getElementById('f-newPassword'));
     document.getElementById('save-password').addEventListener('click', function () {
       var msg = document.getElementById('password-msg');
+      msg.textContent = '';
+      if (!validatePassword()) { document.getElementById('f-newPassword').focus(); return; }
       var oldPassword = document.getElementById('f-oldPassword').value;
       var newPassword = document.getElementById('f-newPassword').value;
       var repeat = document.getElementById('f-repeatPassword').value;

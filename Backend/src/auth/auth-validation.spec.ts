@@ -5,7 +5,7 @@ import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from '../users/dto/change-password.dto';
 
-const validRegistration = { firstName: 'Test', lastName: 'User', email: 'user@example.com', password: 'strong-password' };
+const validRegistration = { firstName: 'Test', lastName: 'User', email: 'user@example.com', password: 'Strong-password1' };
 
 describe('Authentication input boundaries', () => {
   it.each([123, {}, [], null, '   ', 'a'.repeat(101)])('rejects invalid signup names (%j)', async (firstName) => {
@@ -14,9 +14,9 @@ describe('Authentication input boundaries', () => {
   });
 
   it('normalizes identity fields without trimming passwords', async () => {
-    const dto = plainToInstance(RegisterDto, { ...validRegistration, firstName: ' Test ', email: ' USER@EXAMPLE.COM ', password: ' password ' });
+    const dto = plainToInstance(RegisterDto, { ...validRegistration, firstName: ' Test ', email: ' USER@EXAMPLE.COM ', password: ' Password1! ' });
     expect(await validate(dto)).toEqual([]);
-    expect(dto).toMatchObject({ firstName: 'Test', email: 'user@example.com', password: ' password ' });
+    expect(dto).toMatchObject({ firstName: 'Test', email: 'user@example.com', password: ' Password1! ' });
   });
 
   it('rejects passwords beyond bcrypt byte capacity on all password-setting endpoints', async () => {
