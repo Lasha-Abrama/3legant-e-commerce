@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
+import { setupSwagger } from './swagger/setup-swagger';
 
 export function configureApp(app: NestExpressApplication, configService: ConfigService): void {
   const trustProxy = configService.get<string | number>('TRUST_PROXY');
@@ -45,4 +46,5 @@ export function configureApp(app: NestExpressApplication, configService: ConfigS
   );
 
   app.setGlobalPrefix('api');
+  setupSwagger(app);
 }

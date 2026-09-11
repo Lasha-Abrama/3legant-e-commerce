@@ -1,0 +1,3479 @@
+# Maintained by hand. Update alongside controllers and DTOs; npm run test:swagger checks validity and route coverage.
+openapi: 3.0.3
+info:
+  title: 3legant E-Commerce API
+  version: 1.0.0
+  description: YAML source of truth for the NestJS API. All paths are relative to /api on the current
+    origin. Use login and paste its accessToken into Authorize for protected operations. Admin
+    operations require an administrator account. Try it out sends real requests and can change data.
+    Unknown request fields are rejected. MongoDB IDs are 24 hexadecimal characters.
+servers:
+  - url: /api
+    description: Current origin
+tags:
+  - name: auth
+  - name: blogs
+  - name: Administration
+  - name: Contact
+  - name: health
+  - name: orders
+  - name: payments
+  - name: products
+  - name: Questions
+  - name: Reviews
+  - name: users
+paths:
+  /auth/register:
+    post:
+      tags:
+        - auth
+      summary: Register
+      operationId: Auth_register
+      responses:
+        "201":
+          description: Created / operation completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+          headers:
+            Set-Cookie:
+              description: Rotating HttpOnly threelegant_refresh session cookie.
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterDto"
+  /auth/login:
+    post:
+      tags:
+        - auth
+      summary: Login
+      operationId: Auth_login
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+          headers:
+            Set-Cookie:
+              description: Rotating HttpOnly threelegant_refresh session cookie.
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginDto"
+  /auth/google:
+    get:
+      tags:
+        - auth
+      summary: Google Login
+      operationId: Auth_googleLogin
+      responses:
+        "302":
+          description: Redirect to Google or the frontend callback.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: next
+          in: query
+          required: false
+          schema:
+            type: string
+      description: Browser navigation endpoint; open in the browser to complete the OAuth redirect and
+        cookie flow.
+  /auth/google/callback:
+    get:
+      tags:
+        - auth
+      summary: Google Callback
+      operationId: Auth_googleCallback
+      responses:
+        "302":
+          description: Redirect to Google or the frontend callback.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: error
+          in: query
+          required: false
+          schema:
+            type: string
+      description: Browser navigation endpoint; open in the browser to complete the OAuth redirect and
+        cookie flow.
+  /auth/google/session:
+    get:
+      tags:
+        - auth
+      summary: Google Session
+      operationId: Auth_googleSession
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      description: Exchanges and clears the temporary HttpOnly Google handoff cookie after the OAuth callback.
+  /auth/forgot-password:
+    post:
+      tags:
+        - auth
+      summary: Forgot Password
+      operationId: Auth_forgotPassword
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordDto"
+  /auth/reset-password:
+    post:
+      tags:
+        - auth
+      summary: Reset Password
+      operationId: Auth_resetPassword
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordDto"
+  /auth/logout:
+    post:
+      tags:
+        - auth
+      summary: Logout
+      operationId: Auth_logout
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /auth/refresh:
+    post:
+      tags:
+        - auth
+      summary: Refresh
+      operationId: Auth_refresh
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+          headers:
+            Set-Cookie:
+              description: Rotating HttpOnly threelegant_refresh session cookie.
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      security:
+        - refreshCookie: []
+      description: "Uses the HttpOnly threelegant_refresh cookie and requires X-Requested-With:
+        threelegant. When Origin is supplied it must match FRONTEND_URL. Cross-site requests are
+        rejected. No bearer token is required."
+      parameters:
+        - name: X-Requested-With
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - threelegant
+            default: threelegant
+  /auth/me:
+    get:
+      tags:
+        - auth
+      summary: Me
+      operationId: Auth_me
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    allOf:
+                      - $ref: "#/components/schemas/SafeUser"
+                    nullable: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      description: "Optional bearer authentication. Returns { user: null } when the token is missing or
+        invalid."
+      security:
+        - {}
+        - bearerAuth: []
+  /blogs:
+    get:
+      tags:
+        - blogs
+      summary: Find All
+      operationId: Blogs_findAll
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Blog"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  take:
+                    type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 80
+        - name: exclude
+          in: query
+          required: false
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 80
+        - name: featured
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - newest
+              - oldest
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: take
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 12
+    post:
+      tags:
+        - Administration
+      summary: Create
+      operationId: Blogs_create
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Blog"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBlogDto"
+  /blogs/{id}:
+    get:
+      tags:
+        - blogs
+      summary: Find One
+      operationId: Blogs_findOne
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Blog"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+    patch:
+      tags:
+        - Administration
+      summary: Update
+      operationId: Blogs_update
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Blog"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBlogDto"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+    delete:
+      tags:
+        - Administration
+      summary: Remove
+      operationId: Blogs_remove
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Blog"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /admin/contact-messages:
+    get:
+      tags:
+        - Administration
+      summary: Find All Messages
+      operationId: ContactAdmin_findAllMessages
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /admin/contact-messages/{id}:
+    delete:
+      tags:
+        - Administration
+      summary: Remove Message
+      operationId: ContactAdmin_removeMessage
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /admin/newsletter-subscribers:
+    get:
+      tags:
+        - Administration
+      summary: Find All Subscribers
+      operationId: ContactAdmin_findAllSubscribers
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /admin/newsletter-subscribers/{id}:
+    delete:
+      tags:
+        - Administration
+      summary: Remove Subscriber
+      operationId: ContactAdmin_removeSubscriber
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  //contact:
+    post:
+      tags:
+        - Contact
+      summary: Create Message
+      operationId: Contact_createMessage
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContactMessageDto"
+  //newsletter:
+    post:
+      tags:
+        - Contact
+      summary: Subscribe
+      operationId: Contact_subscribe
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscribeDto"
+  /admin/coupons:
+    get:
+      tags:
+        - Administration
+      summary: List
+      operationId: Coupons_list
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+    post:
+      tags:
+        - Administration
+      summary: Create
+      operationId: Coupons_create
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCouponDto"
+  /admin/coupons/generate:
+    post:
+      tags:
+        - Administration
+      summary: Generate
+      operationId: Coupons_generate
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /admin/coupons/{id}:
+    patch:
+      tags:
+        - Administration
+      summary: Update
+      operationId: Coupons_update
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCouponDto"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+    delete:
+      tags:
+        - Administration
+      summary: Remove
+      operationId: Coupons_remove
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /health:
+    get:
+      tags:
+        - health
+      summary: Check
+      operationId: Health_check
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - ok
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /admin/orders:
+    get:
+      tags:
+        - Administration
+      summary: Find All
+      operationId: OrdersAdmin_findAll
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /admin/orders/{id}/status:
+    patch:
+      tags:
+        - Administration
+      summary: Update Status
+      operationId: OrdersAdmin_updateStatus
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrderStatusDto"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /orders:
+    post:
+      tags:
+        - orders
+      summary: Create
+      operationId: Orders_create
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderDto"
+      description: Creates an order using server-side product prices and coupon validation. Card payments
+        use Stripe Checkout; PayPal is currently rejected as unavailable.
+  /orders/me:
+    get:
+      tags:
+        - orders
+      summary: Find Mine
+      operationId: Orders_findMine
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /orders/{id}:
+    get:
+      tags:
+        - orders
+      summary: Find One
+      operationId: Orders_findOne
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /orders/quote:
+    post:
+      tags:
+        - orders
+      summary: Quote
+      operationId: Orders_quote
+      responses:
+        "201":
+          description: Created / operation completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderQuote"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteOrderDto"
+      description: Calculates current prices, discount, shipping and total without placing an order.
+        Supplied item names/prices are not trusted.
+  /admin/payments/orders/{orderId}/refund:
+    post:
+      tags:
+        - Administration
+      summary: Refund Order
+      operationId: PaymentsAdmin_refundOrder
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  refundId:
+                    type: string
+                  status:
+                    type: string
+                    nullable: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /payments/checkout-session:
+    post:
+      tags:
+        - payments
+      summary: Create Checkout Session
+      operationId: Payments_createCheckoutSession
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkoutUrl:
+                    type: string
+                    format: uri
+                    nullable: true
+                  sessionId:
+                    type: string
+                  expiresAt:
+                    type: string
+                    format: date-time
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutSessionDto"
+  /payments/webhook:
+    post:
+      tags:
+        - payments
+      summary: Handle Webhook
+      operationId: Payments_handleWebhook
+      responses:
+        "201":
+          description: Created / operation completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      description: Stripe server-to-server endpoint. Requires the exact raw JSON body and its valid Stripe
+        signature. Use Stripe CLI for local testing.
+      parameters:
+        - name: stripe-signature
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Stripe Event payload signed using STRIPE_WEBHOOK_SECRET.
+  /payments/cancel-checkout-session:
+    post:
+      tags:
+        - payments
+      summary: Cancel Checkout Session
+      operationId: Payments_cancelCheckoutSession
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cancelled:
+                    type: boolean
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutSessionDto"
+  /products:
+    get:
+      tags:
+        - products
+      summary: Find All
+      operationId: Products_findAll
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Product"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  take:
+                    type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - Living Room
+              - Bedroom
+              - Kitchen
+              - Bathroom
+              - Dining
+              - Outdoor
+        - name: minPrice
+          in: query
+          required: false
+          schema:
+            type: number
+            minimum: 0
+        - name: maxPrice
+          in: query
+          required: false
+          schema:
+            type: number
+            minimum: 0
+        - name: newArrival
+          in: query
+          required: false
+          schema:
+            type: boolean
+            description: Omit for all products. Any non-empty query string (including false) currently coerces
+              to true.
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - price_asc
+              - price_desc
+              - newest
+              - oldest
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 80
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: take
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 12
+    post:
+      tags:
+        - Administration
+      summary: Create
+      operationId: Products_create
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductDto"
+  /products/{id}:
+    get:
+      tags:
+        - products
+      summary: Find One
+      operationId: Products_findOne
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+    patch:
+      tags:
+        - Administration
+      summary: Update
+      operationId: Products_update
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductDto"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+    delete:
+      tags:
+        - Administration
+      summary: Remove
+      operationId: Products_remove
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/questions:
+    get:
+      tags:
+        - Questions
+      summary: Find By Product
+      operationId: Questions_findByProduct
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+    post:
+      tags:
+        - Questions
+      summary: Create
+      operationId: Questions_create
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionTextDto"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/questions/{questionId}:
+    patch:
+      tags:
+        - Questions
+      summary: Update
+      operationId: Questions_update
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionTextDto"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/questions/{questionId}/like:
+    post:
+      tags:
+        - Questions
+      summary: Like
+      operationId: Questions_like
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/questions/{questionId}/answers:
+    post:
+      tags:
+        - Questions
+      summary: Answer
+      operationId: Questions_answer
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionTextDto"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/questions/{questionId}/answers/{answerId}/like:
+    post:
+      tags:
+        - Questions
+      summary: Like Answer
+      operationId: Questions_likeAnswer
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: answerId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/questions/{questionId}/answers/{answerId}/replies:
+    post:
+      tags:
+        - Questions
+      summary: Reply To Answer
+      operationId: Questions_replyToAnswer
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnswerReplyDto"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: answerId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/questions/{questionId}/dislike:
+    post:
+      tags:
+        - Questions
+      summary: Dislike
+      operationId: Questions_dislike
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/questions/{questionId}/answers/{answerId}/dislike:
+    post:
+      tags:
+        - Questions
+      summary: Dislike Answer
+      operationId: Questions_dislikeAnswer
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: answerId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/questions/{questionId}/answers/{answerId}:
+    patch:
+      tags:
+        - Questions
+      summary: Edit Answer
+      operationId: Questions_editAnswer
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionTextDto"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: answerId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/questions/{questionId}/answers/{answerId}/replies/{replyId}:
+    patch:
+      tags:
+        - Questions
+      summary: Edit Reply
+      operationId: Questions_editReply
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionTextDto"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: answerId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: replyId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/questions/{questionId}/answers/{answerId}/replies/{replyId}/like:
+    post:
+      tags:
+        - Questions
+      summary: Like Reply
+      operationId: Questions_likeReply
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: answerId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: replyId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/questions/{questionId}/answers/{answerId}/replies/{replyId}/dislike:
+    post:
+      tags:
+        - Questions
+      summary: Dislike Reply
+      operationId: Questions_dislikeReply
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: answerId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: replyId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /admin/reviews:
+    get:
+      tags:
+        - Administration
+      summary: Find All
+      operationId: ReviewsAdmin_findAll
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /admin/reviews/{id}:
+    delete:
+      tags:
+        - Administration
+      summary: Remove
+      operationId: ReviewsAdmin_remove
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/reviews:
+    get:
+      tags:
+        - Reviews
+      summary: Find By Product
+      operationId: Reviews_findByProduct
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+    post:
+      tags:
+        - Reviews
+      summary: Create
+      operationId: Reviews_create
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReviewDto"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+      description: Requires a signed-in customer who purchased this product. One review per customer/product.
+  /products/{productId}/reviews/{reviewId}:
+    patch:
+      tags:
+        - Reviews
+      summary: Update
+      operationId: Reviews_update
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReviewDto"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/reviews/{reviewId}/like:
+    post:
+      tags:
+        - Reviews
+      summary: Toggle Like
+      operationId: Reviews_toggleLike
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/reviews/{reviewId}/replies:
+    post:
+      tags:
+        - Reviews
+      summary: Reply
+      operationId: Reviews_reply
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReviewReplyDto"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/reviews/{reviewId}/replies/{replyId}/like:
+    post:
+      tags:
+        - Reviews
+      summary: Like Reply
+      operationId: Reviews_likeReply
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: replyId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /products/{productId}/reviews/{reviewId}/replies/{replyId}:
+    patch:
+      tags:
+        - Reviews
+      summary: Edit Reply
+      operationId: Reviews_editReply
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReviewReplyDto"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+        - name: replyId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /users/me/profile-image:
+    patch:
+      tags:
+        - users
+      summary: Update
+      operationId: ProfileImage_update
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profileImageUrl:
+                    type: string
+                    format: uri
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG or WebP; maximum 2 MiB.
+  /admin/uploads/image:
+    post:
+      tags:
+        - Administration
+      summary: Upload Image
+      operationId: Uploads_uploadImage
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                  publicId:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG, GIF or WebP; maximum 4 MiB.
+  /admin/users:
+    get:
+      tags:
+        - Administration
+      summary: Find All
+      operationId: UsersAdmin_findAll
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SafeUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /admin/users/{id}/role:
+    patch:
+      tags:
+        - Administration
+      summary: Set Role
+      operationId: UsersAdmin_setRole
+      description: Requires an administrator access token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafeUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetAdminRoleDto"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+  /users/me:
+    patch:
+      tags:
+        - users
+      summary: Update Profile
+      operationId: Users_updateProfile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafeUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileDto"
+  /users/me/address:
+    patch:
+      tags:
+        - users
+      summary: Update Address
+      operationId: Users_updateAddress
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafeUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAddressDto"
+  /users/me/password:
+    patch:
+      tags:
+        - users
+      summary: Change Password
+      operationId: Users_changePassword
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordDto"
+  /users/me/wishlist:
+    get:
+      tags:
+        - users
+      summary: Get Wishlist
+      operationId: Users_getWishlist
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /users/me/wishlist/{productId}:
+    post:
+      tags:
+        - users
+      summary: Add To Wishlist
+      operationId: Users_addToWishlist
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Created / operation completed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+    delete:
+      tags:
+        - users
+      summary: Remove From Wishlist
+      operationId: Users_removeFromWishlist
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+            example: 507f1f77bcf86cd799439011
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: threelegant_refresh
+      description: HttpOnly cookie set by login/register; browsers manage it automatically.
+  schemas:
+    ForgotPasswordDto:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+        - email
+    LoginDto:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          maxLength: 254
+          format: email
+        password:
+          type: string
+          maxLength: 1024
+          minLength: 1
+      required:
+        - email
+        - password
+    RegisterDto:
+      type: object
+      additionalProperties: false
+      properties:
+        firstName:
+          type: string
+          maxLength: 100
+          minLength: 1
+        lastName:
+          type: string
+          maxLength: 100
+          minLength: 1
+        email:
+          type: string
+          maxLength: 254
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: At most 72 UTF-8 bytes. Include uppercase and lowercase letters, a digit, and a
+            punctuation or symbol character.
+          example: ExamplePass123!
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+    ResetPasswordDto:
+      type: object
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+          maxLength: 128
+          minLength: 32
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: At most 72 UTF-8 bytes. Include uppercase and lowercase letters, a digit, and a
+            punctuation or symbol character.
+          example: ExamplePass123!
+      required:
+        - token
+        - password
+    CreateBlogDto:
+      type: object
+      additionalProperties: false
+      properties:
+        category:
+          type: string
+          minLength: 1
+          maxLength: 80
+        supportingImages:
+          type: array
+          items:
+            type: string
+          maxItems: 6
+        title:
+          type: string
+          minLength: 1
+        excerpt:
+          type: string
+        content:
+          type: string
+          minLength: 1
+        image:
+          type: string
+          minLength: 1
+        featured:
+          type: boolean
+      required:
+        - title
+        - content
+        - image
+    FindBlogsQueryDto:
+      type: object
+      additionalProperties: false
+      properties:
+        category:
+          type: string
+          maxLength: 80
+        exclude:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+          example: 507f1f77bcf86cd799439011
+        search:
+          type: string
+          maxLength: 80
+        featured:
+          type: boolean
+        sort:
+          type: string
+          enum:
+            - newest
+            - oldest
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        take:
+          type: integer
+          minimum: 1
+          default: 12
+    UpdateBlogDto:
+      type: object
+      additionalProperties: false
+      properties:
+        category:
+          type: string
+          minLength: 1
+          maxLength: 80
+        supportingImages:
+          type: array
+          items:
+            type: string
+          maxItems: 6
+        title:
+          type: string
+          minLength: 1
+        excerpt:
+          type: string
+        content:
+          type: string
+          minLength: 1
+        image:
+          type: string
+          minLength: 1
+        featured:
+          type: boolean
+    CreateContactMessageDto:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        message:
+          type: string
+          minLength: 1
+          maxLength: 5000
+      required:
+        - name
+        - email
+        - message
+    SubscribeDto:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+        - email
+    CreateCouponDto:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: ^[A-Z0-9]{8,12}$
+        percentage:
+          type: integer
+          minimum: 1
+          maximum: 100
+        usageLimit:
+          type: integer
+          minimum: 1
+          maximum: 1000000000
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          maxLength: 40
+        active:
+          type: boolean
+      required:
+        - code
+        - percentage
+        - expiresAt
+    UpdateCouponDto:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: ^[A-Z0-9]{8,12}$
+        percentage:
+          type: integer
+          minimum: 1
+          maximum: 100
+        usageLimit:
+          type: integer
+          minimum: 1
+          maximum: 1000000000
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          maxLength: 40
+        active:
+          type: boolean
+    OrderItemDto:
+      type: object
+      additionalProperties: false
+      properties:
+        productId:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          minLength: 1
+        color:
+          type: string
+        price:
+          type: number
+          minimum: 0
+        qty:
+          type: integer
+          minimum: 1
+      required:
+        - productId
+        - color
+        - qty
+    OrderContactDto:
+      type: object
+      additionalProperties: false
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        phone:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+      required:
+        - firstName
+        - lastName
+        - phone
+        - email
+    OrderShippingAddressDto:
+      type: object
+      additionalProperties: false
+      properties:
+        street:
+          type: string
+          minLength: 1
+        city:
+          type: string
+          minLength: 1
+        state:
+          type: string
+          minLength: 1
+        zip:
+          type: string
+          minLength: 1
+        country:
+          type: string
+          minLength: 1
+      required:
+        - street
+        - city
+        - state
+        - zip
+        - country
+    QuoteOrderDto:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItemDto"
+          maxItems: 100
+          minItems: 1
+        couponCode:
+          type: string
+          maxLength: 32
+        shippingOption:
+          type: string
+          enum:
+            - free
+            - express
+            - pickup
+      required:
+        - items
+        - shippingOption
+    CreateOrderDto:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItemDto"
+          maxItems: 100
+          minItems: 1
+        couponCode:
+          type: string
+          maxLength: 32
+        shippingOption:
+          type: string
+          enum:
+            - free
+            - express
+            - pickup
+        contact:
+          $ref: "#/components/schemas/OrderContactDto"
+        shippingAddress:
+          $ref: "#/components/schemas/OrderShippingAddressDto"
+        paymentMethod:
+          type: string
+          enum:
+            - card
+            - paypal
+      required:
+        - items
+        - shippingOption
+        - contact
+        - shippingAddress
+        - paymentMethod
+    UpdateOrderStatusDto:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum:
+            - Processing
+            - Shipped
+            - Delivered
+            - Cancelled
+      required:
+        - status
+    CreateCheckoutSessionDto:
+      type: object
+      additionalProperties: false
+      properties:
+        orderId:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+          example: 507f1f77bcf86cd799439011
+      required:
+        - orderId
+    CreateProductDto:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+        category:
+          type: string
+          enum:
+            - Living Room
+            - Bedroom
+            - Kitchen
+            - Bathroom
+            - Dining
+            - Outdoor
+        price:
+          type: number
+          minimum: 0
+        originalPrice:
+          type: number
+          minimum: 0
+          nullable: true
+        offerDurationDays:
+          type: integer
+          minimum: 1
+          maximum: 365
+          nullable: true
+        colors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductColorDto"
+          minItems: 1
+        newArrival:
+          type: boolean
+        discountLabel:
+          type: string
+        sku:
+          type: string
+          minLength: 1
+        measurements:
+          type: string
+        description:
+          type: string
+          minLength: 1
+        imageLabel:
+          type: string
+          minLength: 1
+        images:
+          type: array
+          items:
+            type: string
+        stock:
+          type: number
+          minimum: 0
+      required:
+        - name
+        - category
+        - price
+        - sku
+        - description
+        - imageLabel
+    ProductColorDto:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+        hex:
+          type: string
+          minLength: 1
+      required:
+        - name
+        - hex
+    FindProductsQueryDto:
+      type: object
+      additionalProperties: false
+      properties:
+        category:
+          type: string
+          enum:
+            - Living Room
+            - Bedroom
+            - Kitchen
+            - Bathroom
+            - Dining
+            - Outdoor
+        minPrice:
+          type: number
+          minimum: 0
+        maxPrice:
+          type: number
+          minimum: 0
+        newArrival:
+          type: boolean
+          description: Omit for all products. Any non-empty query string (including false) currently coerces
+            to true.
+        sort:
+          type: string
+          enum:
+            - price_asc
+            - price_desc
+            - newest
+            - oldest
+        search:
+          type: string
+          maxLength: 80
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        take:
+          type: integer
+          minimum: 1
+          default: 12
+    UpdateProductDto:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+        category:
+          type: string
+          enum:
+            - Living Room
+            - Bedroom
+            - Kitchen
+            - Bathroom
+            - Dining
+            - Outdoor
+        price:
+          type: number
+          minimum: 0
+        originalPrice:
+          type: number
+          minimum: 0
+          nullable: true
+        offerDurationDays:
+          type: integer
+          minimum: 1
+          maximum: 365
+          nullable: true
+        colors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductColorDto"
+          minItems: 1
+        newArrival:
+          type: boolean
+        discountLabel:
+          type: string
+        sku:
+          type: string
+          minLength: 1
+        measurements:
+          type: string
+        description:
+          type: string
+          minLength: 1
+        imageLabel:
+          type: string
+          minLength: 1
+        images:
+          type: array
+          items:
+            type: string
+        stock:
+          type: number
+          minimum: 0
+    QuestionTextDto:
+      type: object
+      additionalProperties: false
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+      required:
+        - text
+    AnswerReplyDto:
+      type: object
+      additionalProperties: false
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        replyToId:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+          example: 507f1f77bcf86cd799439011
+      required:
+        - text
+    CreateReviewReplyDto:
+      type: object
+      additionalProperties: false
+      properties:
+        replyToId:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+          example: 507f1f77bcf86cd799439011
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+      required:
+        - text
+    CreateReviewDto:
+      type: object
+      additionalProperties: false
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+      required:
+        - rating
+        - text
+    UpdateReviewDto:
+      type: object
+      additionalProperties: false
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    ChangePasswordDto:
+      type: object
+      additionalProperties: false
+      properties:
+        oldPassword:
+          type: string
+          maxLength: 1024
+          minLength: 1
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          description: At most 72 UTF-8 bytes. Include uppercase and lowercase letters, a digit, and a
+            punctuation or symbol character.
+          example: ExamplePass123!
+      required:
+        - oldPassword
+        - newPassword
+    SetAdminRoleDto:
+      type: object
+      additionalProperties: false
+      properties:
+        isAdmin:
+          type: boolean
+      required:
+        - isAdmin
+    UpdateAddressDto:
+      type: object
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          enum:
+            - billing
+            - shipping
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 200
+        street:
+          type: string
+          minLength: 1
+          maxLength: 200
+        city:
+          type: string
+          minLength: 1
+          maxLength: 200
+        state:
+          type: string
+          minLength: 1
+          maxLength: 200
+        zip:
+          type: string
+          minLength: 1
+          maxLength: 200
+        country:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+        - type
+    UpdateProfileDto:
+      type: object
+      additionalProperties: false
+      properties:
+        currentPassword:
+          type: string
+          maxLength: 128
+        firstName:
+          type: string
+          maxLength: 100
+          minLength: 1
+        lastName:
+          type: string
+          maxLength: 100
+          minLength: 1
+        displayName:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          maxLength: 254
+          format: email
+        phone:
+          type: string
+          maxLength: 100
+    Error:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        error:
+          type: string
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        user:
+          $ref: "#/components/schemas/SafeUser"
+    SafeUser:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        phone:
+          type: string
+        profileImageUrl:
+          type: string
+        billingAddress:
+          type: object
+        shippingAddress:
+          type: object
+        isAdmin:
+          type: boolean
+    Product:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        category:
+          type: string
+          enum:
+            - Living Room
+            - Bedroom
+            - Kitchen
+            - Bathroom
+            - Dining
+            - Outdoor
+        price:
+          type: number
+          minimum: 0
+        originalPrice:
+          type: number
+          minimum: 0
+          nullable: true
+        colors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductColorDto"
+          minItems: 1
+        newArrival:
+          type: boolean
+        discountLabel:
+          type: string
+        sku:
+          type: string
+          minLength: 1
+        measurements:
+          type: string
+        description:
+          type: string
+          minLength: 1
+        imageLabel:
+          type: string
+          minLength: 1
+        images:
+          type: array
+          items:
+            type: string
+        stock:
+          type: number
+          minimum: 0
+        _id:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+        slug:
+          type: string
+        offerExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        ratingAvg:
+          type: number
+        reviewsCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Blog:
+      type: object
+      properties:
+        category:
+          type: string
+          minLength: 1
+          maxLength: 80
+        supportingImages:
+          type: array
+          items:
+            type: string
+          maxItems: 6
+        title:
+          type: string
+          minLength: 1
+        excerpt:
+          type: string
+        content:
+          type: string
+          minLength: 1
+        image:
+          type: string
+          minLength: 1
+        featured:
+          type: boolean
+        _id:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+        slug:
+          type: string
+        author:
+          oneOf:
+            - type: string
+              pattern: ^[a-fA-F0-9]{24}$
+            - type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    OrderQuote:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+                pattern: ^[a-fA-F0-9]{24}$
+                example: 507f1f77bcf86cd799439011
+              name:
+                type: string
+                minLength: 1
+              color:
+                type: string
+              price:
+                type: number
+                minimum: 0
+              qty:
+                type: integer
+                minimum: 1
+              image:
+                type: string
+        couponId:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+        subtotal:
+          type: number
+        couponCode:
+          type: string
+        discountPercent:
+          type: number
+        discount:
+          type: number
+        shippingCost:
+          type: number
+        total:
+          type: number
+    Order:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+                pattern: ^[a-fA-F0-9]{24}$
+                example: 507f1f77bcf86cd799439011
+              name:
+                type: string
+                minLength: 1
+              color:
+                type: string
+              price:
+                type: number
+                minimum: 0
+              qty:
+                type: integer
+                minimum: 1
+              image:
+                type: string
+        couponId:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+        subtotal:
+          type: number
+        couponCode:
+          type: string
+        discountPercent:
+          type: number
+        discount:
+          type: number
+        shippingCost:
+          type: number
+        total:
+          type: number
+        _id:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+        orderCode:
+          type: string
+        user:
+          oneOf:
+            - type: string
+              pattern: ^[a-fA-F0-9]{24}$
+            - type: object
+        contact:
+          $ref: "#/components/schemas/OrderContactDto"
+        shippingAddress:
+          $ref: "#/components/schemas/OrderShippingAddressDto"
+        paymentMethod:
+          type: string
+          enum:
+            - card
+            - paypal
+        shippingOption:
+          type: string
+          enum:
+            - free
+            - express
+            - pickup
+        status:
+          type: string
+          enum:
+            - Processing
+            - Shipped
+            - Delivered
+            - Cancelled
+        paymentStatus:
+          type: string
+          enum:
+            - pending
+            - paid
+            - failed
+            - refunded
+        checkoutSessionStatus:
+          type: string
+          enum:
+            - none
+            - open
+            - completed
+            - expired
+            - failed
+        inventoryStatus:
+          type: string
+          enum:
+            - pending
+            - adjusted
+            - insufficient
+            - restored
+            - restore_failed
+            - return_required
+  responses:
+    BadRequest:
+      description: Invalid input or operation rejected.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Missing, expired or invalid authentication.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Insufficient permissions.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Requested resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    TooManyRequests:
+      description: Rate limit exceeded; retry later.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"

@@ -2,7 +2,16 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "builds": [
-    { "src": "Backend/api/index.ts", "use": "@vercel/node" },
+    {
+      "src": "Backend/api/index.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "Backend/src/swagger/*.yaml",
+          "Backend/node_modules/swagger-ui-dist/**"
+        ]
+      }
+    },
     { "src": "Frontend/**", "use": "@vercel/static" }
   ],
   "routes": [

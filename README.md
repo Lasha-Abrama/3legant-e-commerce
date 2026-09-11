@@ -44,6 +44,7 @@ Frontend/
   images/             Storefront assets
 Backend/
   src/                NestJS modules, schemas, services, and Jest tests
+    swagger/          YAML OpenAPI specification, Swagger UI setup, and documentation tests
   api/index.ts        Vercel API entry point
   e2e/                Playwright browser tests
   verification/       Isolated local browser verification
@@ -68,6 +69,24 @@ npm run start:dev
 ```
 
 Fill in `Backend/.env` before starting. Open **http://localhost:5000** for the storefront or **http://localhost:5000/admin/login.html** for admin sign-in. Nest serves both the frontend and `/api` locally; no separate frontend build is required.
+
+### API documentation (Swagger)
+
+With the backend running, open [Swagger UI](http://localhost:5000/api/docs/). It documents all 74 API operations, including public storefront routes, authentication, customer accounts, community features, orders, payments, uploads, and administration.
+
+The source of truth is [Backend/src/swagger/openapi.yaml](Backend/src/swagger/openapi.yaml). Definitions are maintained in YAML, with reusable request schemas and security schemes; Swagger annotations are not needed in controllers. [setup-swagger.ts](Backend/src/swagger/setup-swagger.ts) connects the specification to the shared local/Vercel application setup.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `/api/docs/` | Interactive Swagger UI |
+| `/api/docs/openapi.yaml` | Downloadable YAML specification |
+| `/api/docs/openapi.json` | The same specification serialized as JSON |
+
+The server URL is relative (`/api`), so requests use the current host in development and production. To try protected operations, execute `POST /auth/login`, copy the returned `accessToken`, and paste it into **Authorize** without the `Bearer` prefix. Administration requires an administrator account. Tokens are not persisted by Swagger UI across page reloads.
+
+Login/register also set the HttpOnly refresh cookie. `POST /auth/refresh` uses that browser-managed cookie and the required `X-Requested-With: threelegant` header; the documentation host must match `FRONTEND_URL`. Google OAuth requires browser navigation through its redirect flow. Stripe webhooks require a signed raw payload; use the Stripe CLI instructions below. **Try it out sends real API requests and can modify data.**
+
+When changing controllers or DTOs, update the YAML in the same change and run `npm run test:swagger` from `Backend/`. The tests validate OpenAPI references, route coverage, guard requirements, response status codes, and documentation/asset delivery without connecting to a database. Nest copies the YAML into `dist/swagger/` and watches it during development; Vercel explicitly bundles the YAML and Swagger UI assets. Swagger UI uses local assets and works with the existing content security policy.
 
 ### Environment
 
@@ -103,6 +122,7 @@ Run from `Backend/`:
 
 ```bash
 npm test                       # Jest unit and HTTP integration tests
+npm run test:swagger            # OpenAPI validation, route coverage, and Swagger HTTP checks
 npm run check                  # TypeScript checking + Nest production build
 node verification/local-flows.cjs # Isolated browser auth, UX, and coupon checks
 npm run test:e2e                # Playwright; see environment requirements below

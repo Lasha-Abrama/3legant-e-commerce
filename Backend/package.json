@@ -12,13 +12,14 @@
     "check": "npm run typecheck && npm run build",
     "test": "jest --runInBand",
     "test:api": "jest --runInBand src/api.integration.spec.ts",
+    "test:swagger": "jest --runInBand src/swagger/swagger.spec.ts",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:watch": "jest --watch",
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "seed": "ts-node -r tsconfig-paths/register src/seed.ts"
-    ,"blogs:expand": "ts-node src/blogs/expand-editorial.ts"
+    "seed": "ts-node -r tsconfig-paths/register src/seed.ts",
+    "blogs:expand": "ts-node src/blogs/expand-editorial.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.3",
@@ -42,9 +43,12 @@
     "nodemailer": "^10.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "stripe": "^22.5.0"
+    "stripe": "^22.5.0",
+    "swagger-ui-express": "^5.0.1",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
+    "@apidevtools/swagger-parser": "^10.1.1",
     "@nestjs/cli": "^11.0.24",
     "@nestjs/testing": "^11.2.3",
     "@playwright/test": "^1.63.0",
@@ -54,6 +58,7 @@
     "@types/multer": "^1.4.12",
     "@types/node": "^20.14.0",
     "@types/supertest": "^7.2.1",
+    "@types/swagger-ui-express": "^4.1.8",
     "jest": "^29.7.0",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.12",
