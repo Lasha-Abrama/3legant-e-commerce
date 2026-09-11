@@ -104,7 +104,7 @@
       '<div class="password-fields" style="display:flex;flex-direction:column;gap:12px;max-width:400px;margin-bottom:12px;">' +
         '<div class="field"><span class="field__label">OLD PASSWORD</span><input class="input" type="password" id="f-oldPassword"></div>' +
         '<div class="field"><span class="field__label">NEW PASSWORD</span><input class="input" type="password" id="f-newPassword"></div>' +
-        '<div class="field"><span class="field__label">REPEAT NEW PASSWORD</span><input class="input" type="password" id="f-repeatPassword"></div>' +
+        '<div class="field"><span class="field__label">REPEAT NEW PASSWORD</span><input class="input" type="password" id="f-repeatPassword" aria-describedby="password-match-msg"><div class="error-text" id="password-match-msg" role="alert"></div></div>' +
       '</div>' +
       '<div class="error-text" id="password-msg"></div>' +
       '<button class="btn btn--dark" id="save-password">Update password</button>';
@@ -134,7 +134,17 @@
       });
     });
 
-    var validatePassword = PasswordPolicy.attach(document.getElementById('f-newPassword'));
+    var validatePassword = PasswordPolicy.attach(document.getElementById('f-newPassword'), { deferEmpty: true });
+    var repeatInput = document.getElementById('f-repeatPassword');
+    var matchMessage = document.getElementById('password-match-msg');
+    function clearMatchingError() {
+      if (document.getElementById('f-newPassword').value === repeatInput.value) {
+        matchMessage.textContent = '';
+        repeatInput.removeAttribute('aria-invalid');
+      }
+    }
+    repeatInput.addEventListener('input', clearMatchingError);
+    document.getElementById('f-newPassword').addEventListener('input', clearMatchingError);
     document.getElementById('save-password').addEventListener('click', function () {
       var msg = document.getElementById('password-msg');
       msg.textContent = '';
@@ -142,7 +152,12 @@
       var oldPassword = document.getElementById('f-oldPassword').value;
       var newPassword = document.getElementById('f-newPassword').value;
       var repeat = document.getElementById('f-repeatPassword').value;
-      if (newPassword !== repeat) { msg.style.color = 'var(--red)'; msg.textContent = 'Passwords do not match.'; return; }
+      if (newPassword !== repeat) {
+        matchMessage.textContent = 'Passwords do not match.';
+        repeatInput.setAttribute('aria-invalid', 'true');
+        repeatInput.focus();
+        return;
+      }
       apiPatch('/users/me/password', { oldPassword: oldPassword, newPassword: newPassword }).then(function (res) {
         if (!res) return;
         if (res._status >= 400) { msg.style.color = 'var(--red)'; msg.textContent = res.message; return; }
@@ -182,16 +197,20 @@
         addressCard('shipping', 'Shipping Address', u.shippingAddress) +
       '</div><p id="address-status" role="status"></p>';
 
-    content.querySelectorAll('.edit-address').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var type = btn.getAttribute('data-type');
-        openAddressForm(type);
-      });
+    content.querySelector('#address-grid').addEventListener('click', function (event) {
+      var button = event.target.closest('.edit-address');
+      if (button) openAddressForm(button.getAttribute('data-type'));
     });
   }
 
+  function restoreAddressCard(type) {
+    var card = document.querySelector('.address-card[data-type="' + type + '"]');
+    card.outerHTML = addressCard(type, type === 'billing' ? 'Billing Address' : 'Shipping Address',
+      type === 'billing' ? state.user.billingAddress : state.user.shippingAddress);
+    document.querySelector('.edit-address[data-type="' + type + '"]').focus();
+  }
+
   function openAddressForm(type) {
-    renderAddressTab(document.getElementById('account-content'));
     var addr = (type === 'billing' ? state.user.billingAddress : state.user.shippingAddress) || {};
     var card = document.querySelector('.address-card[data-type="' + type + '"]');
     var fields = [
@@ -207,8 +226,7 @@
     var form = card.querySelector('form'), message = form.querySelector('[role="alert"]');
     form.elements.fullName.focus();
     form.querySelector('[data-cancel-address]').onclick = function () {
-      renderAddressTab(document.getElementById('account-content'));
-      document.querySelector('.edit-address[data-type="' + type + '"]').focus();
+      restoreAddressCard(type);
     };
     form.onsubmit = function (event) {
       event.preventDefault();
@@ -228,7 +246,7 @@
         }
         state.user = res;
         if (card.isConnected && state.tab === 'address') {
-          renderAddressTab(document.getElementById('account-content'));
+          restoreAddressCard(type);
           document.getElementById('address-status').textContent = 'Address saved.';
           document.querySelector('.edit-address[data-type="' + type + '"]').focus();
         }

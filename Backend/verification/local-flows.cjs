@@ -110,6 +110,8 @@ function deferred() { let resolve; const promise = new Promise(r => { resolve = 
     browser = await chromium.launch({ executablePath, headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
     const page = await context.newPage();
+    const artifacts = resolve(__dirname, '../test-results/local-flows');
+    mkdirSync(artifacts, { recursive: true });
     // Avoid third-party fonts/images in this isolated verification.
     await page.route('**/*', route => route.request().url().startsWith(origin) ? route.continue() : route.abort());
     holdRefresh = true;
@@ -127,6 +129,9 @@ function deferred() { let resolve; const promise = new Promise(r => { resolve = 
     assert(cookie && cookie.httpOnly && cookie.sameSite === 'Lax' && cookie.path === '/api/auth' && !cookie.secure);
     console.log('PASS localhost OAuth handoff waits for rotation; account reload restores the session; HTTP cookie flags correct.');
 
+    await expect(page.locator('.password-requirements')).toBeHidden();
+    await page.locator('#f-newPassword').focus();
+    await expect(page.locator('.password-requirements')).toBeHidden();
     await page.locator('#f-newPassword').fill('abcdefgh');
     await expect(page.locator('.password-requirements li')).toHaveCount(3);
     await page.locator('#f-newPassword').fill('Abcdefgh');
@@ -135,6 +140,42 @@ function deferred() { let resolve; const promise = new Promise(r => { resolve = 
     await expect(page.locator('.password-requirements li')).toHaveCount(1);
     await page.locator('#f-newPassword').fill('Abcdef1!');
     await expect(page.locator('.password-requirements')).toBeHidden();
+    await page.locator('#f-repeatPassword').fill('different');
+    await page.locator('#save-password').click();
+    await expect(page.locator('#password-match-msg')).toHaveText('Passwords do not match.');
+    await expect(page.locator('#password-msg')).toBeEmpty();
+    assert(await page.locator('#f-repeatPassword').evaluate(input => input.parentElement.contains(document.getElementById('password-match-msg'))));
+    await page.locator('#f-repeatPassword').fill('Abcdef1!');
+    await expect(page.locator('#password-match-msg')).toBeEmpty();
+    for (const width of [375, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 });
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.locator('#f-repeatPassword').fill('different');
+      await page.locator('#save-password').click();
+      await page.locator('#save-password').scrollIntoViewIfNeeded();
+      await page.screenshot({ path: resolve(artifacts, 'account-password-' + width + '.png') });
+    }
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await page.goto(origin + '/account.html?tab=address');
+    const shipping = page.locator('.address-card[data-type=shipping]');
+    const normalHeight = (await shipping.boundingBox()).height;
+    await page.locator('.edit-address[data-type=billing]').click();
+    assert.equal((await shipping.boundingBox()).height, normalHeight);
+    await page.locator('.address-card[data-type=billing] [name=fullName]').fill('Unsaved billing draft');
+    await page.locator('.edit-address[data-type=shipping]').click();
+    await expect(page.locator('.address-card[data-type=billing] [name=fullName]')).toHaveValue('Unsaved billing draft');
+    await page.locator('.address-card[data-type=billing] [data-cancel-address]').click();
+    await expect(shipping.locator('form')).toBeVisible();
+    assert.equal((await page.locator('.address-card[data-type=billing]').boundingBox()).height, normalHeight);
+    await page.screenshot({ path: resolve(artifacts, 'account-address-desktop.png'), fullPage: true });
+    for (const width of [375, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 });
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await shipping.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: resolve(artifacts, 'account-address-' + width + '.png') });
+    }
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    console.log('PASS account password feedback, independent address editors, and 375/390/430px layouts.');
     for (const path of ['/register.html', '/reset-password.html?token=' + 'x'.repeat(43)]) {
       await page.goto(origin + path);
       if (path === '/register.html') {
@@ -170,8 +211,6 @@ function deferred() { let resolve; const promise = new Promise(r => { resolve = 
     await page.locator('[name=percentage]').fill('23');
     await page.locator('[name=usageLimit]').fill('5');
     await page.locator('[name=expiresAt]').fill('2099-01-01T12:00');
-    const artifacts = resolve(__dirname, '../test-results/local-flows');
-    mkdirSync(artifacts, { recursive: true });
     await page.screenshot({ path: resolve(artifacts, 'coupons-desktop.png'), fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
     assert(await page.locator('#coupon-editor').evaluate(el => el.scrollWidth <= el.clientWidth));
@@ -244,6 +283,12 @@ function deferred() { let resolve; const promise = new Promise(r => { resolve = 
     const touchPage = await touchContext.newPage();
     await touchPage.route('**/*', route => route.request().url().startsWith(origin) ? route.continue() : route.abort());
     await touchPage.goto(origin + '/index.html');
+    for (const width of [375, 390, 430]) {
+      await touchPage.setViewportSize({ width, height: 844 });
+      assert(await touchPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await touchPage.screenshot({ path: resolve(artifacts, 'home-' + width + '.png') });
+    }
+    await touchPage.setViewportSize({ width: 390, height: 844 });
     const cdp = await touchContext.newCDPSession(touchPage);
     async function swipe(startX, startY, endX, endY) {
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: startX, y: startY }] });

@@ -48,7 +48,7 @@
 .complete-meta dd { margin:0; font-weight:600; overflow-wrap:anywhere; }
 .order-complete > .btn { border-radius:80px; padding:12px 32px; }
 .complete-shopping { display:block; width:fit-content; margin:20px auto 0; font-size:14px; color:#6c7275; }
-.page-account .address-grid { gap:24px; }
+.page-account .address-grid { gap:24px; align-items:start; }
 .page-account .address-card { min-height:140px; padding:16px; border:1px solid #6c7275; border-radius:8px; background:#fff; }
 .page-account .address-card__head { align-items:center; gap:12px; margin-bottom:8px; }
 .page-account .address-card__head > span { font-size:16px!important; line-height:26px; }
