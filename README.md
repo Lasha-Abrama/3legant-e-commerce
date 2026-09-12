@@ -23,6 +23,22 @@ Built with **HTML, CSS, vanilla JavaScript, NestJS, TypeScript, and MongoDB**. T
 - Session invalidation on logout and credential changes; current-password confirmation for email changes.
 - Server-side authorization, input validation, shared MongoDB rate limiting, security headers, and validated image uploads.
 
+## Screenshots
+
+| Homepage | Shop |
+| --- | --- |
+| ![3legant homepage](docs/screenshots/homepage.png) | ![3legant shop page](docs/screenshots/shop.png) |
+
+| Product | Checkout |
+| --- | --- |
+| ![3legant product page](docs/screenshots/product.png) | ![3legant checkout page](docs/screenshots/checkout.png) |
+
+| My Account | Admin dashboard |
+| --- | --- |
+| ![3legant account page](docs/screenshots/account.png) | ![3legant admin dashboard](docs/screenshots/admin-dashboard.png) |
+
+The Account, Checkout, and Admin screenshots use local sample data only; no customer data, credentials, or payment data is included.
+
 ## Payments and coupons
 
 Card details are entered only on **Stripe-hosted Checkout**—the application never collects or stores them.
