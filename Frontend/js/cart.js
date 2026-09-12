@@ -50,7 +50,10 @@
   function sync() {
     var items = getCart();
     if (!items.length || typeof apiGetSilent !== 'function') return Promise.resolve(items);
-    return apiGetSilent('/products?take=200').then(function (res) {
+    var productIds = Array.from(new Set(items.map(function (item) { return item.id; })))
+      .filter(function (id) { return /^[a-f\d]{24}$/i.test(id); });
+    if (!productIds.length) return Promise.resolve(items);
+    return apiGetSilent('/products?take=' + productIds.length + '&ids=' + encodeURIComponent(productIds.join(','))).then(function (res) {
       if (!res || res._status >= 400 || !Array.isArray(res.data)) return items;
       var products = new Map(res.data.map(function (product) { return [product._id, product]; }));
       var nextItems = items.map(function (item) {

@@ -171,3 +171,6 @@ export class Order {
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
+OrderSchema.index({ user: 1, createdAt: -1 });
+OrderSchema.index({ stripeCheckoutSessionId: 1 }, { sparse: true });
+OrderSchema.index({ stripePaymentIntentId: 1 }, { sparse: true });

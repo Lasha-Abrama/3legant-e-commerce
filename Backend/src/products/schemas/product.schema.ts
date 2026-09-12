@@ -80,3 +80,7 @@ export class Product {
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
+ProductSchema.index({ newArrival: 1, createdAt: -1 });
+ProductSchema.index({ category: 1, createdAt: -1 });
+ProductSchema.index({ category: 1, price: 1 });
+ProductSchema.index({ price: 1 });

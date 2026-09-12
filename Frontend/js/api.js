@@ -135,6 +135,12 @@ function apiGetSilent(url) {
   }).catch(apiFailure);
 }
 
+function apiGetPublic(url) {
+  return fetch(API + url, { credentials: 'same-origin' })
+    .then(parseApiResponse)
+    .catch(apiFailure);
+}
+
 function apiSend(method, url, data) {
   return authenticatedFetch(url, {
     method: method,

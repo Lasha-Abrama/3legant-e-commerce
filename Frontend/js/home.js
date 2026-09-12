@@ -29,7 +29,7 @@
   document.getElementById('category-grid').innerHTML = CATEGORIES.map(function (c, index) {
     return (
       '<article class="category-tile category-tile--' + (index === 0 ? 'large' : 'small') + '">' +
-        '<img src="' + c.img + '" alt="' + c.name + '">' +
+        '<img src="' + c.img + '" alt="' + c.name + '" loading="lazy" decoding="async">' +
         '<div class="category-tile__text">' +
           '<div class="category-tile__name">' + c.name + '</div>' +
           '<a class="category-tile__link" href="shop.html?category=' + encodeURIComponent(c.name) + '">Shop Now &rarr;</a>' +
@@ -48,7 +48,7 @@
   }).join('');
 
   function loadArticles() {
-    apiGetSilent('/blogs?take=20').then(function (res) {
+    apiGetPublic('/blogs?take=3').then(function (res) {
       var grid = document.getElementById('article-grid');
       if (!res || res._status >= 400 || !Array.isArray(res.data)) {
         renderRetryState(grid, res && res.message, loadArticles);
@@ -58,7 +58,7 @@
         return (
           '<a class="article-card" href="blog-post.html?id=' + encodeURIComponent(a._id) + '">' +
             '<div class="ph" style="width:100%;height:160px;border-radius:10px;padding:0;">' +
-              '<img src="' + safeImageUrl(articleImageUrl(a)) + '" alt="' + escapeHtml(a.title) + '" style="width:100%;height:100%;object-fit:cover;">' +
+              '<img src="' + safeImageUrl(articleImageUrl(a)) + '" alt="' + escapeHtml(a.title) + '" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;">' +
             '</div>' +
             '<div class="article-card__title">' + escapeHtml(a.title) + '</div>' +
             '<span class="text-link">Read More <span>→</span></span>' +
@@ -72,14 +72,14 @@
   wireNewsletterForm();
 
   function loadNewArrivals() {
-    apiGetSilent('/products?take=100').then(function (res) {
+    apiGetPublic('/products?take=8&newArrival=true').then(function (res) {
       var grid = document.getElementById('new-arrivals');
       if (!res || res._status >= 400 || !Array.isArray(res.data)) {
         renderRetryState(grid, res && res.message, loadNewArrivals);
         return;
       }
       grid.innerHTML = res.data.length
-        ? res.data.filter(function(p) { return p.newArrival; }).sort(function(a,b) { var x = HOME_PRODUCT_ORDER.indexOf(a.name), y = HOME_PRODUCT_ORDER.indexOf(b.name); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y); }).slice(0,8).map(homeProductCardHtml).join('')
+        ? res.data.sort(function(a,b) { var x = HOME_PRODUCT_ORDER.indexOf(a.name), y = HOME_PRODUCT_ORDER.indexOf(b.name); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y); }).slice(0,8).map(homeProductCardHtml).join('')
         : '<div class="shop-empty">No new arrivals yet.</div>';
       wireAddToCartButtons(grid);
     });
@@ -129,6 +129,16 @@
   slider.addEventListener('pointerup', finishSwipe);
   slider.addEventListener('pointercancel', finishSwipe);
   slider.addEventListener('lostpointercapture', finishSwipe);
-  loadArticles();
   loadNewArrivals();
+  var articleGrid = document.getElementById('article-grid');
+  if ('IntersectionObserver' in window) {
+    var articleObserver = new IntersectionObserver(function (entries) {
+      if (!entries.some(function (entry) { return entry.isIntersecting; })) return;
+      articleObserver.disconnect();
+      loadArticles();
+    }, { rootMargin: '500px 0px' });
+    articleObserver.observe(articleGrid);
+  } else {
+    loadArticles();
+  }
 })();

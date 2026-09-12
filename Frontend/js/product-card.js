@@ -8,7 +8,7 @@ function imageBoxHtml(url, fallbackLabel, sizeStyle) {
   if (safeUrl) {
     return (
       '<div class="ph" style="' + sizeStyle + 'padding:0;">' +
-        '<img class="product-img" src="' + safeUrl + '" alt="' + escapeHtml(fallbackLabel) + '">' +
+        '<img class="product-img" src="' + safeUrl + '" alt="' + escapeHtml(fallbackLabel) + '" loading="lazy" decoding="async">' +
       '</div>'
     );
   }

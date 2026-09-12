@@ -17,8 +17,9 @@ export class ProductsService {
   ) {}
 
   async findAll(query: FindProductsQueryDto): Promise<PaginatedResult<Product>> {
-    await this.expireOffers();
+    await this.expireOffers(query.ids);
     const filter: QueryFilter<ProductDocument> = {};
+    if (query.ids?.length) filter._id = { $in: query.ids };
     if (query.category) filter.category = query.category;
     if (typeof query.newArrival === 'boolean') filter.newArrival = query.newArrival;
     if (query.minPrice !== undefined || query.maxPrice !== undefined) {
@@ -89,9 +90,9 @@ export class ProductsService {
 
   // Materialize expired prices before filtering/sorting and before order quotes.
   // MongoDB evaluates the condition atomically, so a renewed offer is not expired.
-  private async expireOffers(id?: string) {
+  private async expireOffers(ids?: string | string[]) {
     await this.productModel.updateMany({
-      ...(id ? { _id: id } : {}),
+      ...(typeof ids === 'string' ? { _id: ids } : ids?.length ? { _id: { $in: ids } } : {}),
       offerExpiresAt: { $ne: null, $lte: new Date() },
       $or: [{ originalPrice: { $ne: null } }, { discountLabel: { $nin: [null, ''] } }],
     }, [{ $set: {

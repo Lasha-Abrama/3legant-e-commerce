@@ -1,5 +1,5 @@
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsMongoId, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { PRODUCT_CATEGORIES, ProductCategory } from '../schemas/product.schema';
 
 const SORT_OPTIONS = ['price_asc', 'price_desc', 'newest', 'oldest'] as const;
@@ -33,6 +33,13 @@ export class FindProductsQueryDto {
   @IsString()
   @MaxLength(80)
   search?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? value.split(',').map((id) => id.trim()).filter(Boolean) : value)
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsMongoId({ each: true })
+  ids?: string[];
 
   @IsOptional()
   @Type(() => Number)

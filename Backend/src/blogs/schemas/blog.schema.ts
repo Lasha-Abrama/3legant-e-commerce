@@ -33,3 +33,6 @@ export class Blog {
 }
 
 export const BlogSchema = SchemaFactory.createForClass(Blog);
+BlogSchema.index({ createdAt: -1 });
+BlogSchema.index({ featured: 1, createdAt: -1 });
+BlogSchema.index({ category: 1, createdAt: -1 });
